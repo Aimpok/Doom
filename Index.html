@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Лабиринт</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        canvas { 
+            display: block; 
+            touch-action: none;
+        }
+        
+        /* Мобильное управление */
+        #mobileControls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        /* Джойстик для движения */
+        #movementJoystick {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 120px;
+            height: 120px;
+            pointer-events: auto;
+        }
+        
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            position: absolute;
+        }
+        
+        .joystick-stick {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            transition: transform 0.1s;
+        }
+        
+        /* Правая половина экрана для поворота камеры */
+        #cameraTouchArea {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: auto;
+        }
+        
+        /* Адаптация для разных экранов */
+        @media (max-width: 768px) {
+            #movementJoystick {
+                width: 100px;
+                height: 100px;
+                bottom: 20px;
+                left: 20px;
+            }
+            .joystick-stick {
+                width: 50px;
+                height: 50px;
+                top: 25px;
+                left: 25px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #movementJoystick {
+                width: 80px;
+                height: 80px;
+            }
+            .joystick-stick {
+                width: 40px;
+                height: 40px;
+                top: 20px;
+                left: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Мобильное управление -->
+    <div id="mobileControls">
+        <div id="movementJoystick">
+            <div class="joystick-base"></div>
+            <div class="joystick-stick" id="joystickStick"></div>
+        </div>
+        
+        <!-- Правая половина экрана для поворота камеры -->
+        <div id="cameraTouchArea"></div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Базовые настройки
+        const scene = new THREE.Scene();
+        
+        // ТУМАН - добавляем в сцену
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 50); // цвет, ближняя граница, дальняя граница
+        
+        // Камера с МЕНЬШЕЙ дальностью прорисовки
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50); // дальность 50 вместо 1000
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x87CEEB);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Оптимизация производительности
+        document.body.appendChild(renderer.domElement);
+
+        // Параметры лабиринта
+        const CELL_SIZE = 8;
+        const WALL_HEIGHT = 8;
+        const WALL_THICKNESS = 0.3;
+
+        // Текстуры
+        const textureLoader = new THREE.TextureLoader();
+        let wallTexture, floorTexture, roofTexture;
+
+        // Загрузка текстур
+        function loadTextures() {
+            return new Promise((resolve) => {
+                let texturesLoaded = 0;
+                const totalTextures = 3;
+
+                function onTextureLoad() {
+                    texturesLoaded++;
+                    if (texturesLoaded === totalTextures) {
+                        resolve();
+                    }
+                }
+
+                wallTexture = textureLoader.load('WallTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры стен:', error);
+                    wallTexture = null;
+                    onTextureLoad();
+                });
+
+                floorTexture = textureLoader.load('FloorTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры пола:', error);
+                    floorTexture = null;
+                    onTextureLoad();
+                });
+
+                roofTexture = textureLoader.load('RoofTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры потолка:', error);
+                    roofTexture = null;
+                    onTextureLoad();
+                });
+
+                // НАСТРОЙКИ ТЕКСТУР - В 10 РАЗ МЕНЬШЕ
+                if (wallTexture) {
+                    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+                    wallTexture.repeat.set(0.2, 0.2);
+                }
+                if (floorTexture) {
+                    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+                    floorTexture.repeat.set(40, 40);
+                }
+                if (roofTexture) {
+                    roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
+                    roofTexture.repeat.set(20, 20);
+                }
+            });
+        }
+
+        // Создаем материалы с текстурами
+        function createMaterials() {
+            const wallMaterial = wallTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: wallTexture,
+                    fog: true // ВКЛЮЧАЕМ ТУМАН ДЛЯ МАТЕРИАЛОВ
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    fog: true
+                });
+            
+            const floorMaterial = floorTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: floorTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x90EE90,
+                    fog: true
+                });
+            
+            const roofMaterial = roofTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: roofTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0xCCCCCC,
+                    fog: true
+                });
+            
+            return { wallMaterial, floorMaterial, roofMaterial };
+        }
+
+        // Генератор лабиринта
+        class MazeGenerator {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.maze = this.generateMazeWithMultiplePaths();
+            }
+
+            generateMazeWithMultiplePaths() {
+                let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
+                const paths = [];
+                const numPaths = 3;
+                
+                for (let i = 0; i < numPaths; i++) {
+                    let startX = 1 + Math.floor(Math.random() * (this.width - 3));
+                    let startY = 1 + Math.floor(Math.random() * (this.height - 3));
+                    paths.push(this.generatePath(maze, startX, startY));
+                }
+                
+                this.connectPaths(maze, paths);
+                this.addRandomPassages(maze);
+                
+                return maze;
+            }
+
+            generatePath(maze, startX, startY) {
+                let x = startX, y = startY;
+                maze[y][x] = 0;
+                
+                let path = [[x, y]];
+                let directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
+                let stack = [[x, y]];
+                
+                while (stack.length > 0) {
+                    let [cx, cy] = stack[stack.length - 1];
+                    
+                    let possibleDirs = directions.filter(([dx, dy]) => {
+                        let nx = cx + dx, ny = cy + dy;
+                        return nx > 0 && nx < this.width - 1 && 
+                               ny > 0 && ny < this.height - 1 && 
+                               maze[ny][nx] === 1;
+                    });
+                    
+                    if (possibleDirs.length > 0) {
+                        let [dx, dy] = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                        let nx = cx + dx, ny = cy + dy;
+                        
+                        maze[cy + dy/2][cx + dx/2] = 0;
+                        maze[ny][nx] = 0;
+                        
+                        path.push([nx, ny]);
+                        stack.push([nx, ny]);
+                    } else {
+                        stack.pop();
+                    }
+                }
+                
+                return path;
+            }
+
+            connectPaths(maze, paths) {
+                for (let i = 0; i < paths.length - 1; i++) {
+                    const connectionPoints = 2;
+                    for (let j = 0; j < connectionPoints; j++) {
+                        const point1 = paths[i][Math.floor(Math.random() * paths[i].length)];
+                        const point2 = paths[i+1][Math.floor(Math.random() * paths[i+1].length)];
+                        this.createPassage(maze, point1, point2);
+                    }
+                }
+            }
+
+            createPassage(maze, [x1, y1], [x2, y2]) {
+                let x = x1, y = y1;
+                while (x !== x2 || y !== y2) {
+                    if (Math.random() > 0.5 && x !== x2) {
+                        x += x < x2 ? 1 : -1;
+                    } else if (y !== y2) {
+                        y += y < y2 ? 1 : -1;
+                    }
+                    if (x > 0 && x < this.width - 1 && y > 0 && y < this.height - 1) {
+                        maze[y][x] = 0;
+                    }
+                }
+            }
+
+            addRandomPassages(maze) {
+                const numExtraPassages = Math.floor(this.width * this.height * 0.1);
+                for (let i = 0; i < numExtraPassages; i++) {
+                    const x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    const y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    if (maze[y][x] === 1) {
+                        const neighbors = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ].filter(([nx, ny]) => 
+                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height
+                        );
+                        const passageNeighbors = neighbors.filter(([nx, ny]) => maze[ny][nx] === 0);
+                        if (passageNeighbors.length >= 2) {
+                            maze[y][x] = 0;
+                        }
+                    }
+                }
+            }
+
+            getMaze() {
+                return this.maze;
+            }
+        }
+
+        // Создаем лабиринт
+        const mazeGen = new MazeGenerator(25, 25);
+        const maze = mazeGen.getMaze();
+
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+        
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight1.position.set(50, 100, 50);
+        scene.add(directionalLight1);
+        
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight2.position.set(-50, 80, -50);
+        scene.add(directionalLight2);
+
+        // Создание сцены
+        function createScene(materials) {
+            createFloor(materials.floorMaterial);
+            createRoof(materials.roofMaterial);
+            createMazeWalls(materials.wallMaterial);
+        }
+
+        function createFloor(floorMaterial) {
+            const floorWidth = maze[0].length * CELL_SIZE;
+            const floorHeight = maze.length * CELL_SIZE;
+            const floorGeometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -1;
+            scene.add(floor);
+        }
+
+        function createRoof(roofMaterial) {
+            const roofWidth = maze[0].length * CELL_SIZE;
+            const roofHeight = maze.length * CELL_SIZE;
+            const roofGeometry = new THREE.PlaneGeometry(roofWidth, roofHeight);
+            const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+            roof.rotation.x = Math.PI / 2;
+            roof.position.y = WALL_HEIGHT - 1;
+            scene.add(roof);
+        }
+
+        function createMazeWalls(wallMaterial) {
+            const wallGroup = new THREE.Group();
+            
+            for (let y = 0; y < maze.length; y++) {
+                for (let x = 0; x < maze[y].length - 1; x++) {
+                    if (maze[y][x] === 1 || maze[y][x+1] === 1) {
+                        if (maze[y][x] !== maze[y][x+1]) {
+                            const wallGeometry = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE);
+                            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                            wall.position.set(
+                                (x + 0.5 - maze[0].length/2) * CELL_SIZE, 
+                                WALL_HEIGHT/2 - 1,
+                                (y - maze.length/2) * CELL_SIZE
+                            );
+                            wallGroup.add(wall);
+                        }
+                    }
+                }
+            }
+
+            for (let y = 0; y < maze.length - 1; y++) {
+                for (let x = 0; x < maze[y].length; x++) {
+                    if (maze[y][x] === 1 || maze[y+1][x] === 1) {
+                        if (maze[y][x] !== maze[y+1][x]) {
+                            const wallGeometry = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS);
+                            const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                            wall.position.set(
+                                (x - maze[0].length/2) * CELL_SIZE, 
+                                WALL_HEIGHT/2 - 1,
+                                (y + 0.5 - maze.length/2) * CELL_SIZE
+                            );
+                            wallGroup.add(wall);
+                        }
+                    }
+                }
+            }
+
+            scene.add(wallGroup);
+        }
+
+        // Позиция игрока
+        function findRandomStartPosition() {
+            let freeCells = [];
+            for (let y = 1; y < maze.length - 1; y++) {
+                for (let x = 1; x < maze[y].length - 1; x++) {
+                    if (maze[y][x] === 0) {
+                        freeCells.push({x, y});
+                    }
+                }
+            }
+            
+            if (freeCells.length > 0) {
+                const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
+                return {
+                    x: (randomCell.x - maze[0].length/2) * CELL_SIZE,
+                    z: (randomCell.y - maze.length/2) * CELL_SIZE
+                };
+            }
+            
+            return {
+                x: (-maze[0].length/2 + 1) * CELL_SIZE,
+                z: (-maze.length/2 + 1) * CELL_SIZE
+            };
+        }
+
+        const startPos = findRandomStartPosition();
+        camera.position.set(startPos.x, 1.7, startPos.z);
+        
+        // Переменные управления
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        
+        let yaw = 0;
+        let pitch = 0;
+        const PI_2 = Math.PI / 2;
+
+        // УПРАВЛЕНИЕ
+        let activeTouches = new Map();
+
+        // Инициализация джойстика
+        function initJoystick() {
+            const joystickStick = document.getElementById('joystickStick');
+            const joystickBase = document.getElementById('movementJoystick');
+            
+            let baseRect = joystickBase.getBoundingClientRect();
+            const baseCenterX = baseRect.left + baseRect.width / 2;
+            const baseCenterY = baseRect.top + baseRect.height / 2;
+            const maxDistance = baseRect.width / 3;
+
+            function updateJoystick(touch) {
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
+                
+                const deltaX = touchX - baseCenterX;
+                const deltaY = touchY - baseCenterY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                let stickX = deltaX;
+                let stickY = deltaY;
+                
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    stickX = Math.cos(angle) * maxDistance;
+                    stickY = Math.sin(angle) * maxDistance;
+                }
+                
+                joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                
+                const normalizedX = stickX / maxDistance;
+                const normalizedY = stickY / maxDistance;
+                
+                moveForward = normalizedY < -0.1;
+                moveBackward = normalizedY > 0.1;
+                moveLeft = normalizedX < -0.1;
+                moveRight = normalizedX > 0.1;
+            }
+
+            function resetJoystick() {
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+            }
+
+            // Обработка событий джойстика
+            joystickBase.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
+                baseRect = joystickBase.getBoundingClientRect();
+                updateJoystick(touch);
+            });
+        }
+
+        // Инициализация поворота камеры
+        function initCameraControls() {
+            const cameraArea = document.getElementById('cameraTouchArea');
+            let lastCameraX = 0;
+            let lastCameraY = 0;
+
+            cameraArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                activeTouches.set(touch.identifier, { 
+                    type: 'camera', 
+                    element: cameraArea,
+                    lastX: touch.clientX,
+                    lastY: touch.clientY
+                });
+            });
+        }
+
+        // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
+        function initGlobalHandlers() {
+            // Обработка перемещения всех касаний
+            document.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                
+                for (let touch of e.touches) {
+                    const touchData = activeTouches.get(touch.identifier);
+                    if (!touchData) continue;
+                    
+                    if (touchData.type === 'joystick') {
+                        const joystickStick = document.getElementById('joystickStick');
+                        const joystickBase = document.getElementById('movementJoystick');
+                        
+                        let baseRect = joystickBase.getBoundingClientRect();
+                        const baseCenterX = baseRect.left + baseRect.width / 2;
+                        const baseCenterY = baseRect.top + baseRect.height / 2;
+                        const maxDistance = baseRect.width / 3;
+                        
+                        const deltaX = touch.clientX - baseCenterX;
+                        const deltaY = touch.clientY - baseCenterY;
+                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        
+                        let stickX = deltaX;
+                        let stickY = deltaY;
+                        
+                        if (distance > maxDistance) {
+                            const angle = Math.atan2(deltaY, deltaX);
+                            stickX = Math.cos(angle) * maxDistance;
+                            stickY = Math.sin(angle) * maxDistance;
+                        }
+                        
+                        joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                        
+                        const normalizedX = stickX / maxDistance;
+                        const normalizedY = stickY / maxDistance;
+                        
+                        moveForward = normalizedY < -0.1;
+                        moveBackward = normalizedY > 0.1;
+                        moveLeft = normalizedX < -0.1;
+                        moveRight = normalizedX > 0.1;
+                        
+                    } else if (touchData.type === 'camera') {
+                        if (touchData.lastX && touchData.lastY) {
+                            const deltaX = touch.clientX - touchData.lastX;
+                            const deltaY = touch.clientY - touchData.lastY;
+                            
+                            yaw -= deltaX * 0.005;
+                            pitch -= deltaY * 0.005;
+                            pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
+                        }
+                        
+                        touchData.lastX = touch.clientX;
+                        touchData.lastY = touch.clientY;
+                    }
+                }
+            });
+
+            // Обработка окончания касаний
+            document.addEventListener('touchend', (e) => {
+                for (let touch of e.changedTouches) {
+                    const touchData = activeTouches.get(touch.identifier);
+                    if (touchData && touchData.type === 'joystick') {
+                        const joystickStick = document.getElementById('joystickStick');
+                        joystickStick.style.transform = 'translate(0, 0)';
+                        moveForward = moveBackward = moveLeft = moveRight = false;
+                    }
+                    activeTouches.delete(touch.identifier);
+                }
+            });
+
+            // Сброс при потере фокуса
+            window.addEventListener('blur', () => {
+                activeTouches.clear();
+                const joystickStick = document.getElementById('joystickStick');
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+            });
+        }
+
+        // Инициализация управления
+        function initControls() {
+            initJoystick();
+            initCameraControls();
+            initGlobalHandlers();
+
+            // Клавиатура для десктопа
+            window.addEventListener('keydown', (event) => {
+                switch(event.code) {
+                    case 'KeyW': moveForward = true; break;
+                    case 'KeyS': moveBackward = true; break;
+                    case 'KeyA': moveLeft = true; break;
+                    case 'KeyD': moveRight = true; break;
+                }
+            });
+            
+            window.addEventListener('keyup', (event) => {
+                switch(event.code) {
+                    case 'KeyW': moveForward = false; break;
+                    case 'KeyS': moveBackward = false; break;
+                    case 'KeyA': moveLeft = false; break;
+                    case 'KeyD': moveRight = false; break;
+                }
+            });
+
+            // Мышь для десктопа
+            document.addEventListener('mousemove', (event) => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    yaw -= event.movementX * 0.002;
+                    pitch -= event.movementY * 0.002;
+                    pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
+                }
+            });
+
+            renderer.domElement.addEventListener('click', () => {
+                renderer.domElement.requestPointerLock();
+            });
+        }
+
+        // Проверка коллизий
+        function checkCollision(newX, newZ) {
+            const playerRadius = 0.3;
+            const points = [
+                [newX - playerRadius, newZ],
+                [newX + playerRadius, newZ],
+                [newX, newZ - playerRadius],
+                [newX, newZ + playerRadius]
+            ];
+            
+            for (let [px, pz] of points) {
+                const mazeX = Math.round((px / CELL_SIZE) + maze[0].length/2);
+                const mazeZ = Math.round((pz / CELL_SIZE) + maze.length/2);
+                
+                if (mazeZ >= 0 && mazeZ < maze.length && 
+                    mazeX >= 0 && mazeX < maze[0].length) {
+                    if (maze[mazeZ][mazeX] === 1) {
+                        return true;
+                    }
+                } else {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Анимация
+        const moveSpeed = 0.2;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            camera.rotation.order = 'YXZ';
+            camera.rotation.y = yaw;
+            camera.rotation.x = pitch;
+            
+            const direction = new THREE.Vector3();
+            
+            if (moveForward) direction.z -= moveSpeed;
+            if (moveBackward) direction.z += moveSpeed;
+            if (moveLeft) direction.x -= moveSpeed;
+            if (moveRight) direction.x += moveSpeed;
+            
+            direction.applyEuler(new THREE.Euler(0, yaw, 0));
+            
+            let newX = camera.position.x;
+            let newZ = camera.position.z;
+            
+            if (!checkCollision(newX + direction.x, newZ)) {
+                newX += direction.x;
+            }
+            if (!checkCollision(newX, newZ + direction.z)) {
+                newZ += direction.z;
+            }
+            
+            camera.position.x = newX;
+            camera.position.z = newZ;
+            
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Запуск игры
+        loadTextures().then(() => {
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+            animate();
+        }).catch((error) => {
+            console.error('Ошибка загрузки:', error);
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+            animate();
+        });
+    </script>
+</body>
+</html>
