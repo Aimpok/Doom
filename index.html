@@ -40,24 +40,27 @@
         }
         
         .logo {
-            width: 60%;
+            width: 50vmin; /* Адаптивный размер относительно меньшей стороны экрана */
             max-width: 600px;
-            margin-bottom: 15px;
+            margin-bottom: 2vmin;
+            object-fit: contain;
         }
         
         .menu-buttons {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px; /* СУКА ЕЩЕ МЕНЬШЕ */
-            margin-top: 10px;
+            gap: 1vmin; /* Минимальное адаптивное расстояние */
+            margin-top: 3vmin;
         }
         
         .menu-button {
-            width: 125%;
-            max-width: 450px;
+            width: 40vmin; /* Адаптивный размер кнопок */
+            max-width: 400px;
+            min-width: 200px;
             cursor: pointer;
             transition: all 0.3s ease;
+            object-fit: contain;
         }
         
         .menu-button:hover {
@@ -85,27 +88,27 @@
         }
         
         .options-title {
-            font-size: 3em;
+            font-size: 5vmin;
             color: #ff0000;
-            margin-bottom: 40px;
+            margin-bottom: 5vmin;
             text-shadow: 0 0 10px #ff0000;
             font-weight: bold;
         }
         
         .option-item {
-            margin: 15px 0;
-            font-size: 1.5em;
+            margin: 2vmin 0;
+            font-size: 3vmin;
             color: #fff;
         }
         
         .back-button {
-            margin-top: 40px;
-            padding: 10px 30px;
+            margin-top: 5vmin;
+            padding: 1.5vmin 4vmin;
             background: #ff0000;
             color: #000;
             border: none;
             border-radius: 5px;
-            font-size: 1.2em;
+            font-size: 2.5vmin;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
@@ -131,10 +134,10 @@
         /* Джойстик для движения */
         #movementJoystick {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 120px;
-            height: 120px;
+            bottom: 5vmin;
+            left: 5vmin;
+            width: 20vmin;
+            height: 20vmin;
             pointer-events: auto;
         }
         
@@ -148,13 +151,13 @@
         }
         
         .joystick-stick {
-            width: 60px;
-            height: 60px;
+            width: 10vmin;
+            height: 10vmin;
             background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 30px;
-            left: 30px;
+            top: 5vmin;
+            left: 5vmin;
             transition: transform 0.1s;
         }
         
@@ -167,88 +170,97 @@
             height: 100%;
             pointer-events: auto;
         }
-        
-        /* Адаптация для разных экранов */
-        @media (max-width: 768px) {
-            .logo {
-                width: 70%;
-                margin-bottom: 12px;
-            }
-            
-            .menu-button {
-                width: 140%;
-            }
-            
-            .menu-buttons {
-                gap: 1px;
-            }
-            
-            #movementJoystick {
-                width: 100px;
-                height: 100px;
-                bottom: 20px;
-                left: 20px;
-            }
-            
-            .joystick-stick {
-                width: 50px;
-                height: 50px;
-                top: 25px;
-                left: 25px;
-            }
-            
-            .options-title {
-                font-size: 2.5em;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .logo {
-                width: 80%;
-                margin-bottom: 10px;
-            }
-            
-            .menu-button {
-                width: 150%;
-            }
-            
-            .menu-buttons {
-                gap: 0px;
-            }
-            
-            #movementJoystick {
-                width: 80px;
-                height: 80px;
-            }
-            
-            .joystick-stick {
-                width: 40px;
-                height: 40px;
-                top: 20px;
-                left: 20px;
-            }
-            
-            .options-title {
-                font-size: 2em;
-            }
-            
-            .option-item {
-                font-size: 1.2em;
-            }
-        }
 
-        @media (max-height: 700px) {
+        /* Специфичные настройки для разных соотношений сторон */
+        
+        /* Высокие экраны (мобильные в портретной ориентации) */
+        @media (max-aspect-ratio: 9/16) {
             .logo {
-                width: 50%;
-                margin-bottom: 10px;
+                width: 70vmin;
+                margin-bottom: 1vmin;
             }
-            
             .menu-buttons {
-                gap: 0px;
+                margin-top: 2vmin;
+                gap: 0.5vmin;
             }
-            
             .menu-button {
-                width: 130%;
+                width: 50vmin;
+            }
+        }
+        
+        /* Квадратные экраны */
+        @media (min-aspect-ratio: 9/16) and (max-aspect-ratio: 16/9) {
+            .logo {
+                width: 45vmin;
+                margin-bottom: 1.5vmin;
+            }
+            .menu-buttons {
+                margin-top: 2.5vmin;
+                gap: 0.8vmin;
+            }
+            .menu-button {
+                width: 35vmin;
+            }
+        }
+        
+        /* Широкие экраны (десктоп, планшеты в альбомной) */
+        @media (min-aspect-ratio: 16/9) {
+            .logo {
+                width: 40vmin;
+                margin-bottom: 2vmin;
+            }
+            .menu-buttons {
+                margin-top: 3vmin;
+                gap: 1vmin;
+            }
+            .menu-button {
+                width: 30vmin;
+            }
+        }
+        
+        /* Очень широкие экраны */
+        @media (min-aspect-ratio: 21/9) {
+            .logo {
+                width: 35vmin;
+            }
+            .menu-button {
+                width: 25vmin;
+            }
+        }
+        
+        /* Маленькие экраны по высоте */
+        @media (max-height: 500px) {
+            .logo {
+                width: 35vmin;
+                margin-bottom: 1vmin;
+            }
+            .menu-buttons {
+                margin-top: 1.5vmin;
+                gap: 0.3vmin;
+            }
+            .menu-button {
+                width: 25vmin;
+            }
+            .options-title {
+                font-size: 4vmin;
+                margin-bottom: 3vmin;
+            }
+            .option-item {
+                font-size: 2.5vmin;
+                margin: 1.5vmin 0;
+            }
+        }
+        
+        /* Очень маленькие экраны */
+        @media (max-width: 320px) and (max-height: 480px) {
+            .logo {
+                width: 80vmin;
+            }
+            .menu-button {
+                width: 60vmin;
+            }
+            .menu-buttons {
+                gap: 0.2vmin;
             }
         }
     </style>
@@ -361,7 +373,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - В 10 РАЗ МЕНЬШЕ
+                // НАСТРОЙКИ ТЕКСТУР
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(0.2, 0.2);
