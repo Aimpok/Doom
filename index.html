@@ -13,56 +13,107 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
+            background: #000;
         }
         canvas { 
             display: block; 
             touch-action: none;
         }
         
-        /* Стартовое меню */
+        /* Стартовое меню в стиле DOOM */
         #startMenu {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: #000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
-            color: white;
+            background-image: url('MenuBg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         
-        #startMenu h1 {
-            font-size: 3em;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        .logo {
+            width: 60%;
+            max-width: 600px;
+            margin-bottom: 15px;
         }
         
-        #playButton {
-            padding: 15px 40px;
-            font-size: 1.5em;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 8px;
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px; /* СУКА ЕЩЕ МЕНЬШЕ */
+            margin-top: 10px;
+        }
+        
+        .menu-button {
+            width: 125%;
+            max-width: 450px;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
         
-        #playButton:hover {
-            background: #45a049;
+        .menu-button:hover {
             transform: scale(1.05);
         }
         
-        #instructions {
-            margin-top: 30px;
-            text-align: center;
-            max-width: 80%;
-            line-height: 1.5;
+        .menu-button:active {
+            transform: scale(1.02);
+        }
+        
+        /* Экран настроек */
+        #optionsMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+            color: #fff;
+        }
+        
+        .options-title {
+            font-size: 3em;
+            color: #ff0000;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px #ff0000;
+            font-weight: bold;
+        }
+        
+        .option-item {
+            margin: 15px 0;
+            font-size: 1.5em;
+            color: #fff;
+        }
+        
+        .back-button {
+            margin-top: 40px;
+            padding: 10px 30px;
+            background: #ff0000;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .back-button:hover {
+            background: #ff3333;
+            transform: scale(1.05);
         }
         
         /* Мобильное управление */
@@ -74,7 +125,7 @@
             height: 100%;
             pointer-events: none;
             z-index: 50;
-            display: none; /* Скрыто до начала игры */
+            display: none;
         }
         
         /* Джойстик для движения */
@@ -90,7 +141,7 @@
         .joystick-base {
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 0, 0, 0.3);
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.5);
             position: absolute;
@@ -99,7 +150,7 @@
         .joystick-stick {
             width: 60px;
             height: 60px;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
             top: 30px;
@@ -119,12 +170,26 @@
         
         /* Адаптация для разных экранов */
         @media (max-width: 768px) {
+            .logo {
+                width: 70%;
+                margin-bottom: 12px;
+            }
+            
+            .menu-button {
+                width: 140%;
+            }
+            
+            .menu-buttons {
+                gap: 1px;
+            }
+            
             #movementJoystick {
                 width: 100px;
                 height: 100px;
                 bottom: 20px;
                 left: 20px;
             }
+            
             .joystick-stick {
                 width: 50px;
                 height: 50px;
@@ -132,21 +197,30 @@
                 left: 25px;
             }
             
-            #startMenu h1 {
+            .options-title {
                 font-size: 2.5em;
-            }
-            
-            #playButton {
-                padding: 12px 30px;
-                font-size: 1.3em;
             }
         }
         
         @media (max-width: 480px) {
+            .logo {
+                width: 80%;
+                margin-bottom: 10px;
+            }
+            
+            .menu-button {
+                width: 150%;
+            }
+            
+            .menu-buttons {
+                gap: 0px;
+            }
+            
             #movementJoystick {
                 width: 80px;
                 height: 80px;
             }
+            
             .joystick-stick {
                 width: 40px;
                 height: 40px;
@@ -154,13 +228,27 @@
                 left: 20px;
             }
             
-            #startMenu h1 {
+            .options-title {
                 font-size: 2em;
             }
             
-            #playButton {
-                padding: 10px 25px;
-                font-size: 1.1em;
+            .option-item {
+                font-size: 1.2em;
+            }
+        }
+
+        @media (max-height: 700px) {
+            .logo {
+                width: 50%;
+                margin-bottom: 10px;
+            }
+            
+            .menu-buttons {
+                gap: 0px;
+            }
+            
+            .menu-button {
+                width: 130%;
             }
         }
     </style>
@@ -169,13 +257,37 @@
     
     <!-- Стартовое меню -->
     <div id="startMenu">
-        <h1>3D Лабиринт</h1>
-        <button id="playButton">Играть</button>
-        <div id="instructions">
-            <p><strong>Управление:</strong></p>
-            <p>На ПК: WASD для движения, мышь для поворота</p>
-            <p>На телефоне: левый джойстик - движение, правая половина экрана - поворот</p>
+        <img src="Logo.png" alt="DOOM" class="logo">
+        <div class="menu-buttons">
+            <img src="PlayText.png" alt="Играть" class="menu-button" id="playButton">
+            <img src="OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
+    </div>
+    
+    <!-- Меню настроек -->
+    <div id="optionsMenu">
+        <div class="options-title">НАСТРОЙКИ</div>
+        
+        <div class="option-item">
+            <label>
+                <input type="checkbox" id="fogToggle" checked> Туман
+            </label>
+        </div>
+        
+        <div class="option-item">
+            <label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50"> Громкость
+            </label>
+        </div>
+        
+        <div class="option-item">
+            <label>
+                Чувствительность: 
+                <input type="range" id="sensitivitySlider" min="1" max="10" value="5">
+            </label>
+        </div>
+        
+        <button class="back-button" id="backButton">НАЗАД</button>
     </div>
     
     <!-- Мобильное управление -->
@@ -195,10 +307,10 @@
         const scene = new THREE.Scene();
         
         // ТУМАН - добавляем в сцену
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 50); // цвет, ближняя граница, дальняя граница
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50); // дальность 50 вместо 1000
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
         
         const renderer = new THREE.WebGLRenderer({ 
             antialias: true,
@@ -206,7 +318,7 @@
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x87CEEB);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Оптимизация производительности
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         // Параметры лабиринта
@@ -270,7 +382,7 @@
             const wallMaterial = wallTexture ? 
                 new THREE.MeshLambertMaterial({ 
                     map: wallTexture,
-                    fog: true // ВКЛЮЧАЕМ ТУМАН ДЛЯ МАТЕРИАЛОВ
+                    fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
                     color: 0x8B4513,
@@ -530,6 +642,10 @@
         let pitch = 0;
         const PI_2 = Math.PI / 2;
 
+        // Настройки
+        let fogEnabled = true;
+        let mouseSensitivity = 0.002;
+
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
 
@@ -712,8 +828,8 @@
             // Мышь для десктопа
             document.addEventListener('mousemove', (event) => {
                 if (document.pointerLockElement === renderer.domElement) {
-                    yaw -= event.movementX * 0.002;
-                    pitch -= event.movementY * 0.002;
+                    yaw -= event.movementX * mouseSensitivity;
+                    pitch -= event.movementY * mouseSensitivity;
                     pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
                 }
             });
@@ -805,21 +921,42 @@
             animate();
         }
 
-        // Инициализация кнопки "Играть"
+        // Функции для меню
+        function showOptions() {
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('optionsMenu').style.display = 'flex';
+        }
+
+        function hideOptions() {
+            document.getElementById('optionsMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+        }
+
+        // Инициализация меню
         document.getElementById('playButton').addEventListener('click', startGame);
+        document.getElementById('optionsButton').addEventListener('click', showOptions);
+        document.getElementById('backButton').addEventListener('click', hideOptions);
+
+        // Настройки
+        document.getElementById('fogToggle').addEventListener('change', function(e) {
+            fogEnabled = e.target.checked;
+            scene.fog = fogEnabled ? new THREE.Fog(0x87CEEB, 20, 50) : null;
+        });
+
+        document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
+            mouseSensitivity = e.target.value * 0.0004;
+        });
 
         // Запуск игры
         loadTextures().then(() => {
             const materials = createMaterials();
             createScene(materials);
             initControls();
-            // Анимация не запускается сразу, ждем нажатия кнопки "Играть"
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
             initControls();
-            // Анимация не запускается сразу, ждем нажатия кнопки "Играть"
         });
     </script>
 </body>
