@@ -310,7 +310,7 @@
         const scene = new THREE.Scene();
         
         // ТУМАН - добавляем в сцену
-        scene.fog = new THREE.Fog(0x222233, 15, 40);
+        scene.fog = new THREE.Fog(0x556677, 15, 40);
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -320,7 +320,7 @@
             powerPreference: "high-performance"
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x222233);
+        renderer.setClearColor(0x556677);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
@@ -364,7 +364,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - ОПТИМАЛЬНЫЕ НАСТРОЙКИ
+                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ В 2 РАЗА ДЛЯ ПОЛА И ПОТОЛКА
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(1, 1);
@@ -373,13 +373,13 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(12, 12);
+                    floorTexture.repeat.set(6, 6); // УМЕНЬШИЛ В 2 РАЗА (было 12)
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(10, 10);
+                    roofTexture.repeat.set(5, 5); // УМЕНЬШИЛ В 2 РАЗА (было 10)
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -534,15 +534,15 @@
         const mazeGen = new MazeGenerator(25, 25);
         const maze = mazeGen.getMaze();
 
-        // Освещение - ТЕМНЕЕ И АТМОСФЕРНЕЕ
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        // Освещение - СДЕЛАЛ СВЕТЛЕЕ
+        const ambientLight = new THREE.AmbientLight(0x606060, 0.8);
         scene.add(ambientLight);
         
-        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.4);
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
         directionalLight1.position.set(50, 100, 50);
         scene.add(directionalLight1);
         
-        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
         directionalLight2.position.set(-50, 80, -50);
         scene.add(directionalLight2);
 
@@ -989,7 +989,7 @@
         // Настройки
         document.getElementById('fogToggle').addEventListener('change', function(e) {
             fogEnabled = e.target.checked;
-            scene.fog = fogEnabled ? new THREE.Fog(0x222233, 15, 40) : null;
+            scene.fog = fogEnabled ? new THREE.Fog(0x556677, 15, 40) : null;
         });
 
         document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
