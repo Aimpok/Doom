@@ -40,14 +40,13 @@
         }
         
         .logo {
-            width: 85vmin; /* ЕЩЕ БОЛЬШЕ ЛОГО */
+            width: 55vmin;
             max-width: 800px;
-            margin-bottom: 1vmin; /* В 2 РАЗА МЕНЬШЕ РАССТОЯНИЕ */
+            position: absolute;
+            top: 30%;
+            transform: translateY(-50%);
             object-fit: contain;
             -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
             user-drag: none;
             pointer-events: none;
             -webkit-touch-callout: none;
@@ -57,21 +56,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.25vmin; /* В 2 РАЗА МЕНЬШЕ РАССТОЯНИЕ МЕЖДУ КНОПКАМИ */
-            margin-top: 1vmin; /* В 2 РАЗА МЕНЬШЕ */
+            gap: 2.4vmin;
+            position: absolute;
+            top: 70%;
+            transform: translateY(-50%);
         }
         
         .menu-button {
-            width: 65vmin; /* Увеличил кнопки */
-            max-width: 650px;
-            min-width: 300px;
+            width: 60vmin;
+            max-width: 600px;
+            min-width: 250px;
             cursor: pointer;
             transition: all 0.3s ease;
             object-fit: contain;
             -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
             user-drag: none;
             pointer-events: auto;
             -webkit-touch-callout: none;
@@ -88,18 +86,20 @@
         
         .company-name {
             position: absolute;
-            bottom: 2vmin;
-            width: 20vmin; /* В 2 РАЗА МЕНЬШЕ */
-            max-width: 200px;
+            bottom: 0vmin;
+            width: 28vmin;
+            max-width: 300px;
             object-fit: contain;
             -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
             user-drag: none;
             pointer-events: none;
             opacity: 0.8;
             -webkit-touch-callout: none;
+        }
+
+        /* Панель настроек меню - СКРЫТА */
+        .menu-settings {
+            display: none;
         }
 
         /* Запрет выделения и контекстного меню для ВСЕХ элементов */
@@ -215,13 +215,9 @@
         /* Запрет перетаскивания для всех изображений */
         img {
             -webkit-user-drag: none;
-            -khtml-user-drag: none;
-            -moz-user-drag: none;
-            -o-user-drag: none;
             user-drag: none;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -khtml-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
@@ -231,103 +227,6 @@
         /* Разрешаем pointer-events только для кликабельных кнопок */
         .menu-button {
             pointer-events: auto;
-        }
-
-        /* Специфичные настройки для разных соотношений сторон */
-        
-        /* Высокие экраны (мобильные в портретной ориентации) */
-        @media (max-aspect-ratio: 9/16) {
-            .logo {
-                width: 90vmin;
-                margin-bottom: 0.5vmin;
-            }
-            .menu-buttons {
-                margin-top: 0.5vmin;
-                gap: 0.15vmin;
-            }
-            .menu-button {
-                width: 75vmin;
-            }
-            .company-name {
-                width: 25vmin;
-                bottom: 1vmin;
-            }
-        }
-        
-        /* Квадратные экраны */
-        @media (min-aspect-ratio: 9/16) and (max-aspect-ratio: 16/9) {
-            .logo {
-                width: 80vmin;
-                margin-bottom: 0.75vmin;
-            }
-            .menu-buttons {
-                margin-top: 0.75vmin;
-                gap: 0.2vmin;
-            }
-            .menu-button {
-                width: 70vmin;
-            }
-            .company-name {
-                width: 22vmin;
-            }
-        }
-        
-        /* Широкие экраны (десктоп, планшеты в альбомной) */
-        @media (min-aspect-ratio: 16/9) {
-            .logo {
-                width: 75vmin;
-                margin-bottom: 1vmin;
-            }
-            .menu-buttons {
-                margin-top: 1vmin;
-                gap: 0.25vmin;
-            }
-            .menu-button {
-                width: 65vmin;
-            }
-            .company-name {
-                width: 20vmin;
-            }
-        }
-        
-        /* Очень широкие экраны */
-        @media (min-aspect-ratio: 21/9) {
-            .logo {
-                width: 70vmin;
-            }
-            .menu-button {
-                width: 60vmin;
-            }
-            .company-name {
-                width: 18vmin;
-            }
-        }
-        
-        /* Маленькие экраны по высоте */
-        @media (max-height: 500px) {
-            .logo {
-                width: 60vmin;
-                margin-bottom: 0.5vmin;
-            }
-            .menu-buttons {
-                margin-top: 0.5vmin;
-                gap: 0.1vmin;
-            }
-            .menu-button {
-                width: 50vmin;
-            }
-            .company-name {
-                width: 15vmin;
-                bottom: 0.75vmin;
-            }
-            .options-title {
-                font-size: 4vmin;
-                margin-bottom: 3vmin;
-            }
-            .option-item {
-                font-size: 2.5vmin;
-                margin: 1.5vmin 0;
-            }
         }
     </style>
 </head>
@@ -341,6 +240,11 @@
             <img src="OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
         <img src="companyname.png" alt="Company Name" class="company-name">
+    </div>
+    
+    <!-- Панель настроек меню - СКРЫТА -->
+    <div class="menu-settings">
+        <!-- Скрыто -->
     </div>
     
     <!-- Меню настроек -->
@@ -400,10 +304,6 @@
 
         // Запрет долгого нажатия на мобильных
         document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
-
-        document.addEventListener('touchend', function(e) {
             e.preventDefault();
         }, { passive: false });
 
