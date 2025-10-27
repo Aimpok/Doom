@@ -212,6 +212,39 @@
             pointer-events: auto;
         }
 
+        /* Кнопка стрельбы */
+        #shootButton {
+            position: absolute;
+            bottom: 8vmin;
+            right: 8vmin;
+            width: 15vmin;
+            height: 15vmin;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 3vmin;
+            z-index: 60;
+        }
+
+        /* Оружие */
+        #weapon {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40vmin;
+            max-width: 400px;
+            height: auto;
+            pointer-events: none;
+            z-index: 40;
+            transition: transform 0.1s ease;
+        }
+
         /* Запрет перетаскивания для всех изображений */
         img {
             -webkit-user-drag: none;
@@ -282,11 +315,22 @@
         
         <!-- Правая половина экрана для поворота камеры -->
         <div id="cameraTouchArea"></div>
+        
+        <!-- Кнопка стрельбы -->
+        <div id="shootButton">FIRE</div>
     </div>
+    
+    <!-- Оружие -->
+    <img id="weapon" src="Gun.png" alt="Weapon">
     
     <!-- Аудио для меню -->
     <audio id="menuMusic" loop>
         <source src="MrnuMusic.mp3" type="audio/mpeg">
+    </audio>
+    
+    <!-- Звук выстрела -->
+    <audio id="shootSound">
+        <source src="shoot.mp3" type="audio/mpeg">
     </audio>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -660,6 +704,83 @@
         const menuMusic = document.getElementById('menuMusic');
         let musicVolume = 0.5;
 
+        // Оружие
+        const weapon = document.getElementById('weapon');
+        const shootSound = document.getElementById('shootSound');
+        let isShooting = false;
+        let isReloading = false;
+        let canShoot = true;
+        let ammo = 30;
+        let maxAmmo = 30;
+
+        // Анимация оружия
+        function playShootAnimation() {
+            if (!canShoot || isReloading) return;
+            
+            isShooting = true;
+            canShoot = false;
+            ammo--;
+            
+            // Звук выстрела
+            shootSound.currentTime = 0;
+            shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
+            
+            // Анимация отдачи
+            weapon.style.transform = 'translateX(-50%) translateY(10px) scale(1.1)';
+            
+            // Смена текстуры на выстрел 1
+            setTimeout(() => {
+                weapon.src = 'GunSh1.png';
+            }, 50);
+            
+            // Смена текстуры на выстрел 2
+            setTimeout(() => {
+                weapon.src = 'GunSh2.png';
+            }, 100);
+            
+            // Возврат к нормальной текстуре
+            setTimeout(() => {
+                weapon.src = 'Gun.png';
+                weapon.style.transform = 'translateX(-50%)';
+                isShooting = false;
+                
+                // Автоперезарядка если патроны кончились
+                if (ammo <= 0) {
+                    playReloadAnimation();
+                } else {
+                    // Задержка между выстрелами
+                    setTimeout(() => {
+                        canShoot = true;
+                    }, 200);
+                }
+            }, 200);
+        }
+
+        function playReloadAnimation() {
+            if (isReloading || ammo >= maxAmmo) return;
+            
+            isReloading = true;
+            canShoot = false;
+            
+            // Анимация перезарядки 1
+            setTimeout(() => {
+                weapon.src = 'GunKD1.png';
+            }, 100);
+            
+            // Анимация перезарядки 2
+            setTimeout(() => {
+                weapon.src = 'GunKD2.png';
+            }, 300);
+            
+            // Возврат к нормальной текстуре и пополнение патронов
+            setTimeout(() => {
+                weapon.src = 'Gun.png';
+                ammo = maxAmmo;
+                isReloading = false;
+                canShoot = true;
+            }, 600);
+        }
+
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
 
@@ -716,11 +837,13 @@
             });
         }
 
-        // Инициализация поворота камеры
+        // Инициализация поворота камеры и стрельбы
         function initCameraControls() {
             const cameraArea = document.getElementById('cameraTouchArea');
+            const shootButton = document.getElementById('shootButton');
             let lastCameraX = 0;
             let lastCameraY = 0;
+            let isRotating = false;
 
             cameraArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -731,6 +854,25 @@
                     lastX: touch.clientX,
                     lastY: touch.clientY
                 });
+                isRotating = true;
+            });
+
+            // Кнопка стрельбы
+            shootButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                playShootAnimation();
+            });
+
+            shootButton.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                // При долгом зажатии - автоматическая стрельба
+                if (!isShooting && !isReloading && canShoot) {
+                    playShootAnimation();
+                }
+            });
+
+            shootButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
             });
         }
 
@@ -811,6 +953,44 @@
                 const joystickStick = document.getElementById('joystickStick');
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
+            });
+
+            // Управление стрельбой для ПК
+            document.addEventListener('mousedown', (e) => {
+                if (e.button === 2) { // Правая кнопка мыши
+                    e.preventDefault();
+                    playShootAnimation();
+                }
+            });
+
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                return false;
+            });
+
+            // Автоматическая стрельба при зажатии ПКМ
+            let mouseShootInterval;
+            document.addEventListener('mousedown', (e) => {
+                if (e.button === 2) {
+                    mouseShootInterval = setInterval(() => {
+                        if (canShoot && !isShooting && !isReloading) {
+                            playShootAnimation();
+                        }
+                    }, 200);
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (e.button === 2) {
+                    clearInterval(mouseShootInterval);
+                }
+            });
+
+            // Перезарядка по кнопке R
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyR') {
+                    playReloadAnimation();
+                }
             });
         }
 
@@ -934,6 +1114,9 @@
                 document.getElementById('mobileControls').style.display = 'block';
             }
             
+            // Показываем оружие
+            weapon.style.display = 'block';
+            
             // Запускаем анимацию
             animate();
         }
@@ -991,6 +1174,7 @@
         document.getElementById('volumeSlider').addEventListener('input', function(e) {
             musicVolume = e.target.value / 100;
             menuMusic.volume = musicVolume;
+            shootSound.volume = musicVolume;
         });
 
         // Запуск игры
@@ -999,6 +1183,9 @@
             createScene(materials);
             initControls();
             initMenu(); // Инициализируем меню с обработчиками
+            
+            // Скрываем оружие в меню
+            weapon.style.display = 'none';
             
             // Запускаем музыку меню после загрузки
             menuMusic.volume = musicVolume;
@@ -1011,6 +1198,9 @@
             createScene(materials);
             initControls();
             initMenu();
+            
+            // Скрываем оружие в меню
+            weapon.style.display = 'none';
             
             // Все равно пытаемся запустить музыку
             menuMusic.volume = musicVolume;
