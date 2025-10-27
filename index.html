@@ -283,11 +283,10 @@
         <!-- Правая половина экрана для поворота камеры -->
         <div id="cameraTouchArea"></div>
     </div>
-
+    
     <!-- Аудио для меню -->
     <audio id="menuMusic" loop>
         <source src="MrnuMusic.mp3" type="audio/mpeg">
-        Ваш браузер не поддерживает аудио элемент.
     </audio>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -307,31 +306,6 @@
             e.preventDefault();
             return false;
         });
-
-        // Аудио элементы
-        const menuMusic = document.getElementById('menuMusic');
-        let isMusicPlaying = false;
-
-        // Функция для управления музыкой
-        function playMenuMusic() {
-            if (!isMusicPlaying) {
-                menuMusic.volume = document.getElementById('volumeSlider').value / 100;
-                menuMusic.play().catch(e => {
-                    console.log('Автовоспроизведение заблокировано, требуется взаимодействие пользователя');
-                });
-                isMusicPlaying = true;
-            }
-        }
-
-        function stopMenuMusic() {
-            menuMusic.pause();
-            menuMusic.currentTime = 0;
-            isMusicPlaying = false;
-        }
-
-        function setMusicVolume(volume) {
-            menuMusic.volume = volume;
-        }
 
         // Базовые настройки
         const scene = new THREE.Scene();
@@ -394,19 +368,19 @@
                 // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-                    wallTexture.repeat.set(1, 1); // Нормальное качество для стен
+                    wallTexture.repeat.set(1, 1); // Нормальное повторение для стен
                     wallTexture.minFilter = THREE.LinearFilter;
                     wallTexture.magFilter = THREE.LinearFilter;
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(20, 20); // Сжатая текстура пола
+                    floorTexture.repeat.set(8, 8); // Увеличено повторение для пола
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(20, 20); // Сжатая текстура потолка
+                    roofTexture.repeat.set(8, 8); // Увеличено повторение для потолка
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -682,6 +656,10 @@
         let fogEnabled = true;
         let mouseSensitivity = 0.002;
 
+        // Музыка меню
+        const menuMusic = document.getElementById('menuMusic');
+        let musicVolume = 0.5;
+
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
 
@@ -949,7 +927,7 @@
             document.getElementById('startMenu').style.display = 'none';
             
             // Останавливаем музыку меню
-            stopMenuMusic();
+            menuMusic.pause();
             
             // Показываем мобильное управление на мобильных устройствах
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
@@ -971,54 +949,32 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню - УЛУЧШЕННЫЕ ТАЧ-ОБРАБОТЧИКИ
+        // Инициализация меню - ДОБАВЛЕНЫ ТАЧ-ОБРАБОТЧИКИ
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Улучшенные обработчики для мобильных устройств
-            function addMobileHandler(element, handler) {
-                // Клик для ПК
-                element.addEventListener('click', handler);
-                
-                // Тач для мобилок - с улучшенной обработкой
-                element.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    // Добавляем визуальную обратную связь
-                    this.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        this.style.transform = '';
-                    }, 150);
-                    handler();
-                }, { passive: false });
-                
-                // Запрещаем все остальные события
-                element.addEventListener('touchmove', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, { passive: false });
-                
-                element.addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }, { passive: false });
-            }
+            // Клик для ПК
+            playButton.addEventListener('click', startGame);
+            optionsButton.addEventListener('click', showOptions);
+            backButton.addEventListener('click', hideOptions);
             
-            addMobileHandler(playButton, startGame);
-            addMobileHandler(optionsButton, showOptions);
-            addMobileHandler(backButton, hideOptions);
+            // Тач для мобилок - ИСПРАВЛЕНО
+            playButton.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                startGame();
+            }, { passive: false });
             
-            // Запускаем музыку при первом взаимодействии
-            function startMusicOnInteraction() {
-                playMenuMusic();
-                document.removeEventListener('click', startMusicOnInteraction);
-                document.removeEventListener('touchstart', startMusicOnInteraction);
-            }
+            optionsButton.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                showOptions();
+            }, { passive: false });
             
-            document.addEventListener('click', startMusicOnInteraction);
-            document.addEventListener('touchstart', startMusicOnInteraction);
+            backButton.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                hideOptions();
+            }, { passive: false });
         }
 
         // Настройки
@@ -1027,13 +983,14 @@
             scene.fog = fogEnabled ? new THREE.Fog(0x87CEEB, 20, 50) : null;
         });
 
-        document.getElementById('volumeSlider').addEventListener('input', function(e) {
-            const volume = e.target.value / 100;
-            setMusicVolume(volume);
-        });
-
         document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
             mouseSensitivity = e.target.value * 0.0004;
+        });
+
+        // Настройка громкости
+        document.getElementById('volumeSlider').addEventListener('input', function(e) {
+            musicVolume = e.target.value / 100;
+            menuMusic.volume = musicVolume;
         });
 
         // Запуск игры
@@ -1042,12 +999,43 @@
             createScene(materials);
             initControls();
             initMenu(); // Инициализируем меню с обработчиками
+            
+            // Запускаем музыку меню после загрузки
+            menuMusic.volume = musicVolume;
+            menuMusic.play().catch(e => {
+                console.log('Автовоспроизведение музыки заблокировано. Пользователь должен начать взаимодействие.');
+            });
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
             initControls();
             initMenu();
+            
+            // Все равно пытаемся запустить музыку
+            menuMusic.volume = musicVolume;
+            menuMusic.play().catch(e => {
+                console.log('Автовоспроизведение музыки заблокировано.');
+            });
+        });
+
+        // Обработчик для запуска музыки при первом клике пользователя
+        document.addEventListener('click', function initAudio() {
+            if (menuMusic.paused) {
+                menuMusic.play().catch(e => {
+                    console.log('Не удалось запустить музыку');
+                });
+            }
+            document.removeEventListener('click', initAudio);
+        });
+
+        document.addEventListener('touchstart', function initAudioTouch() {
+            if (menuMusic.paused) {
+                menuMusic.play().catch(e => {
+                    console.log('Не удалось запустить музыку');
+                });
+            }
+            document.removeEventListener('touchstart', initAudioTouch);
         });
     </script>
 </body>
