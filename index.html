@@ -1,210 +1,49 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>3D Лабиринт</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            color: white;
+        body { 
+            margin: 0; 
+            padding: 0; 
             overflow: hidden;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: Arial, sans-serif;
+            touch-action: none;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
-            -webkit-user-drag: none;
+            background: #000;
         }
-
-        #menu {
-            text-align: center;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 50px 40px;
-            border-radius: 25px;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
-            border: 2px solid #00ffff;
-            max-width: 600px;
-            width: 95%;
-            position: relative;
+        canvas { 
+            display: block; 
+            touch-action: none;
         }
-
-        h1 {
-            font-size: 4em;
-            margin-bottom: 30px;
-            color: #00ffff;
-            text-shadow: 0 0 15px #00ffff;
-            background: linear-gradient(45deg, #00ffff, #0080ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
-        .subtitle {
-            font-size: 1.4em;
-            margin-bottom: 50px;
-            color: #cccccc;
-            font-weight: 300;
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 25px;
-            margin: 8px 0;
-            font-size: 1.6em;
-            background: linear-gradient(45deg, #00ffff, #0080ff);
-            border: none;
-            border-radius: 15px;
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            font-weight: bold;
-            letter-spacing: 1px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0, 255, 255, 0.4);
-            background: linear-gradient(45deg, #00e6e6, #0066cc);
-        }
-
-        .btn:active {
-            transform: translateY(-2px);
-        }
-
-        .btn::after {
-            content: '';
+        
+        /* Стартовое меню в стиле DOOM */
+        #startMenu {
             position: absolute;
             top: 0;
-            left: -100%;
+            left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .btn:hover::after {
-            left: 100%;
-        }
-
-        .controls-info {
-            margin-top: 30px;
-            padding: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            font-size: 1em;
-        }
-
-        .controls-info h3 {
-            color: #00ffff;
-            margin-bottom: 15px;
-            font-size: 1.4em;
-        }
-
-        .platform {
+            background: #000;
             display: flex;
-            justify-content: space-around;
-            margin-top: 15px;
-            gap: 20px;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            background-image: url('MenuBg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
-
-        .platform div {
-            text-align: center;
-            flex: 1;
-        }
-
-        .platform h4 {
-            color: #00ffff;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        /* Анимация фона */
-        #background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: radial-gradient(circle at center, #16213e 0%, #0f172a 100%);
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
-        }
-
-        .stars {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
-        }
-
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 3s infinite;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
-        }
-
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.2; }
-            50% { opacity: 1; }
-        }
-
-        /* Кнопка компании внизу */
-        .company-footer {
-            position: fixed;
-            bottom: 20px;
-            left: 0;
-            width: 100%;
-            text-align: center;
-            z-index: 101;
-            pointer-events: none;
-        }
-
-        .company-logo {
-            font-size: 1.1em;
-            color: rgba(255, 255, 255, 0.7);
-            background: rgba(0, 0, 0, 0.5);
-            padding: 12px 25px;
-            border-radius: 10px;
-            display: inline-block;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-        }
-
-        /* Защита от выделения и перетаскивания */
-        .protected-image {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        
+        .logo {
+            width: 70vmin; /* Увеличил лого */
+            max-width: 700px;
+            margin-bottom: 2vmin;
+            object-fit: contain;
             -webkit-user-drag: none;
             -khtml-user-drag: none;
             -moz-user-drag: none;
@@ -212,38 +51,101 @@
             user-drag: none;
             pointer-events: none;
         }
-
-        /* Стили для игры */
-        #gameContainer {
-            position: fixed;
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5vmin; /* Еще меньше расстояние */
+            margin-top: 3vmin;
+        }
+        
+        .menu-button {
+            width: 60vmin; /* Увеличил кнопки */
+            max-width: 600px;
+            min-width: 250px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            pointer-events: auto;
+        }
+        
+        .menu-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .menu-button:active {
+            transform: scale(1.02);
+        }
+        
+        .company-name {
+            position: absolute;
+            bottom: 3vmin;
+            width: 40vmin;
+            max-width: 400px;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        
+        /* Экран настроек */
+        #optionsMenu {
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #87CEEB;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+            color: #fff;
         }
-        #backButton {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            padding: 15px 25px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: 2px solid #00ffff;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 1.1em;
+        
+        .options-title {
+            font-size: 5vmin;
+            color: #ff0000;
+            margin-bottom: 5vmin;
+            text-shadow: 0 0 10px #ff0000;
             font-weight: bold;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
         }
-        #backButton:hover {
-            background: rgba(0, 255, 255, 0.3);
+        
+        .option-item {
+            margin: 2vmin 0;
+            font-size: 3vmin;
+            color: #fff;
         }
-
+        
+        .back-button {
+            margin-top: 5vmin;
+            padding: 1.5vmin 4vmin;
+            background: #ff0000;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-size: 2.5vmin;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .back-button:hover {
+            background: #ff3333;
+            transform: scale(1.05);
+        }
+        
         /* Мобильное управление */
         #mobileControls {
             position: absolute;
@@ -253,45 +155,40 @@
             height: 100%;
             pointer-events: none;
             z-index: 50;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
+            display: none;
         }
         
+        /* Джойстик для движения */
         #movementJoystick {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 120px;
-            height: 120px;
+            bottom: 5vmin;
+            left: 5vmin;
+            width: 20vmin;
+            height: 20vmin;
             pointer-events: auto;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
         }
         
         .joystick-base {
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 0, 0, 0.3);
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.5);
             position: absolute;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
         }
         
         .joystick-stick {
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.7);
+            width: 10vmin;
+            height: 10vmin;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 30px;
-            left: 30px;
+            top: 5vmin;
+            left: 5vmin;
             transition: transform 0.1s;
-            -webkit-user-select: none;
-            -webkit-user-drag: none;
         }
         
+        /* Правая половина экрана для поворота камеры */
         #cameraTouchArea {
             position: absolute;
             top: 0;
@@ -299,409 +196,462 @@
             width: 50%;
             height: 100%;
             pointer-events: auto;
-            -webkit-user-select: none;
+        }
+
+        /* Запрет перетаскивания для всех изображений */
+        img {
             -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
+
+        /* Специфичные настройки для разных соотношений сторон */
         
-        @media (max-width: 768px) {
-            #menu {
-                padding: 40px 30px;
-                max-width: 500px;
+        /* Высокие экраны (мобильные в портретной ориентации) */
+        @media (max-aspect-ratio: 9/16) {
+            .logo {
+                width: 80vmin;
+                margin-bottom: 1vmin;
             }
-            
-            h1 {
-                font-size: 3em;
-                margin-bottom: 25px;
+            .menu-buttons {
+                margin-top: 2vmin;
+                gap: 0.3vmin;
             }
-            
-            .subtitle {
-                font-size: 1.2em;
-                margin-bottom: 40px;
+            .menu-button {
+                width: 70vmin;
             }
-            
-            .btn {
-                padding: 22px;
-                font-size: 1.4em;
-                margin: 6px 0;
-            }
-            
-            #movementJoystick {
-                width: 100px;
-                height: 100px;
-                bottom: 20px;
-                left: 20px;
-            }
-            .joystick-stick {
-                width: 50px;
-                height: 50px;
-                top: 25px;
-                left: 25px;
+            .company-name {
+                width: 50vmin;
+                bottom: 2vmin;
             }
         }
         
-        @media (max-width: 480px) {
-            #menu {
-                padding: 30px 20px;
+        /* Квадратные экраны */
+        @media (min-aspect-ratio: 9/16) and (max-aspect-ratio: 16/9) {
+            .logo {
+                width: 65vmin;
+                margin-bottom: 1.5vmin;
             }
-            
-            h1 {
-                font-size: 2.5em;
-                margin-bottom: 20px;
+            .menu-buttons {
+                margin-top: 2.5vmin;
+                gap: 0.4vmin;
             }
-            
-            .subtitle {
-                font-size: 1.1em;
-                margin-bottom: 30px;
+            .menu-button {
+                width: 55vmin;
             }
-            
-            .btn {
-                padding: 20px;
-                font-size: 1.3em;
-                margin: 5px 0;
+            .company-name {
+                width: 45vmin;
             }
-            
-            .platform {
-                flex-direction: column;
-                gap: 15px;
+        }
+        
+        /* Широкие экраны (десктоп, планшеты в альбомной) */
+        @media (min-aspect-ratio: 16/9) {
+            .logo {
+                width: 60vmin;
+                margin-bottom: 2vmin;
             }
-            
-            #movementJoystick {
-                width: 80px;
-                height: 80px;
+            .menu-buttons {
+                margin-top: 3vmin;
+                gap: 0.5vmin;
             }
-            .joystick-stick {
-                width: 40px;
-                height: 40px;
-                top: 20px;
-                left: 20px;
+            .menu-button {
+                width: 50vmin;
             }
-            
-            .company-logo {
-                font-size: 1em;
-                padding: 10px 20px;
+            .company-name {
+                width: 40vmin;
+            }
+        }
+        
+        /* Очень широкие экраны */
+        @media (min-aspect-ratio: 21/9) {
+            .logo {
+                width: 55vmin;
+            }
+            .menu-button {
+                width: 45vmin;
+            }
+            .company-name {
+                width: 35vmin;
+            }
+        }
+        
+        /* Маленькие экраны по высоте */
+        @media (max-height: 500px) {
+            .logo {
+                width: 45vmin;
+                margin-bottom: 1vmin;
+            }
+            .menu-buttons {
+                margin-top: 1.5vmin;
+                gap: 0.2vmin;
+            }
+            .menu-button {
+                width: 35vmin;
+            }
+            .company-name {
+                width: 30vmin;
+                bottom: 1.5vmin;
+            }
+            .options-title {
+                font-size: 4vmin;
+                margin-bottom: 3vmin;
+            }
+            .option-item {
+                font-size: 2.5vmin;
+                margin: 1.5vmin 0;
+            }
+        }
+        
+        /* Очень маленькие экраны */
+        @media (max-width: 320px) and (max-height: 480px) {
+            .logo {
+                width: 85vmin;
+            }
+            .menu-button {
+                width: 65vmin;
+            }
+            .menu-buttons {
+                gap: 0.1vmin;
+            }
+            .company-name {
+                width: 55vmin;
             }
         }
     </style>
 </head>
 <body>
-    <div id="background">
-        <div class="stars" id="stars"></div>
+    
+    <!-- Стартовое меню -->
+    <div id="startMenu">
+        <img src="Logo.png" alt="DOOM" class="logo">
+        <div class="menu-buttons">
+            <img src="PlayText.png" alt="Играть" class="menu-button" id="playButton">
+            <img src="OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
+        </div>
+        <img src="companyname.png" alt="Company Name" class="company-name">
     </div>
-
-    <div id="menu">
-        <h1>🎮 3D ЛАБИРИНТ</h1>
-        <p class="subtitle">Затеряйся в бесконечных коридорах</p>
+    
+    <!-- Меню настроек -->
+    <div id="optionsMenu">
+        <div class="options-title">НАСТРОЙКИ</div>
         
-        <button class="btn" onclick="startGame()">
-            🎯 ИГРАТЬ (От первого лица)
-        </button>
+        <div class="option-item">
+            <label>
+                <input type="checkbox" id="fogToggle" checked> Туман
+            </label>
+        </div>
         
-        <button class="btn" onclick="showControls()">
-            🎮 УПРАВЛЕНИЕ
-        </button>
-
-        <div class="controls-info hidden" id="controlsInfo">
-            <h3>УПРАВЛЕНИЕ</h3>
-            <div class="platform">
-                <div>
-                    <h4>🖥️ КОМПЬЮТЕР</h4>
-                    <p>WASD - Движение</p>
-                    <p>Мышь - Поворот камеры</p>
-                    <p>Клик - Начать управление</p>
-                </div>
-                <div>
-                    <h4>📱 МОБИЛЬНЫЕ</h4>
-                    <p>Джойстик - Движение</p>
-                    <p>Правая часть экрана - Поворот</p>
-                </div>
-            </div>
-            <button class="btn" onclick="hideControls()" style="margin-top: 15px;">
-                НАЗАД
-            </button>
+        <div class="option-item">
+            <label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50"> Громкость
+            </label>
         </div>
-    </div>
-
-    <!-- Кнопка компании внизу -->
-    <div class="company-footer">
-        <div class="company-logo protected-image">
-            companyname.png
+        
+        <div class="option-item">
+            <label>
+                Чувствительность: 
+                <input type="range" id="sensitivitySlider" min="1" max="10" value="5">
+            </label>
         </div>
+        
+        <button class="back-button" id="backButton">НАЗАД</button>
     </div>
-
-    <div id="gameContainer" class="hidden">
-        <button id="backButton" onclick="backToMenu()">← МЕНЮ</button>
-        <canvas id="gameCanvas"></canvas>
-        <div id="mobileControls">
-            <div id="movementJoystick">
-                <div class="joystick-base"></div>
-                <div class="joystick-stick" id="joystickStick"></div>
-            </div>
-            <div id="cameraTouchArea"></div>
+    
+    <!-- Мобильное управление -->
+    <div id="mobileControls">
+        <div id="movementJoystick">
+            <div class="joystick-base"></div>
+            <div class="joystick-stick" id="joystickStick"></div>
         </div>
+        
+        <!-- Правая половина экрана для поворота камеры -->
+        <div id="cameraTouchArea"></div>
     </div>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Защита от контекстного меню и перетаскивания
+        // Запрет контекстного меню и перетаскивания
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
         });
-
+        
         document.addEventListener('dragstart', function(e) {
             e.preventDefault();
             return false;
         });
 
-        document.addEventListener('selectstart', function(e) {
-            e.preventDefault();
-            return false;
+        // Базовые настройки
+        const scene = new THREE.Scene();
+        
+        // ТУМАН - добавляем в сцену
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+        
+        // Камера с МЕНЬШЕЙ дальностью прорисовки
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance"
         });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x87CEEB);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
 
-        // МЕНЮ ФУНКЦИИ
-        function createStars() {
-            const stars = document.getElementById('stars');
-            for (let i = 0; i < 100; i++) {
-                const star = document.createElement('div');
-                star.className = 'star protected-image';
-                star.style.width = Math.random() * 3 + 'px';
-                star.style.height = star.style.width;
-                star.style.left = Math.random() * 100 + '%';
-                star.style.top = Math.random() * 100 + '%';
-                star.style.animationDelay = Math.random() * 3 + 's';
-                stars.appendChild(star);
-            }
-        }
-
-        function startGame() {
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('gameContainer').classList.remove('hidden');
-            document.querySelector('.company-footer').style.display = 'none';
-            initializeGame();
-        }
-
-        function showControls() {
-            document.getElementById('controlsInfo').classList.remove('hidden');
-        }
-
-        function hideControls() {
-            document.getElementById('controlsInfo').classList.add('hidden');
-        }
-
-        function backToMenu() {
-            document.getElementById('menu').classList.remove('hidden');
-            document.getElementById('gameContainer').classList.add('hidden');
-            document.querySelector('.company-footer').style.display = 'block';
-            location.reload();
-        }
-
-        createStars();
-
-        // ПЕРЕМЕННЫЕ ИГРЫ
-        let scene, camera, renderer;
-        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-        let yaw = 0, pitch = 0;
-        const PI_2 = Math.PI / 2;
-        let activeTouches = new Map();
+        // Параметры лабиринта
         const CELL_SIZE = 8;
         const WALL_HEIGHT = 8;
         const WALL_THICKNESS = 0.3;
-        let maze = [];
 
-        // ОСНОВНАЯ ФУНКЦИЯ ИГРЫ
-        function initializeGame() {
-            // Базовые настройки
-            scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
-            
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
-            
-            renderer = new THREE.WebGLRenderer({ 
-                antialias: true,
-                canvas: document.getElementById('gameCanvas'),
-                powerPreference: "high-performance"
+        // Текстуры
+        const textureLoader = new THREE.TextureLoader();
+        let wallTexture, floorTexture, roofTexture;
+
+        // Загрузка текстур
+        function loadTextures() {
+            return new Promise((resolve) => {
+                let texturesLoaded = 0;
+                const totalTextures = 3;
+
+                function onTextureLoad() {
+                    texturesLoaded++;
+                    if (texturesLoaded === totalTextures) {
+                        resolve();
+                    }
+                }
+
+                wallTexture = textureLoader.load('WallTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры стен:', error);
+                    wallTexture = null;
+                    onTextureLoad();
+                });
+
+                floorTexture = textureLoader.load('FloorTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры пола:', error);
+                    floorTexture = null;
+                    onTextureLoad();
+                });
+
+                roofTexture = textureLoader.load('RoofTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры потолка:', error);
+                    roofTexture = null;
+                    onTextureLoad();
+                });
+
+                // НАСТРОЙКИ ТЕКСТУР
+                if (wallTexture) {
+                    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+                    wallTexture.repeat.set(0.2, 0.2);
+                }
+                if (floorTexture) {
+                    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+                    floorTexture.repeat.set(40, 40);
+                }
+                if (roofTexture) {
+                    roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
+                    roofTexture.repeat.set(20, 20);
+                }
             });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x87CEEB);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-            // Генерация лабиринта
-            generateMaze();
-            
-            // Освещение
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-            scene.add(ambientLight);
-            
-            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight1.position.set(50, 100, 50);
-            scene.add(directionalLight1);
-            
-            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-            directionalLight2.position.set(-50, 80, -50);
-            scene.add(directionalLight2);
-
-            // Создание сцены
-            createScene();
-
-            // Позиция игрока
-            const startPos = findRandomStartPosition();
-            camera.position.set(startPos.x, 1.7, startPos.z);
-            
-            // Инициализация управления
-            initControls();
-
-            // Запуск анимации
-            animate();
-
-            // Обработка изменения размера окна
-            window.addEventListener('resize', onWindowResize);
         }
 
-        function generateMaze() {
-            // Генератор лабиринта
-            class MazeGenerator {
-                constructor(width, height) {
-                    this.width = width;
-                    this.height = height;
-                    this.maze = this.generateMazeWithMultiplePaths();
-                }
+        // Создаем материалы с текстурами
+        function createMaterials() {
+            const wallMaterial = wallTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: wallTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    fog: true
+                });
+            
+            const floorMaterial = floorTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: floorTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x90EE90,
+                    fog: true
+                });
+            
+            const roofMaterial = roofTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: roofTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0xCCCCCC,
+                    fog: true
+                });
+            
+            return { wallMaterial, floorMaterial, roofMaterial };
+        }
 
-                generateMazeWithMultiplePaths() {
-                    let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
-                    const paths = [];
-                    const numPaths = 3;
-                    
-                    for (let i = 0; i < numPaths; i++) {
-                        let startX = 1 + Math.floor(Math.random() * (this.width - 3));
-                        let startY = 1 + Math.floor(Math.random() * (this.height - 3));
-                        paths.push(this.generatePath(maze, startX, startY));
-                    }
-                    
-                    this.connectPaths(maze, paths);
-                    this.addRandomPassages(maze);
-                    
-                    return maze;
-                }
+        // Генератор лабиринта
+        class MazeGenerator {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.maze = this.generateMazeWithMultiplePaths();
+            }
 
-                generatePath(maze, startX, startY) {
-                    let x = startX, y = startY;
-                    maze[y][x] = 0;
+            generateMazeWithMultiplePaths() {
+                let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
+                const paths = [];
+                const numPaths = 3;
+                
+                for (let i = 0; i < numPaths; i++) {
+                    let startX = 1 + Math.floor(Math.random() * (this.width - 3));
+                    let startY = 1 + Math.floor(Math.random() * (this.height - 3));
+                    paths.push(this.generatePath(maze, startX, startY));
+                }
+                
+                this.connectPaths(maze, paths);
+                this.addRandomPassages(maze);
+                
+                return maze;
+            }
+
+            generatePath(maze, startX, startY) {
+                let x = startX, y = startY;
+                maze[y][x] = 0;
+                
+                let path = [[x, y]];
+                let directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
+                let stack = [[x, y]];
+                
+                while (stack.length > 0) {
+                    let [cx, cy] = stack[stack.length - 1];
                     
-                    let path = [[x, y]];
-                    let directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
-                    let stack = [[x, y]];
+                    let possibleDirs = directions.filter(([dx, dy]) => {
+                        let nx = cx + dx, ny = cy + dy;
+                        return nx > 0 && nx < this.width - 1 && 
+                               ny > 0 && ny < this.height - 1 && 
+                               maze[ny][nx] === 1;
+                    });
                     
-                    while (stack.length > 0) {
-                        let [cx, cy] = stack[stack.length - 1];
+                    if (possibleDirs.length > 0) {
+                        let [dx, dy] = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                        let nx = cx + dx, ny = cy + dy;
                         
-                        let possibleDirs = directions.filter(([dx, dy]) => {
-                            let nx = cx + dx, ny = cy + dy;
-                            return nx > 0 && nx < this.width - 1 && 
-                                   ny > 0 && ny < this.height - 1 && 
-                                   maze[ny][nx] === 1;
-                        });
+                        maze[cy + dy/2][cx + dx/2] = 0;
+                        maze[ny][nx] = 0;
                         
-                        if (possibleDirs.length > 0) {
-                            let [dx, dy] = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
-                            let nx = cx + dx, ny = cy + dy;
-                            
-                            maze[cy + dy/2][cx + dx/2] = 0;
-                            maze[ny][nx] = 0;
-                            
-                            path.push([nx, ny]);
-                            stack.push([nx, ny]);
-                        } else {
-                            stack.pop();
-                        }
-                    }
-                    
-                    return path;
-                }
-
-                connectPaths(maze, paths) {
-                    for (let i = 0; i < paths.length - 1; i++) {
-                        const connectionPoints = 2;
-                        for (let j = 0; j < connectionPoints; j++) {
-                            const point1 = paths[i][Math.floor(Math.random() * paths[i].length)];
-                            const point2 = paths[i+1][Math.floor(Math.random() * paths[i+1].length)];
-                            this.createPassage(maze, point1, point2);
-                        }
+                        path.push([nx, ny]);
+                        stack.push([nx, ny]);
+                    } else {
+                        stack.pop();
                     }
                 }
+                
+                return path;
+            }
 
-                createPassage(maze, [x1, y1], [x2, y2]) {
-                    let x = x1, y = y1;
-                    while (x !== x2 || y !== y2) {
-                        if (Math.random() > 0.5 && x !== x2) {
-                            x += x < x2 ? 1 : -1;
-                        } else if (y !== y2) {
-                            y += y < y2 ? 1 : -1;
-                        }
-                        if (x > 0 && x < this.width - 1 && y > 0 && y < this.height - 1) {
+            connectPaths(maze, paths) {
+                for (let i = 0; i < paths.length - 1; i++) {
+                    const connectionPoints = 2;
+                    for (let j = 0; j < connectionPoints; j++) {
+                        const point1 = paths[i][Math.floor(Math.random() * paths[i].length)];
+                        const point2 = paths[i+1][Math.floor(Math.random() * paths[i+1].length)];
+                        this.createPassage(maze, point1, point2);
+                    }
+                }
+            }
+
+            createPassage(maze, [x1, y1], [x2, y2]) {
+                let x = x1, y = y1;
+                while (x !== x2 || y !== y2) {
+                    if (Math.random() > 0.5 && x !== x2) {
+                        x += x < x2 ? 1 : -1;
+                    } else if (y !== y2) {
+                        y += y < y2 ? 1 : -1;
+                    }
+                    if (x > 0 && x < this.width - 1 && y > 0 && y < this.height - 1) {
+                        maze[y][x] = 0;
+                    }
+                }
+            }
+
+            addRandomPassages(maze) {
+                const numExtraPassages = Math.floor(this.width * this.height * 0.1);
+                for (let i = 0; i < numExtraPassages; i++) {
+                    const x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    const y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    if (maze[y][x] === 1) {
+                        const neighbors = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ].filter(([nx, ny]) => 
+                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height
+                        );
+                        const passageNeighbors = neighbors.filter(([nx, ny]) => maze[ny][nx] === 0);
+                        if (passageNeighbors.length >= 2) {
                             maze[y][x] = 0;
                         }
                     }
                 }
-
-                addRandomPassages(maze) {
-                    const numExtraPassages = Math.floor(this.width * this.height * 0.1);
-                    for (let i = 0; i < numExtraPassages; i++) {
-                        const x = 1 + Math.floor(Math.random() * (this.width - 2));
-                        const y = 1 + Math.floor(Math.random() * (this.height - 2));
-                        if (maze[y][x] === 1) {
-                            const neighbors = [
-                                [x-1, y], [x+1, y], [x, y-1], [x, y+1]
-                            ].filter(([nx, ny]) => 
-                                nx >= 0 && nx < this.width && ny >= 0 && ny < this.height
-                            );
-                            const passageNeighbors = neighbors.filter(([nx, ny]) => maze[ny][nx] === 0);
-                            if (passageNeighbors.length >= 2) {
-                                maze[y][x] = 0;
-                            }
-                        }
-                    }
-                }
-
-                getMaze() {
-                    return this.maze;
-                }
             }
 
-            const mazeGen = new MazeGenerator(25, 25);
-            maze = mazeGen.getMaze();
+            getMaze() {
+                return this.maze;
+            }
         }
 
-        function createScene() {
-            createFloor();
-            createRoof();
-            createMazeWalls();
+        // Создаем лабиринт
+        const mazeGen = new MazeGenerator(25, 25);
+        const maze = mazeGen.getMaze();
+
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        scene.add(ambientLight);
+        
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight1.position.set(50, 100, 50);
+        scene.add(directionalLight1);
+        
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight2.position.set(-50, 80, -50);
+        scene.add(directionalLight2);
+
+        // Создание сцены
+        function createScene(materials) {
+            createFloor(materials.floorMaterial);
+            createRoof(materials.roofMaterial);
+            createMazeWalls(materials.wallMaterial);
         }
 
-        function createFloor() {
+        function createFloor(floorMaterial) {
             const floorWidth = maze[0].length * CELL_SIZE;
             const floorHeight = maze.length * CELL_SIZE;
             const floorGeometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
-            const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x90EE90, fog: true });
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             floor.position.y = -1;
             scene.add(floor);
         }
 
-        function createRoof() {
+        function createRoof(roofMaterial) {
             const roofWidth = maze[0].length * CELL_SIZE;
             const roofHeight = maze.length * CELL_SIZE;
             const roofGeometry = new THREE.PlaneGeometry(roofWidth, roofHeight);
-            const roofMaterial = new THREE.MeshLambertMaterial({ color: 0xCCCCCC, fog: true });
             const roof = new THREE.Mesh(roofGeometry, roofMaterial);
             roof.rotation.x = Math.PI / 2;
             roof.position.y = WALL_HEIGHT - 1;
             scene.add(roof);
         }
 
-        function createMazeWalls() {
+        function createMazeWalls(wallMaterial) {
             const wallGroup = new THREE.Group();
-            const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513, fog: true });
             
             for (let y = 0; y < maze.length; y++) {
                 for (let x = 0; x < maze[y].length - 1; x++) {
@@ -740,6 +690,7 @@
             scene.add(wallGroup);
         }
 
+        // Позиция игрока
         function findRandomStartPosition() {
             let freeCells = [];
             for (let y = 1; y < maze.length - 1; y++) {
@@ -764,31 +715,100 @@
             };
         }
 
-        function initControls() {
+        const startPos = findRandomStartPosition();
+        camera.position.set(startPos.x, 1.7, startPos.z);
+        
+        // Переменные управления
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        
+        let yaw = 0;
+        let pitch = 0;
+        const PI_2 = Math.PI / 2;
+
+        // Настройки
+        let fogEnabled = true;
+        let mouseSensitivity = 0.002;
+
+        // УПРАВЛЕНИЕ
+        let activeTouches = new Map();
+
+        // Инициализация джойстика
+        function initJoystick() {
             const joystickStick = document.getElementById('joystickStick');
             const joystickBase = document.getElementById('movementJoystick');
-            const cameraArea = document.getElementById('cameraTouchArea');
             
-            // Джойстик
+            let baseRect = joystickBase.getBoundingClientRect();
+            const baseCenterX = baseRect.left + baseRect.width / 2;
+            const baseCenterY = baseRect.top + baseRect.height / 2;
+            const maxDistance = baseRect.width / 3;
+
+            function updateJoystick(touch) {
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
+                
+                const deltaX = touchX - baseCenterX;
+                const deltaY = touchY - baseCenterY;
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                
+                let stickX = deltaX;
+                let stickY = deltaY;
+                
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    stickX = Math.cos(angle) * maxDistance;
+                    stickY = Math.sin(angle) * maxDistance;
+                }
+                
+                joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                
+                const normalizedX = stickX / maxDistance;
+                const normalizedY = stickY / maxDistance;
+                
+                moveForward = normalizedY < -0.1;
+                moveBackward = normalizedY > 0.1;
+                moveLeft = normalizedX < -0.1;
+                moveRight = normalizedX > 0.1;
+            }
+
+            function resetJoystick() {
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+            }
+
+            // Обработка событий джойстика
             joystickBase.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
-                activeTouches.set(touch.identifier, { type: 'joystick' });
+                activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
+                baseRect = joystickBase.getBoundingClientRect();
                 updateJoystick(touch);
             });
+        }
 
-            // Камера
+        // Инициализация поворота камеры
+        function initCameraControls() {
+            const cameraArea = document.getElementById('cameraTouchArea');
+            let lastCameraX = 0;
+            let lastCameraY = 0;
+
             cameraArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
                 activeTouches.set(touch.identifier, { 
                     type: 'camera', 
+                    element: cameraArea,
                     lastX: touch.clientX,
                     lastY: touch.clientY
                 });
             });
+        }
 
-            // Общие обработчики
+        // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
+        function initGlobalHandlers() {
+            // Обработка перемещения всех касаний
             document.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 
@@ -797,7 +817,37 @@
                     if (!touchData) continue;
                     
                     if (touchData.type === 'joystick') {
-                        updateJoystick(touch);
+                        const joystickStick = document.getElementById('joystickStick');
+                        const joystickBase = document.getElementById('movementJoystick');
+                        
+                        let baseRect = joystickBase.getBoundingClientRect();
+                        const baseCenterX = baseRect.left + baseRect.width / 2;
+                        const baseCenterY = baseRect.top + baseRect.height / 2;
+                        const maxDistance = baseRect.width / 3;
+                        
+                        const deltaX = touch.clientX - baseCenterX;
+                        const deltaY = touch.clientY - baseCenterY;
+                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        
+                        let stickX = deltaX;
+                        let stickY = deltaY;
+                        
+                        if (distance > maxDistance) {
+                            const angle = Math.atan2(deltaY, deltaX);
+                            stickX = Math.cos(angle) * maxDistance;
+                            stickY = Math.sin(angle) * maxDistance;
+                        }
+                        
+                        joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                        
+                        const normalizedX = stickX / maxDistance;
+                        const normalizedY = stickY / maxDistance;
+                        
+                        moveForward = normalizedY < -0.1;
+                        moveBackward = normalizedY > 0.1;
+                        moveLeft = normalizedX < -0.1;
+                        moveRight = normalizedX > 0.1;
+                        
                     } else if (touchData.type === 'camera') {
                         if (touchData.lastX && touchData.lastY) {
                             const deltaX = touch.clientX - touchData.lastX;
@@ -807,23 +857,42 @@
                             pitch -= deltaY * 0.005;
                             pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
                         }
+                        
                         touchData.lastX = touch.clientX;
                         touchData.lastY = touch.clientY;
                     }
                 }
             });
 
+            // Обработка окончания касаний
             document.addEventListener('touchend', (e) => {
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
                     if (touchData && touchData.type === 'joystick') {
-                        resetJoystick();
+                        const joystickStick = document.getElementById('joystickStick');
+                        joystickStick.style.transform = 'translate(0, 0)';
+                        moveForward = moveBackward = moveLeft = moveRight = false;
                     }
                     activeTouches.delete(touch.identifier);
                 }
             });
 
-            // Клавиатура
+            // Сброс при потере фокуса
+            window.addEventListener('blur', () => {
+                activeTouches.clear();
+                const joystickStick = document.getElementById('joystickStick');
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+            });
+        }
+
+        // Инициализация управления
+        function initControls() {
+            initJoystick();
+            initCameraControls();
+            initGlobalHandlers();
+
+            // Клавиатура для десктопа
             window.addEventListener('keydown', (event) => {
                 switch(event.code) {
                     case 'KeyW': moveForward = true; break;
@@ -842,11 +911,11 @@
                 }
             });
 
-            // Мышь
+            // Мышь для десктопа
             document.addEventListener('mousemove', (event) => {
                 if (document.pointerLockElement === renderer.domElement) {
-                    yaw -= event.movementX * 0.002;
-                    pitch -= event.movementY * 0.002;
+                    yaw -= event.movementX * mouseSensitivity;
+                    pitch -= event.movementY * mouseSensitivity;
                     pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
                 }
             });
@@ -856,45 +925,7 @@
             });
         }
 
-        function updateJoystick(touch) {
-            const joystickStick = document.getElementById('joystickStick');
-            const joystickBase = document.getElementById('movementJoystick');
-            
-            const baseRect = joystickBase.getBoundingClientRect();
-            const baseCenterX = baseRect.left + baseRect.width / 2;
-            const baseCenterY = baseRect.top + baseRect.height / 2;
-            const maxDistance = baseRect.width / 3;
-            
-            const deltaX = touch.clientX - baseCenterX;
-            const deltaY = touch.clientY - baseCenterY;
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
-            let stickX = deltaX;
-            let stickY = deltaY;
-            
-            if (distance > maxDistance) {
-                const angle = Math.atan2(deltaY, deltaX);
-                stickX = Math.cos(angle) * maxDistance;
-                stickY = Math.sin(angle) * maxDistance;
-            }
-            
-            joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-            
-            const normalizedX = stickX / maxDistance;
-            const normalizedY = stickY / maxDistance;
-            
-            moveForward = normalizedY < -0.1;
-            moveBackward = normalizedY > 0.1;
-            moveLeft = normalizedX < -0.1;
-            moveRight = normalizedX > 0.1;
-        }
-
-        function resetJoystick() {
-            const joystickStick = document.getElementById('joystickStick');
-            joystickStick.style.transform = 'translate(0, 0)';
-            moveForward = moveBackward = moveLeft = moveRight = false;
-        }
-
+        // Проверка коллизий
         function checkCollision(newX, newZ) {
             const playerRadius = 0.3;
             const points = [
@@ -921,6 +952,9 @@
             return false;
         }
 
+        // Анимация
+        const moveSpeed = 0.2;
+        
         function animate() {
             requestAnimationFrame(animate);
             
@@ -929,7 +963,6 @@
             camera.rotation.x = pitch;
             
             const direction = new THREE.Vector3();
-            const moveSpeed = 0.2;
             
             if (moveForward) direction.z -= moveSpeed;
             if (moveBackward) direction.z += moveSpeed;
@@ -953,12 +986,64 @@
             
             renderer.render(scene, camera);
         }
-
-        function onWindowResize() {
+        
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Функция запуска игры
+        function startGame() {
+            // Скрываем меню
+            document.getElementById('startMenu').style.display = 'none';
+            
+            // Показываем мобильное управление на мобильных устройствах
+            if ('ontouchstart' in window || navigator.maxTouchPoints) {
+                document.getElementById('mobileControls').style.display = 'block';
+            }
+            
+            // Запускаем анимацию
+            animate();
         }
+
+        // Функции для меню
+        function showOptions() {
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('optionsMenu').style.display = 'flex';
+        }
+
+        function hideOptions() {
+            document.getElementById('optionsMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+        }
+
+        // Инициализация меню
+        document.getElementById('playButton').addEventListener('click', startGame);
+        document.getElementById('optionsButton').addEventListener('click', showOptions);
+        document.getElementById('backButton').addEventListener('click', hideOptions);
+
+        // Настройки
+        document.getElementById('fogToggle').addEventListener('change', function(e) {
+            fogEnabled = e.target.checked;
+            scene.fog = fogEnabled ? new THREE.Fog(0x87CEEB, 20, 50) : null;
+        });
+
+        document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
+            mouseSensitivity = e.target.value * 0.0004;
+        });
+
+        // Запуск игры
+        loadTextures().then(() => {
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+        }).catch((error) => {
+            console.error('Ошибка загрузки:', error);
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+        });
     </script>
 </body>
 </html>
