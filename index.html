@@ -310,7 +310,7 @@
         const scene = new THREE.Scene();
         
         // ТУМАН - добавляем в сцену
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+        scene.fog = new THREE.Fog(0x222233, 15, 40);
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -320,9 +320,8 @@
             powerPreference: "high-performance"
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x87CEEB);
+        renderer.setClearColor(0x222233);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
         // Параметры лабиринта
@@ -365,7 +364,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
+                // НАСТРОЙКИ ТЕКСТУР - ОПТИМАЛЬНЫЕ НАСТРОЙКИ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(1, 1);
@@ -374,13 +373,13 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(8, 8);
+                    floorTexture.repeat.set(12, 12);
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(4, 4);
+                    roofTexture.repeat.set(10, 10);
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -395,7 +394,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0x8B4513,
+                    color: 0x5D4037,
                     fog: true
                 });
             
@@ -405,7 +404,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0x90EE90,
+                    color: 0x4E342E,
                     fog: true
                 });
             
@@ -415,7 +414,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0xCCCCCC,
+                    color: 0x37474F,
                     fog: true
                 });
             
@@ -535,15 +534,15 @@
         const mazeGen = new MazeGenerator(25, 25);
         const maze = mazeGen.getMaze();
 
-        // Освещение
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+        // Освещение - ТЕМНЕЕ И АТМОСФЕРНЕЕ
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         scene.add(ambientLight);
         
-        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.4);
         directionalLight1.position.set(50, 100, 50);
         scene.add(directionalLight1);
         
-        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
         directionalLight2.position.set(-50, 80, -50);
         scene.add(directionalLight2);
 
@@ -990,7 +989,7 @@
         // Настройки
         document.getElementById('fogToggle').addEventListener('change', function(e) {
             fogEnabled = e.target.checked;
-            scene.fog = fogEnabled ? new THREE.Fog(0x87CEEB, 20, 50) : null;
+            scene.fog = fogEnabled ? new THREE.Fog(0x222233, 15, 40) : null;
         });
 
         document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
