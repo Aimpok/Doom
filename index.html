@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Лабиринт</title>
+    <title>DoomGame(@renjaydev)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
         body { 
@@ -301,11 +301,6 @@
             e.preventDefault();
             return false;
         });
-
-        // Запрет долгого нажатия на мобильных
-        document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-        }, { passive: false });
 
         // Базовые настройки
         const scene = new THREE.Scene();
@@ -936,10 +931,33 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню
-        document.getElementById('playButton').addEventListener('click', startGame);
-        document.getElementById('optionsButton').addEventListener('click', showOptions);
-        document.getElementById('backButton').addEventListener('click', hideOptions);
+        // Инициализация меню - ДОБАВЛЕНЫ ТАЧ-ОБРАБОТЧИКИ
+        function initMenu() {
+            const playButton = document.getElementById('playButton');
+            const optionsButton = document.getElementById('optionsButton');
+            const backButton = document.getElementById('backButton');
+            
+            // Клик для ПК
+            playButton.addEventListener('click', startGame);
+            optionsButton.addEventListener('click', showOptions);
+            backButton.addEventListener('click', hideOptions);
+            
+            // Тач для мобилок
+            playButton.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                startGame();
+            }, { passive: false });
+            
+            optionsButton.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                showOptions();
+            }, { passive: false });
+            
+            backButton.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                hideOptions();
+            }, { passive: false });
+        }
 
         // Настройки
         document.getElementById('fogToggle').addEventListener('change', function(e) {
@@ -956,11 +974,13 @@
             const materials = createMaterials();
             createScene(materials);
             initControls();
+            initMenu(); // Инициализируем меню с обработчиками
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
             initControls();
+            initMenu();
         });
     </script>
 </body>
