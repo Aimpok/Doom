@@ -172,13 +172,13 @@
             display: none;
         }
         
-        /* Джойстик для движения */
+        /* Джойстик для движения - УВЕЛИЧЕН В 2 РАЗА */
         #movementJoystick {
             position: absolute;
             bottom: 5vmin;
             left: 5vmin;
-            width: 20vmin;
-            height: 20vmin;
+            width: 40vmin;
+            height: 40vmin;
             pointer-events: auto;
         }
         
@@ -192,17 +192,17 @@
         }
         
         .joystick-stick {
-            width: 10vmin;
-            height: 10vmin;
+            width: 20vmin;
+            height: 20vmin;
             background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 5vmin;
-            left: 5vmin;
+            top: 10vmin;
+            left: 10vmin;
             transition: transform 0.1s;
         }
         
-        /* Правая половина экрана для поворота камеры и стрельбы */
+        /* Область для поворота камеры */
         #cameraTouchArea {
             position: absolute;
             top: 0;
@@ -212,13 +212,13 @@
             pointer-events: auto;
         }
 
-        /* Кнопка стрельбы - ближе к центру */
+        /* Кнопка стрельбы - УВЕЛИЧЕНА В 2 РАЗА */
         #shootButton {
             position: absolute;
             bottom: 15vmin;
             right: 15vmin;
-            width: 15vmin;
-            height: 15vmin;
+            width: 30vmin;
+            height: 30vmin;
             background: rgba(255, 0, 0, 0.3);
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.5);
@@ -227,7 +227,7 @@
             justify-content: center;
             align-items: center;
             color: white;
-            font-size: 3vmin;
+            font-size: 6vmin;
             z-index: 60;
         }
 
@@ -312,7 +312,7 @@
             <div class="joystick-stick" id="joystickStick"></div>
         </div>
         
-        <!-- Правая половина экрана для поворота камеры и стрельбы -->
+        <!-- Область для поворота камеры -->
         <div id="cameraTouchArea"></div>
         
         <!-- Кнопка стрельбы -->
@@ -417,13 +417,13 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(8, 8); // Увеличено повторение для пола
+                    floorTexture.repeat.set(4, 4); // УМЕНЬШЕНО В 2 РАЗА (было 8,8)
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(8, 8); // Увеличено повторение для потолка
+                    roofTexture.repeat.set(4, 4); // УМЕНЬШЕНО В 2 РАЗА (было 8,8)
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -712,7 +712,7 @@
         let ammo = 30;
         let maxAmmo = 30;
 
-        // Анимация оружия - ИСПРАВЛЕНА СКОРОСТЬ
+        // Анимация оружия
         function playShootAnimation() {
             if (!canShoot || isReloading) return;
             
@@ -826,9 +826,16 @@
             joystickBase.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
-                activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
-                baseRect = joystickBase.getBoundingClientRect();
-                updateJoystick(touch);
+                // Проверяем, что касание именно в области джойстика
+                const rect = joystickBase.getBoundingClientRect();
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
+                
+                if (touchX >= rect.left && touchX <= rect.right && 
+                    touchY >= rect.top && touchY <= rect.bottom) {
+                    activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
+                    updateJoystick(touch);
+                }
             });
         }
 
@@ -836,18 +843,24 @@
         function initCameraControls() {
             const cameraArea = document.getElementById('cameraTouchArea');
             const shootButton = document.getElementById('shootButton');
-            let lastCameraX = 0;
-            let lastCameraY = 0;
 
             cameraArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
-                activeTouches.set(touch.identifier, { 
-                    type: 'camera', 
-                    element: cameraArea,
-                    lastX: touch.clientX,
-                    lastY: touch.clientY
-                });
+                // Проверяем, что касание НЕ в кнопке стрельбы
+                const shootRect = shootButton.getBoundingClientRect();
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
+                
+                if (!(touchX >= shootRect.left && touchX <= shootRect.right && 
+                      touchY >= shootRect.top && touchY <= shootRect.bottom)) {
+                    activeTouches.set(touch.identifier, { 
+                        type: 'camera', 
+                        element: cameraArea,
+                        lastX: touch.clientX,
+                        lastY: touch.clientY
+                    });
+                }
             });
 
             // Кнопка стрельбы - поворот камеры и стрельба
@@ -959,6 +972,7 @@
                     }
                     activeTouches.delete(touch.identifier);
                 }
+                isShootingTouch = false;
             });
 
             // Сброс при потере фокуса
@@ -967,6 +981,7 @@
                 const joystickStick = document.getElementById('joystickStick');
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
+                isShootingTouch = false;
             });
 
             // Управление стрельбой для ПК - ЛКМ
@@ -1074,7 +1089,7 @@
             return false;
         }
 
-        // Анимация - ИСПРАВЛЕНА СКОРОСТЬ ДВИЖЕНИЯ
+        // Анимация
         const moveSpeed = 0.15; // Одинаковая скорость для всех платформ
         
         function animate() {
@@ -1148,7 +1163,7 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню - ДОБАВЛЕНЫ ТАЧ-ОБРАБОТЧИКИ
+        // Инициализация меню
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
@@ -1159,7 +1174,7 @@
             optionsButton.addEventListener('click', showOptions);
             backButton.addEventListener('click', hideOptions);
             
-            // Тач для мобилок - ИСПРАВЛЕНО
+            // Тач для мобилок
             playButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 startGame();
@@ -1202,7 +1217,7 @@
             const materials = createMaterials();
             createScene(materials);
             initControls();
-            initMenu(); // Инициализируем меню с обработчиками
+            initMenu();
             
             // Скрываем оружие в меню
             weapon.style.display = 'none';
@@ -1224,7 +1239,6 @@
             // Скрываем оружие в меню
             weapon.style.display = 'none';
             
-            // Все равно пытаемся запустить музыку
             if (menuMusic) {
                 menuMusic.volume = musicVolume;
                 menuMusic.play().catch(e => {
