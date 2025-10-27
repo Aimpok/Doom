@@ -323,12 +323,12 @@
     <img id="weapon" src="Gun.png" alt="Weapon">
     
     <!-- Аудио для меню -->
-    <audio id="menuMusic" loop>
+    <audio id="menuMusic" loop preload="auto">
         <source src="MenuMusic.mp3" type="audio/mpeg">
     </audio>
     
     <!-- Звук выстрела -->
-    <audio id="shootSound">
+    <audio id="shootSound" preload="auto">
         <source src="Shoot.mp3" type="audio/mpeg">
     </audio>
     
@@ -833,7 +833,12 @@
                 
                 if (touchX >= rect.left && touchX <= rect.right && 
                     touchY >= rect.top && touchY <= rect.bottom) {
-                    activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
+                    activeTouches.set(touch.identifier, { 
+                        type: 'joystick', 
+                        element: joystickBase,
+                        startX: touch.clientX,
+                        startY: touch.clientY
+                    });
                     updateJoystick(touch);
                 }
             });
@@ -873,6 +878,14 @@
                 
                 // Стрельба при касании
                 playShootAnimation();
+                
+                // Добавляем касание в activeTouches для правильной обработки
+                activeTouches.set(touch.identifier, { 
+                    type: 'shoot', 
+                    element: shootButton,
+                    lastX: touch.clientX,
+                    lastY: touch.clientY
+                });
             });
 
             shootButton.addEventListener('touchmove', (e) => {
@@ -891,6 +904,13 @@
                 lastShootTouchX = touch.clientX;
                 lastShootTouchY = touch.clientY;
                 
+                // Обновляем позицию в activeTouches
+                const touchData = activeTouches.get(touch.identifier);
+                if (touchData) {
+                    touchData.lastX = touch.clientX;
+                    touchData.lastY = touch.clientY;
+                }
+                
                 // Автострельба при долгом зажатии
                 if (!isShooting && !isReloading && canShoot) {
                     playShootAnimation();
@@ -900,6 +920,9 @@
             shootButton.addEventListener('touchend', (e) => {
                 e.preventDefault();
                 isShootingTouch = false;
+                for (let touch of e.changedTouches) {
+                    activeTouches.delete(touch.identifier);
+                }
             });
         }
 
@@ -958,6 +981,7 @@
                         touchData.lastX = touch.clientX;
                         touchData.lastY = touch.clientY;
                     }
+                    // Для типа 'shoot' обрабатывается в обработчике кнопки стрельбы
                 }
             });
 
@@ -965,12 +989,14 @@
             document.addEventListener('touchend', (e) => {
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
-                    if (touchData && touchData.type === 'joystick') {
-                        const joystickStick = document.getElementById('joystickStick');
-                        joystickStick.style.transform = 'translate(0, 0)';
-                        moveForward = moveBackward = moveLeft = moveRight = false;
+                    if (touchData) {
+                        if (touchData.type === 'joystick') {
+                            const joystickStick = document.getElementById('joystickStick');
+                            joystickStick.style.transform = 'translate(0, 0)';
+                            moveForward = moveBackward = moveLeft = moveRight = false;
+                        }
+                        activeTouches.delete(touch.identifier);
                     }
-                    activeTouches.delete(touch.identifier);
                 }
                 isShootingTouch = false;
             });
@@ -1212,54 +1238,73 @@
             }
         });
 
-        // Запуск игры
-        loadTextures().then(() => {
-            const materials = createMaterials();
-            createScene(materials);
-            initControls();
-            initMenu();
-            
-            // Скрываем оружие в меню
-            weapon.style.display = 'none';
-            
-            // Запускаем музыку меню после загрузки
-            if (menuMusic) {
-                menuMusic.volume = musicVolume;
-                menuMusic.play().catch(e => {
-                    console.log('Автовоспроизведение музыки заблокировано. Пользователь должен начать взаимодействие.');
-                });
-            }
-        }).catch((error) => {
-            console.error('Ошибка загрузки:', error);
-            const materials = createMaterials();
-            createScene(materials);
-            initControls();
-            initMenu();
-            
-            // Скрываем оружие в меню
-            weapon.style.display = 'none';
-            
-            if (menuMusic) {
-                menuMusic.volume = musicVolume;
-                menuMusic.play().catch(e => {
-                    console.log('Автовоспроизведение музыки заблокировано.');
-                });
-            }
-        });
-
-        // Обработчик для запуска музыки при первом клике пользователя
-        function initAudio() {
-            if (menuMusic && menuMusic.paused) {
-                menuMusic.play().catch(e => {
-                    console.log('Не удалось запустить музыку');
-                });
-            }
-            document.removeEventListener('click', initAudio);
-            document.removeEventListener('touchstart', initAudio);
+        // Запуск игры и инициализация звука
+        function initGame() {
+            loadTextures().then(() => {
+                const materials = createMaterials();
+                createScene(materials);
+                initControls();
+                initMenu();
+                
+                // Скрываем оружие в меню
+                weapon.style.display = 'none';
+                
+                // Попытка запуска музыки с обработкой мобильных ограничений
+                initAudio();
+            }).catch((error) => {
+                console.error('Ошибка загрузки:', error);
+                const materials = createMaterials();
+                createScene(materials);
+                initControls();
+                initMenu();
+                
+                // Скрываем оружие в меню
+                weapon.style.display = 'none';
+                
+                initAudio();
+            });
         }
 
-        document.addEventListener('click', initAudio);
-        document.addEventListener('touchstart', initAudio);
+        // Улучшенная инициализация звука для мобильных устройств
+        function initAudio() {
+            if (!menuMusic) return;
+            
+            // Устанавливаем громкость
+            menuMusic.volume = musicVolume;
+            
+            // Пытаемся запустить музыку
+            const playMusic = () => {
+                if (menuMusic.paused) {
+                    menuMusic.play().then(() => {
+                        console.log('Музыка запущена');
+                    }).catch(e => {
+                        console.log('Автовоспроизведение музыки заблокировано:', e);
+                        // Показываем сообщение пользователю на мобилках
+                        if ('ontouchstart' in window) {
+                            alert('Нажмите на экран для запуска музыки');
+                        }
+                    });
+                }
+            };
+            
+            // Пытаемся запустить сразу
+            playMusic();
+            
+            // Добавляем обработчики для пользовательского взаимодействия
+            const startMusicOnInteraction = () => {
+                playMusic();
+                document.removeEventListener('click', startMusicOnInteraction);
+                document.removeEventListener('touchstart', startMusicOnInteraction);
+                document.removeEventListener('keydown', startMusicOnInteraction);
+            };
+            
+            document.addEventListener('click', startMusicOnInteraction);
+            document.addEventListener('touchstart', startMusicOnInteraction);
+            document.addEventListener('keydown', startMusicOnInteraction);
+        }
+
+        // Запускаем игру
+        initGame();
     </script>
 </body>
 </html>
