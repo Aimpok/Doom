@@ -71,10 +71,9 @@
             object-fit: contain;
             -webkit-user-drag: none;
             user-drag: none;
-            pointer-events: auto !important;
+            pointer-events: auto;
             -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: rgba(0,0,0,0.3);
-            tap-highlight-color: rgba(0,0,0,0.3);
+            -webkit-tap-highlight-color: transparent;
         }
         
         .menu-button:hover {
@@ -154,8 +153,6 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
-            pointer-events: auto !important;
-            touch-action: manipulation;
         }
         
         .back-button:hover {
@@ -175,16 +172,14 @@
             display: none;
         }
         
-        /* FLOATING Джойстик - фиксированная версия */
+        /* Джойстик для движения */
         #movementJoystick {
             position: absolute;
-            bottom: 20vmin;
-            left: 20vmin;
-            width: 25vmin;
-            height: 25vmin;
-            pointer-events: none;
-            z-index: 100;
-            display: block;
+            bottom: 5vmin;
+            left: 5vmin;
+            width: 20vmin;
+            height: 20vmin;
+            pointer-events: auto;
         }
         
         .joystick-base {
@@ -194,30 +189,17 @@
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.5);
             position: absolute;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
         }
         
         .joystick-stick {
-            width: 12vmin;
-            height: 12vmin;
+            width: 10vmin;
+            height: 10vmin;
             background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 6.5vmin;
-            left: 6.5vmin;
+            top: 5vmin;
+            left: 5vmin;
             transition: transform 0.1s;
-            border: 2px solid rgba(255, 255, 255, 0.7);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Левая половина экрана для движения */
-        #movementTouchArea {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 50%;
-            height: 100%;
-            pointer-events: auto;
         }
         
         /* Правая половина экрана для поворота камеры */
@@ -242,10 +224,9 @@
             pointer-events: none;
         }
 
-        /* Исправление для мобильных касаний */
-        #playButton, #optionsButton, #backButton {
-            pointer-events: auto !important;
-            touch-action: manipulation;
+        /* Разрешаем pointer-events только для кликабельных кнопок */
+        .menu-button {
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -294,18 +275,20 @@
     
     <!-- Мобильное управление -->
     <div id="mobileControls">
-        <!-- Левая область для движения -->
-        <div id="movementTouchArea"></div>
-        
-        <!-- Фиксированный джойстик -->
         <div id="movementJoystick">
             <div class="joystick-base"></div>
             <div class="joystick-stick" id="joystickStick"></div>
         </div>
         
-        <!-- Правая область для поворота камеры -->
+        <!-- Правая половина экрана для поворота камеры -->
         <div id="cameraTouchArea"></div>
     </div>
+
+    <!-- Аудио для меню -->
+    <audio id="menuMusic" loop>
+        <source src="MrnuMusic.mp3" type="audio/mpeg">
+        Ваш браузер не поддерживает аудио элемент.
+    </audio>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -325,11 +308,36 @@
             return false;
         });
 
+        // Аудио элементы
+        const menuMusic = document.getElementById('menuMusic');
+        let isMusicPlaying = false;
+
+        // Функция для управления музыкой
+        function playMenuMusic() {
+            if (!isMusicPlaying) {
+                menuMusic.volume = document.getElementById('volumeSlider').value / 100;
+                menuMusic.play().catch(e => {
+                    console.log('Автовоспроизведение заблокировано, требуется взаимодействие пользователя');
+                });
+                isMusicPlaying = true;
+            }
+        }
+
+        function stopMenuMusic() {
+            menuMusic.pause();
+            menuMusic.currentTime = 0;
+            isMusicPlaying = false;
+        }
+
+        function setMusicVolume(volume) {
+            menuMusic.volume = volume;
+        }
+
         // Базовые настройки
         const scene = new THREE.Scene();
         
         // ТУМАН - добавляем в сцену
-        scene.fog = new THREE.Fog(0x556677, 15, 40);
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -339,7 +347,7 @@
             powerPreference: "high-performance"
         });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x556677);
+        renderer.setClearColor(0x87CEEB);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
@@ -383,22 +391,22 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ ТЕКСТУРУ ПОЛА ЕЩЕ В 3 РАЗА
+                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-                    wallTexture.repeat.set(1, 1);
+                    wallTexture.repeat.set(1, 1); // Нормальное качество для стен
                     wallTexture.minFilter = THREE.LinearFilter;
                     wallTexture.magFilter = THREE.LinearFilter;
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(36, 36); // УВЕЛИЧИЛ В 3 РАЗА (было 12) - ТЕКСТУРА БУДЕТ ЕЩЕ МЕНЬШЕ
+                    floorTexture.repeat.set(20, 20); // Сжатая текстура пола
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(5, 5);
+                    roofTexture.repeat.set(20, 20); // Сжатая текстура потолка
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -413,7 +421,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0x5D4037,
+                    color: 0x8B4513,
                     fog: true
                 });
             
@@ -423,7 +431,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0x4E342E,
+                    color: 0x90EE90,
                     fog: true
                 });
             
@@ -433,7 +441,7 @@
                     fog: true
                 }) :
                 new THREE.MeshLambertMaterial({ 
-                    color: 0x37474F,
+                    color: 0xCCCCCC,
                     fog: true
                 });
             
@@ -554,14 +562,14 @@
         const maze = mazeGen.getMaze();
 
         // Освещение
-        const ambientLight = new THREE.AmbientLight(0x606060, 0.8);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
         scene.add(ambientLight);
         
-        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.6);
+        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight1.position.set(50, 100, 50);
         scene.add(directionalLight1);
         
-        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.5);
+        const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
         directionalLight2.position.set(-50, 80, -50);
         scene.add(directionalLight2);
 
@@ -676,16 +684,13 @@
 
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
-        let joystickActive = false;
 
         // Инициализация джойстика
         function initJoystick() {
             const joystickStick = document.getElementById('joystickStick');
             const joystickBase = document.getElementById('movementJoystick');
-            const movementArea = document.getElementById('movementTouchArea');
             
-            // Фиксированная позиция джойстика
-            const baseRect = joystickBase.getBoundingClientRect();
+            let baseRect = joystickBase.getBoundingClientRect();
             const baseCenterX = baseRect.left + baseRect.width / 2;
             const baseCenterY = baseRect.top + baseRect.height / 2;
             const maxDistance = baseRect.width / 3;
@@ -709,32 +714,28 @@
                 
                 joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
                 
-                // ОДНА СКОРОСТЬ - либо стоишь, либо идешь
-                const isMoving = distance > 10; // Порог активации движения
+                const normalizedX = stickX / maxDistance;
+                const normalizedY = stickY / maxDistance;
                 
-                const angle = Math.atan2(deltaY, deltaX);
-                moveForward = isMoving && angle < -Math.PI/4 && angle > -3*Math.PI/4;
-                moveBackward = isMoving && angle > Math.PI/4 && angle < 3*Math.PI/4;
-                moveLeft = isMoving && angle > 3*Math.PI/4 || angle < -3*Math.PI/4;
-                moveRight = isMoving && angle > -Math.PI/4 && angle < Math.PI/4;
+                moveForward = normalizedY < -0.1;
+                moveBackward = normalizedY > 0.1;
+                moveLeft = normalizedX < -0.1;
+                moveRight = normalizedX > 0.1;
             }
 
             function resetJoystick() {
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
-                joystickActive = false;
             }
 
             // Обработка событий джойстика
-            movementArea.addEventListener('touchstart', (e) => {
+            joystickBase.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
-                joystickActive = true;
-                activeTouches.set(touch.identifier, { type: 'joystick', element: movementArea });
+                activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
+                baseRect = joystickBase.getBoundingClientRect();
                 updateJoystick(touch);
             });
-            
-            return { updateJoystick, resetJoystick };
         }
 
         // Инициализация поворота камеры
@@ -756,8 +757,8 @@
         }
 
         // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
-        function initGlobalHandlers(joystickControls) {
-            // Предотвращаем стандартное поведение браузера для касаний
+        function initGlobalHandlers() {
+            // Обработка перемещения всех касаний
             document.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 
@@ -766,7 +767,37 @@
                     if (!touchData) continue;
                     
                     if (touchData.type === 'joystick') {
-                        joystickControls.updateJoystick(touch);
+                        const joystickStick = document.getElementById('joystickStick');
+                        const joystickBase = document.getElementById('movementJoystick');
+                        
+                        let baseRect = joystickBase.getBoundingClientRect();
+                        const baseCenterX = baseRect.left + baseRect.width / 2;
+                        const baseCenterY = baseRect.top + baseRect.height / 2;
+                        const maxDistance = baseRect.width / 3;
+                        
+                        const deltaX = touch.clientX - baseCenterX;
+                        const deltaY = touch.clientY - baseCenterY;
+                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        
+                        let stickX = deltaX;
+                        let stickY = deltaY;
+                        
+                        if (distance > maxDistance) {
+                            const angle = Math.atan2(deltaY, deltaX);
+                            stickX = Math.cos(angle) * maxDistance;
+                            stickY = Math.sin(angle) * maxDistance;
+                        }
+                        
+                        joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                        
+                        const normalizedX = stickX / maxDistance;
+                        const normalizedY = stickY / maxDistance;
+                        
+                        moveForward = normalizedY < -0.1;
+                        moveBackward = normalizedY > 0.1;
+                        moveLeft = normalizedX < -0.1;
+                        moveRight = normalizedX > 0.1;
+                        
                     } else if (touchData.type === 'camera') {
                         if (touchData.lastX && touchData.lastY) {
                             const deltaX = touch.clientX - touchData.lastX;
@@ -781,14 +812,16 @@
                         touchData.lastY = touch.clientY;
                     }
                 }
-            }, { passive: false });
+            });
 
             // Обработка окончания касаний
             document.addEventListener('touchend', (e) => {
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
                     if (touchData && touchData.type === 'joystick') {
-                        joystickControls.resetJoystick();
+                        const joystickStick = document.getElementById('joystickStick');
+                        joystickStick.style.transform = 'translate(0, 0)';
+                        moveForward = moveBackward = moveLeft = moveRight = false;
                     }
                     activeTouches.delete(touch.identifier);
                 }
@@ -797,15 +830,17 @@
             // Сброс при потере фокуса
             window.addEventListener('blur', () => {
                 activeTouches.clear();
-                joystickControls.resetJoystick();
+                const joystickStick = document.getElementById('joystickStick');
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
             });
         }
 
         // Инициализация управления
         function initControls() {
-            const joystickControls = initJoystick();
+            initJoystick();
             initCameraControls();
-            initGlobalHandlers(joystickControls);
+            initGlobalHandlers();
 
             // Клавиатура для десктопа
             window.addEventListener('keydown', (event) => {
@@ -867,16 +902,11 @@
             return false;
         }
 
-        // Анимация с delta time для фиксированной скорости
-        let lastTime = 0;
-        const moveSpeed = 8; // Единиц в секунду
+        // Анимация
+        const moveSpeed = 0.2;
         
-        function animate(currentTime) {
+        function animate() {
             requestAnimationFrame(animate);
-            
-            // Расчет delta time для независимости от FPS
-            const deltaTime = lastTime ? (currentTime - lastTime) / 1000 : 0.016;
-            lastTime = currentTime;
             
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
@@ -884,17 +914,11 @@
             
             const direction = new THREE.Vector3();
             
-            if (moveForward) direction.z -= 1;
-            if (moveBackward) direction.z += 1;
-            if (moveLeft) direction.x -= 1;
-            if (moveRight) direction.x += 1;
+            if (moveForward) direction.z -= moveSpeed;
+            if (moveBackward) direction.z += moveSpeed;
+            if (moveLeft) direction.x -= moveSpeed;
+            if (moveRight) direction.x += moveSpeed;
             
-            // Нормализуем вектор направления если двигаемся по диагонали
-            if (direction.length() > 0) {
-                direction.normalize();
-            }
-            
-            direction.multiplyScalar(moveSpeed * deltaTime);
             direction.applyEuler(new THREE.Euler(0, yaw, 0));
             
             let newX = camera.position.x;
@@ -924,13 +948,16 @@
             // Скрываем меню
             document.getElementById('startMenu').style.display = 'none';
             
+            // Останавливаем музыку меню
+            stopMenuMusic();
+            
             // Показываем мобильное управление на мобильных устройствах
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
             }
             
             // Запускаем анимацию
-            animate(0);
+            animate();
         }
 
         // Функции для меню
@@ -944,52 +971,65 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню
+        // Инициализация меню - УЛУЧШЕННЫЕ ТАЧ-ОБРАБОТЧИКИ
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Функция для обработки и кликов и касаний
-            function addButtonHandlers(element, handler) {
+            // Улучшенные обработчики для мобильных устройств
+            function addMobileHandler(element, handler) {
                 // Клик для ПК
                 element.addEventListener('click', handler);
                 
-                // Тач для мобилок
+                // Тач для мобилок - с улучшенной обработкой
                 element.addEventListener('touchstart', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
+                    // Добавляем визуальную обратную связь
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
                     handler();
                 }, { passive: false });
                 
-                // Предотвращаем случайные прокрутки
+                // Запрещаем все остальные события
                 element.addEventListener('touchmove', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
+                }, { passive: false });
+                
+                element.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }, { passive: false });
             }
             
-            addButtonHandlers(playButton, startGame);
-            addButtonHandlers(optionsButton, showOptions);
-            addButtonHandlers(backButton, hideOptions);
+            addMobileHandler(playButton, startGame);
+            addMobileHandler(optionsButton, showOptions);
+            addMobileHandler(backButton, hideOptions);
             
-            // Добавляем визуальный фидбэк для касаний
-            [playButton, optionsButton].forEach(button => {
-                button.addEventListener('touchstart', function() {
-                    this.style.opacity = '0.7';
-                });
-                button.addEventListener('touchend', function() {
-                    this.style.opacity = '1';
-                });
-                button.addEventListener('touchcancel', function() {
-                    this.style.opacity = '1';
-                });
-            });
+            // Запускаем музыку при первом взаимодействии
+            function startMusicOnInteraction() {
+                playMenuMusic();
+                document.removeEventListener('click', startMusicOnInteraction);
+                document.removeEventListener('touchstart', startMusicOnInteraction);
+            }
+            
+            document.addEventListener('click', startMusicOnInteraction);
+            document.addEventListener('touchstart', startMusicOnInteraction);
         }
 
         // Настройки
         document.getElementById('fogToggle').addEventListener('change', function(e) {
             fogEnabled = e.target.checked;
-            scene.fog = fogEnabled ? new THREE.Fog(0x556677, 15, 40) : null;
+            scene.fog = fogEnabled ? new THREE.Fog(0x87CEEB, 20, 50) : null;
+        });
+
+        document.getElementById('volumeSlider').addEventListener('input', function(e) {
+            const volume = e.target.value / 100;
+            setMusicVolume(volume);
         });
 
         document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
