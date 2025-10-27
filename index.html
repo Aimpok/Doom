@@ -71,9 +71,10 @@
             object-fit: contain;
             -webkit-user-drag: none;
             user-drag: none;
-            pointer-events: auto;
+            pointer-events: auto !important;
             -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.3);
+            tap-highlight-color: rgba(0,0,0,0.3);
         }
         
         .menu-button:hover {
@@ -153,6 +154,8 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
+            pointer-events: auto !important;
+            touch-action: manipulation;
         }
         
         .back-button:hover {
@@ -224,9 +227,10 @@
             pointer-events: none;
         }
 
-        /* Разрешаем pointer-events только для кликабельных кнопок */
-        .menu-button {
-            pointer-events: auto;
+        /* Исправление для мобильных касаний */
+        #playButton, #optionsButton, #backButton {
+            pointer-events: auto !important;
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -318,6 +322,7 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setClearColor(0x87CEEB);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild(renderer.domElement);
 
         // Параметры лабиринта
@@ -360,18 +365,24 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ ПОВТОРЕНИЯ
+                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-                    wallTexture.repeat.set(1, 1); // Нормальное повторение
+                    wallTexture.repeat.set(1, 1);
+                    wallTexture.minFilter = THREE.LinearFilter;
+                    wallTexture.magFilter = THREE.LinearFilter;
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(4, 4); // Уменьшил повторение для лучшего качества
+                    floorTexture.repeat.set(8, 8);
+                    floorTexture.minFilter = THREE.LinearFilter;
+                    floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(2, 2); // Нормальное повторение
+                    roofTexture.repeat.set(4, 4);
+                    roofTexture.minFilter = THREE.LinearFilter;
+                    roofTexture.magFilter = THREE.LinearFilter;
                 }
             });
         }
@@ -721,9 +732,12 @@
 
         // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
         function initGlobalHandlers() {
-            // Обработка перемещения всех касаний
+            // Предотвращаем стандартное поведение браузера для касаний
             document.addEventListener('touchmove', (e) => {
-                e.preventDefault();
+                // Разрешаем перемещение только для элементов управления, не для всей страницы
+                if (e.target.closest('#movementJoystick') || e.target.closest('#cameraTouchArea')) {
+                    e.preventDefault();
+                }
                 
                 for (let touch of e.touches) {
                     const touchData = activeTouches.get(touch.identifier);
@@ -775,7 +789,7 @@
                         touchData.lastY = touch.clientY;
                     }
                 }
-            });
+            }, { passive: false });
 
             // Обработка окончания касаний
             document.addEventListener('touchend', (e) => {
@@ -931,27 +945,46 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню - ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ
+        // Инициализация меню - ИСПРАВЛЕНА
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Универсальные обработчики для всех устройств
-            function addButtonHandler(element, handler) {
+            // Функция для обработки и кликов и касаний
+            function addButtonHandlers(element, handler) {
                 // Клик для ПК
                 element.addEventListener('click', handler);
                 
                 // Тач для мобилок
-                element.addEventListener('touchend', function(e) {
+                element.addEventListener('touchstart', function(e) {
                     e.preventDefault();
+                    e.stopPropagation();
                     handler();
+                }, { passive: false });
+                
+                // Предотвращаем случайные прокрутки
+                element.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
                 }, { passive: false });
             }
             
-            addButtonHandler(playButton, startGame);
-            addButtonHandler(optionsButton, showOptions);
-            addButtonHandler(backButton, hideOptions);
+            addButtonHandlers(playButton, startGame);
+            addButtonHandlers(optionsButton, showOptions);
+            addButtonHandlers(backButton, hideOptions);
+            
+            // Добавляем визуальный фидбэк для касаний
+            [playButton, optionsButton].forEach(button => {
+                button.addEventListener('touchstart', function() {
+                    this.style.opacity = '0.7';
+                });
+                button.addEventListener('touchend', function() {
+                    this.style.opacity = '1';
+                });
+                button.addEventListener('touchcancel', function() {
+                    this.style.opacity = '1';
+                });
+            });
         }
 
         // Настройки
