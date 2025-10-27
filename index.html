@@ -175,39 +175,47 @@
             display: none;
         }
         
-        /* FLOATING Джойстик для движения - В 2 РАЗА БОЛЬШЕ */
+        /* FLOATING Джойстик - исправленная версия */
         #movementJoystick {
             position: absolute;
-            bottom: 10vmin;
-            left: 10vmin;
-            width: 40vmin;
-            height: 40vmin;
-            pointer-events: auto;
+            width: 30vmin;
+            height: 30vmin;
+            pointer-events: none;
             z-index: 100;
+            display: none;
         }
         
         .joystick-base {
             width: 100%;
             height: 100%;
-            background: rgba(255, 0, 0, 0.4);
+            background: rgba(255, 0, 0, 0.3);
             border-radius: 50%;
-            border: 3px solid rgba(255, 255, 255, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.5);
             position: absolute;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
         }
         
         .joystick-stick {
-            width: 20vmin;
-            height: 20vmin;
-            background: rgba(255, 255, 255, 0.95);
+            width: 12vmin;
+            height: 12vmin;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 10vmin;
-            left: 10vmin;
+            top: 9vmin;
+            left: 9vmin;
             transition: transform 0.1s;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Левая половина экрана для движения */
+        #movementTouchArea {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: auto;
         }
         
         /* Правая половина экрана для поворота камеры */
@@ -284,12 +292,16 @@
     
     <!-- Мобильное управление -->
     <div id="mobileControls">
+        <!-- Левая область для движения -->
+        <div id="movementTouchArea"></div>
+        
+        <!-- Плавающий джойстик -->
         <div id="movementJoystick">
             <div class="joystick-base"></div>
             <div class="joystick-stick" id="joystickStick"></div>
         </div>
         
-        <!-- Правая половина экрана для поворота камеры -->
+        <!-- Правая область для поворота камеры -->
         <div id="cameraTouchArea"></div>
     </div>
     
@@ -369,7 +381,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ В 2 РАЗА ДЛЯ ПОЛА И ПОТОЛКА
+                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ ТЕКСТУРУ ПОЛА В 2 РАЗА
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(1, 1);
@@ -378,13 +390,13 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(6, 6); // УМЕНЬШИЛ В 2 РАЗА (было 12)
+                    floorTexture.repeat.set(12, 12); // УВЕЛИЧИЛ В 2 РАЗА (было 6) - ТЕКСТУРА БУДЕТ МЕНЬШЕ
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(5, 5); // УМЕНЬШИЛ В 2 РАЗА (было 10)
+                    roofTexture.repeat.set(5, 5);
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -539,7 +551,7 @@
         const mazeGen = new MazeGenerator(25, 25);
         const maze = mazeGen.getMaze();
 
-        // Освещение - СДЕЛАЛ СВЕТЛЕЕ
+        // Освещение
         const ambientLight = new THREE.AmbientLight(0x606060, 0.8);
         scene.add(ambientLight);
         
@@ -662,24 +674,55 @@
 
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
+        let joystickActive = false;
+        let joystickPosition = { x: 0, y: 0 };
+        let joystickBasePosition = { x: 0, y: 0 };
 
-        // Инициализация джойстика
-        function initJoystick() {
+        // Инициализация FLOATING джойстика
+        function initFloatingJoystick() {
             const joystickStick = document.getElementById('joystickStick');
             const joystickBase = document.getElementById('movementJoystick');
+            const movementArea = document.getElementById('movementTouchArea');
             
-            let baseRect = joystickBase.getBoundingClientRect();
-            const baseCenterX = baseRect.left + baseRect.width / 2;
-            const baseCenterY = baseRect.top + baseRect.height / 2;
-            const maxDistance = baseRect.width / 3;
-
-            function updateJoystick(touch) {
-                const touchX = touch.clientX;
-                const touchY = touch.clientY;
+            // Показываем джойстик
+            joystickBase.style.display = 'block';
+            joystickBase.style.pointerEvents = 'none';
+            
+            movementArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
                 
-                const deltaX = touchX - baseCenterX;
-                const deltaY = touchY - baseCenterY;
+                // Позиция первого касания - центр джойстика
+                joystickBasePosition.x = touch.clientX;
+                joystickBasePosition.y = touch.clientY;
+                joystickPosition.x = touch.clientX;
+                joystickPosition.y = touch.clientY;
+                
+                // Позиционируем джойстик
+                joystickBase.style.left = (touch.clientX - 15) + 'vmin';
+                joystickBase.style.top = (touch.clientY - 15) + 'vmin';
+                
+                // Сбрасываем стик в центр
+                joystickStick.style.transform = 'translate(0, 0)';
+                
+                joystickActive = true;
+                activeTouches.set(touch.identifier, { 
+                    type: 'joystick', 
+                    element: movementArea,
+                    startX: touch.clientX,
+                    startY: touch.clientY
+                });
+                
+                updateJoystick(touch);
+            });
+            
+            function updateJoystick(touch) {
+                if (!joystickActive) return;
+                
+                const deltaX = touch.clientX - joystickBasePosition.x;
+                const deltaY = touch.clientY - joystickBasePosition.y;
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = 45; // Максимальное расстояние от центра
                 
                 let stickX = deltaX;
                 let stickY = deltaY;
@@ -700,20 +743,14 @@
                 moveLeft = normalizedX < -0.1;
                 moveRight = normalizedX > 0.1;
             }
-
+            
             function resetJoystick() {
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
+                joystickActive = false;
             }
-
-            // Обработка событий джойстика
-            joystickBase.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.changedTouches[0];
-                activeTouches.set(touch.identifier, { type: 'joystick', element: joystickBase });
-                baseRect = joystickBase.getBoundingClientRect();
-                updateJoystick(touch);
-            });
+            
+            return { updateJoystick, resetJoystick };
         }
 
         // Инициализация поворота камеры
@@ -735,50 +772,17 @@
         }
 
         // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
-        function initGlobalHandlers() {
+        function initGlobalHandlers(joystickControls) {
             // Предотвращаем стандартное поведение браузера для касаний
             document.addEventListener('touchmove', (e) => {
-                // Разрешаем перемещение только для элементов управления, не для всей страницы
-                if (e.target.closest('#movementJoystick') || e.target.closest('#cameraTouchArea')) {
-                    e.preventDefault();
-                }
+                e.preventDefault();
                 
                 for (let touch of e.touches) {
                     const touchData = activeTouches.get(touch.identifier);
                     if (!touchData) continue;
                     
                     if (touchData.type === 'joystick') {
-                        const joystickStick = document.getElementById('joystickStick');
-                        const joystickBase = document.getElementById('movementJoystick');
-                        
-                        let baseRect = joystickBase.getBoundingClientRect();
-                        const baseCenterX = baseRect.left + baseRect.width / 2;
-                        const baseCenterY = baseRect.top + baseRect.height / 2;
-                        const maxDistance = baseRect.width / 3;
-                        
-                        const deltaX = touch.clientX - baseCenterX;
-                        const deltaY = touch.clientY - baseCenterY;
-                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                        
-                        let stickX = deltaX;
-                        let stickY = deltaY;
-                        
-                        if (distance > maxDistance) {
-                            const angle = Math.atan2(deltaY, deltaX);
-                            stickX = Math.cos(angle) * maxDistance;
-                            stickY = Math.sin(angle) * maxDistance;
-                        }
-                        
-                        joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
-                        
-                        const normalizedX = stickX / maxDistance;
-                        const normalizedY = stickY / maxDistance;
-                        
-                        moveForward = normalizedY < -0.1;
-                        moveBackward = normalizedY > 0.1;
-                        moveLeft = normalizedX < -0.1;
-                        moveRight = normalizedX > 0.1;
-                        
+                        joystickControls.updateJoystick(touch);
                     } else if (touchData.type === 'camera') {
                         if (touchData.lastX && touchData.lastY) {
                             const deltaX = touch.clientX - touchData.lastX;
@@ -800,9 +804,7 @@
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
                     if (touchData && touchData.type === 'joystick') {
-                        const joystickStick = document.getElementById('joystickStick');
-                        joystickStick.style.transform = 'translate(0, 0)';
-                        moveForward = moveBackward = moveLeft = moveRight = false;
+                        joystickControls.resetJoystick();
                     }
                     activeTouches.delete(touch.identifier);
                 }
@@ -811,17 +813,15 @@
             // Сброс при потере фокуса
             window.addEventListener('blur', () => {
                 activeTouches.clear();
-                const joystickStick = document.getElementById('joystickStick');
-                joystickStick.style.transform = 'translate(0, 0)';
-                moveForward = moveBackward = moveLeft = moveRight = false;
+                joystickControls.resetJoystick();
             });
         }
 
         // Инициализация управления
         function initControls() {
-            initJoystick();
+            const joystickControls = initFloatingJoystick();
             initCameraControls();
-            initGlobalHandlers();
+            initGlobalHandlers(joystickControls);
 
             // Клавиатура для десктопа
             window.addEventListener('keydown', (event) => {
@@ -883,11 +883,16 @@
             return false;
         }
 
-        // Анимация
-        const moveSpeed = 0.2;
+        // Анимация с delta time для фиксированной скорости
+        let lastTime = 0;
+        const moveSpeed = 5; // Единиц в секунду
         
-        function animate() {
+        function animate(currentTime) {
             requestAnimationFrame(animate);
+            
+            // Расчет delta time для независимости от FPS
+            const deltaTime = lastTime ? (currentTime - lastTime) / 1000 : 0.016;
+            lastTime = currentTime;
             
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
@@ -895,11 +900,17 @@
             
             const direction = new THREE.Vector3();
             
-            if (moveForward) direction.z -= moveSpeed;
-            if (moveBackward) direction.z += moveSpeed;
-            if (moveLeft) direction.x -= moveSpeed;
-            if (moveRight) direction.x += moveSpeed;
+            if (moveForward) direction.z -= 1;
+            if (moveBackward) direction.z += 1;
+            if (moveLeft) direction.x -= 1;
+            if (moveRight) direction.x += 1;
             
+            // Нормализуем вектор направления если двигаемся по диагонали
+            if (direction.length() > 0) {
+                direction.normalize();
+            }
+            
+            direction.multiplyScalar(moveSpeed * deltaTime);
             direction.applyEuler(new THREE.Euler(0, yaw, 0));
             
             let newX = camera.position.x;
@@ -935,7 +946,7 @@
             }
             
             // Запускаем анимацию
-            animate();
+            animate(0);
         }
 
         // Функции для меню
@@ -949,7 +960,7 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню - ИСПРАВЛЕНА
+        // Инициализация меню
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
