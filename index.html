@@ -702,6 +702,7 @@
         // Музыка меню
         const menuMusic = document.getElementById('menuMusic');
         let musicVolume = 0.5;
+        let musicStarted = false;
 
         // Оружие
         const weapon = document.getElementById('weapon');
@@ -1159,11 +1160,15 @@
         function showOptions() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'flex';
+            
+            // Музыка продолжает играть в меню настроек
         }
 
         function hideOptions() {
             document.getElementById('optionsMenu').style.display = 'none';
             document.getElementById('startMenu').style.display = 'flex';
+            
+            // Музыка продолжает играть когда возвращаемся в главное меню
         }
 
         // Инициализация меню
@@ -1224,14 +1229,17 @@
             
             // Функция запуска музыки
             const playMusic = () => {
-                if (menuMusic.paused) {
-                    menuMusic.play().catch(e => {
+                if (menuMusic.paused && !musicStarted) {
+                    menuMusic.play().then(() => {
+                        console.log('Музыка меню запущена');
+                        musicStarted = true;
+                    }).catch(e => {
                         // Просто игнорируем ошибку, не показываем сообщение
                     });
                 }
             };
             
-            // Пытаемся запустить сразу
+            // Пытаемся запустить сразу при загрузке
             playMusic();
             
             // Обработчики для пользовательского взаимодействия
@@ -1256,7 +1264,7 @@
             // Скрываем оружие в меню
             weapon.style.display = 'none';
             
-            // Инициализируем звук
+            // Инициализируем звук - музыка играет в меню
             initAudio();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
@@ -1268,7 +1276,7 @@
             // Скрываем оружие в меню
             weapon.style.display = 'none';
             
-            // Инициализируем звук
+            // Инициализируем звук - музыка играет в меню
             initAudio();
         });
     </script>
