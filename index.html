@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DoomGame(@renjaydev)</title>
+    <title>3D Лабиринт</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
         body { 
@@ -360,18 +360,18 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР
+                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ ПОВТОРЕНИЯ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-                    wallTexture.repeat.set(0.2, 0.2);
+                    wallTexture.repeat.set(1, 1); // Нормальное повторение
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(40, 40);
+                    floorTexture.repeat.set(4, 4); // Уменьшил повторение для лучшего качества
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(20, 20);
+                    roofTexture.repeat.set(2, 2); // Нормальное повторение
                 }
             });
         }
@@ -931,32 +931,27 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        // Инициализация меню - ДОБАВЛЕНЫ ТАЧ-ОБРАБОТЧИКИ
+        // Инициализация меню - ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ
         function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Клик для ПК
-            playButton.addEventListener('click', startGame);
-            optionsButton.addEventListener('click', showOptions);
-            backButton.addEventListener('click', hideOptions);
+            // Универсальные обработчики для всех устройств
+            function addButtonHandler(element, handler) {
+                // Клик для ПК
+                element.addEventListener('click', handler);
+                
+                // Тач для мобилок
+                element.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    handler();
+                }, { passive: false });
+            }
             
-            // Тач для мобилок
-            playButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                startGame();
-            }, { passive: false });
-            
-            optionsButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                showOptions();
-            }, { passive: false });
-            
-            backButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                hideOptions();
-            }, { passive: false });
+            addButtonHandler(playButton, startGame);
+            addButtonHandler(optionsButton, showOptions);
+            addButtonHandler(backButton, hideOptions);
         }
 
         // Настройки
