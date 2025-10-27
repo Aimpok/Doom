@@ -175,14 +175,16 @@
             display: none;
         }
         
-        /* FLOATING Джойстик - исправленная версия */
+        /* FLOATING Джойстик - фиксированная версия */
         #movementJoystick {
             position: absolute;
-            width: 30vmin;
-            height: 30vmin;
+            bottom: 20vmin;
+            left: 20vmin;
+            width: 25vmin;
+            height: 25vmin;
             pointer-events: none;
             z-index: 100;
-            display: none;
+            display: block;
         }
         
         .joystick-base {
@@ -201,8 +203,8 @@
             background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 9vmin;
-            left: 9vmin;
+            top: 6.5vmin;
+            left: 6.5vmin;
             transition: transform 0.1s;
             border: 2px solid rgba(255, 255, 255, 0.7);
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
@@ -295,7 +297,7 @@
         <!-- Левая область для движения -->
         <div id="movementTouchArea"></div>
         
-        <!-- Плавающий джойстик -->
+        <!-- Фиксированный джойстик -->
         <div id="movementJoystick">
             <div class="joystick-base"></div>
             <div class="joystick-stick" id="joystickStick"></div>
@@ -381,7 +383,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ ТЕКСТУРУ ПОЛА В 2 РАЗА
+                // НАСТРОЙКИ ТЕКСТУР - УМЕНЬШИЛ ТЕКСТУРУ ПОЛА ЕЩЕ В 3 РАЗА
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(1, 1);
@@ -390,7 +392,7 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(12, 12); // УВЕЛИЧИЛ В 2 РАЗА (было 6) - ТЕКСТУРА БУДЕТ МЕНЬШЕ
+                    floorTexture.repeat.set(36, 36); // УВЕЛИЧИЛ В 3 РАЗА (было 12) - ТЕКСТУРА БУДЕТ ЕЩЕ МЕНЬШЕ
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
@@ -675,54 +677,26 @@
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
         let joystickActive = false;
-        let joystickPosition = { x: 0, y: 0 };
-        let joystickBasePosition = { x: 0, y: 0 };
 
-        // Инициализация FLOATING джойстика
-        function initFloatingJoystick() {
+        // Инициализация джойстика
+        function initJoystick() {
             const joystickStick = document.getElementById('joystickStick');
             const joystickBase = document.getElementById('movementJoystick');
             const movementArea = document.getElementById('movementTouchArea');
             
-            // Показываем джойстик
-            joystickBase.style.display = 'block';
-            joystickBase.style.pointerEvents = 'none';
-            
-            movementArea.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.changedTouches[0];
-                
-                // Позиция первого касания - центр джойстика
-                joystickBasePosition.x = touch.clientX;
-                joystickBasePosition.y = touch.clientY;
-                joystickPosition.x = touch.clientX;
-                joystickPosition.y = touch.clientY;
-                
-                // Позиционируем джойстик
-                joystickBase.style.left = (touch.clientX - 15) + 'vmin';
-                joystickBase.style.top = (touch.clientY - 15) + 'vmin';
-                
-                // Сбрасываем стик в центр
-                joystickStick.style.transform = 'translate(0, 0)';
-                
-                joystickActive = true;
-                activeTouches.set(touch.identifier, { 
-                    type: 'joystick', 
-                    element: movementArea,
-                    startX: touch.clientX,
-                    startY: touch.clientY
-                });
-                
-                updateJoystick(touch);
-            });
-            
+            // Фиксированная позиция джойстика
+            const baseRect = joystickBase.getBoundingClientRect();
+            const baseCenterX = baseRect.left + baseRect.width / 2;
+            const baseCenterY = baseRect.top + baseRect.height / 2;
+            const maxDistance = baseRect.width / 3;
+
             function updateJoystick(touch) {
-                if (!joystickActive) return;
+                const touchX = touch.clientX;
+                const touchY = touch.clientY;
                 
-                const deltaX = touch.clientX - joystickBasePosition.x;
-                const deltaY = touch.clientY - joystickBasePosition.y;
+                const deltaX = touchX - baseCenterX;
+                const deltaY = touchY - baseCenterY;
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                const maxDistance = 45; // Максимальное расстояние от центра
                 
                 let stickX = deltaX;
                 let stickY = deltaY;
@@ -735,20 +709,30 @@
                 
                 joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
                 
-                const normalizedX = stickX / maxDistance;
-                const normalizedY = stickY / maxDistance;
+                // ОДНА СКОРОСТЬ - либо стоишь, либо идешь
+                const isMoving = distance > 10; // Порог активации движения
                 
-                moveForward = normalizedY < -0.1;
-                moveBackward = normalizedY > 0.1;
-                moveLeft = normalizedX < -0.1;
-                moveRight = normalizedX > 0.1;
+                const angle = Math.atan2(deltaY, deltaX);
+                moveForward = isMoving && angle < -Math.PI/4 && angle > -3*Math.PI/4;
+                moveBackward = isMoving && angle > Math.PI/4 && angle < 3*Math.PI/4;
+                moveLeft = isMoving && angle > 3*Math.PI/4 || angle < -3*Math.PI/4;
+                moveRight = isMoving && angle > -Math.PI/4 && angle < Math.PI/4;
             }
-            
+
             function resetJoystick() {
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
                 joystickActive = false;
             }
+
+            // Обработка событий джойстика
+            movementArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                joystickActive = true;
+                activeTouches.set(touch.identifier, { type: 'joystick', element: movementArea });
+                updateJoystick(touch);
+            });
             
             return { updateJoystick, resetJoystick };
         }
@@ -819,7 +803,7 @@
 
         // Инициализация управления
         function initControls() {
-            const joystickControls = initFloatingJoystick();
+            const joystickControls = initJoystick();
             initCameraControls();
             initGlobalHandlers(joystickControls);
 
@@ -885,7 +869,7 @@
 
         // Анимация с delta time для фиксированной скорости
         let lastTime = 0;
-        const moveSpeed = 5; // Единиц в секунду
+        const moveSpeed = 8; // Единиц в секунду
         
         function animate(currentTime) {
             requestAnimationFrame(animate);
