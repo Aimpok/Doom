@@ -702,6 +702,7 @@
         // Музыка меню
         const menuMusic = document.getElementById('menuMusic');
         let musicVolume = 0.5;
+        let musicStarted = false;
 
         // Оружие
         const weapon = document.getElementById('weapon');
@@ -1238,33 +1239,6 @@
             }
         });
 
-        // Запуск игры и инициализация звука
-        function initGame() {
-            loadTextures().then(() => {
-                const materials = createMaterials();
-                createScene(materials);
-                initControls();
-                initMenu();
-                
-                // Скрываем оружие в меню
-                weapon.style.display = 'none';
-                
-                // Попытка запуска музыки с обработкой мобильных ограничений
-                initAudio();
-            }).catch((error) => {
-                console.error('Ошибка загрузки:', error);
-                const materials = createMaterials();
-                createScene(materials);
-                initControls();
-                initMenu();
-                
-                // Скрываем оружие в меню
-                weapon.style.display = 'none';
-                
-                initAudio();
-            });
-        }
-
         // Улучшенная инициализация звука для мобильных устройств
         function initAudio() {
             if (!menuMusic) return;
@@ -1272,17 +1246,14 @@
             // Устанавливаем громкость
             menuMusic.volume = musicVolume;
             
-            // Пытаемся запустить музыку
+            // Функция запуска музыки
             const playMusic = () => {
-                if (menuMusic.paused) {
+                if (menuMusic.paused && !musicStarted) {
                     menuMusic.play().then(() => {
                         console.log('Музыка запущена');
+                        musicStarted = true;
                     }).catch(e => {
-                        console.log('Автовоспроизведение музыки заблокировано:', e);
-                        // Показываем сообщение пользователю на мобилках
-                        if ('ontouchstart' in window) {
-                            alert('Нажмите на экран для запуска музыки');
-                        }
+                        console.log('Автовоспроизведение заблокировано, ждем пользовательского взаимодействия');
                     });
                 }
             };
@@ -1290,21 +1261,48 @@
             // Пытаемся запустить сразу
             playMusic();
             
-            // Добавляем обработчики для пользовательского взаимодействия
+            // Обработчики для пользовательского взаимодействия
             const startMusicOnInteraction = () => {
-                playMusic();
-                document.removeEventListener('click', startMusicOnInteraction);
-                document.removeEventListener('touchstart', startMusicOnInteraction);
-                document.removeEventListener('keydown', startMusicOnInteraction);
+                if (!musicStarted) {
+                    playMusic();
+                }
             };
             
+            // Добавляем обработчики на все возможные взаимодействия
             document.addEventListener('click', startMusicOnInteraction);
             document.addEventListener('touchstart', startMusicOnInteraction);
             document.addEventListener('keydown', startMusicOnInteraction);
+            document.addEventListener('mousedown', startMusicOnInteraction);
+            
+            // Также запускаем музыку при загрузке текстур (это считается пользовательским действием)
+            setTimeout(startMusicOnInteraction, 1000);
         }
 
-        // Запускаем игру
-        initGame();
+        // Запуск игры
+        loadTextures().then(() => {
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+            initMenu();
+            
+            // Скрываем оружие в меню
+            weapon.style.display = 'none';
+            
+            // Инициализируем звук
+            initAudio();
+        }).catch((error) => {
+            console.error('Ошибка загрузки:', error);
+            const materials = createMaterials();
+            createScene(materials);
+            initControls();
+            initMenu();
+            
+            // Скрываем оружие в меню
+            weapon.style.display = 'none';
+            
+            // Инициализируем звук
+            initAudio();
+        });
     </script>
 </body>
 </html>
