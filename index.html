@@ -172,13 +172,13 @@
             display: none;
         }
         
-        /* Джойстик для движения - УВЕЛИЧЕН В 2 РАЗА */
+        /* Джойстик для движения - УМЕНЬШЕН */
         #movementJoystick {
             position: absolute;
             bottom: 5vmin;
             left: 5vmin;
-            width: 40vmin;
-            height: 40vmin;
+            width: 30vmin;
+            height: 30vmin;
             pointer-events: auto;
         }
         
@@ -192,13 +192,13 @@
         }
         
         .joystick-stick {
-            width: 20vmin;
-            height: 20vmin;
+            width: 15vmin;
+            height: 15vmin;
             background: rgba(255, 255, 255, 0.9);
             border-radius: 50%;
             position: absolute;
-            top: 10vmin;
-            left: 10vmin;
+            top: 7.5vmin;
+            left: 7.5vmin;
             transition: transform 0.1s;
         }
         
@@ -212,13 +212,13 @@
             pointer-events: auto;
         }
 
-        /* Кнопка стрельбы - УВЕЛИЧЕНА В 2 РАЗА */
+        /* Кнопка стрельбы - УМЕНЬШЕНА */
         #shootButton {
             position: absolute;
             bottom: 15vmin;
             right: 15vmin;
-            width: 30vmin;
-            height: 30vmin;
+            width: 25vmin;
+            height: 25vmin;
             background: rgba(255, 0, 0, 0.3);
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.5);
@@ -227,7 +227,7 @@
             justify-content: center;
             align-items: center;
             color: white;
-            font-size: 6vmin;
+            font-size: 5vmin;
             z-index: 60;
         }
 
@@ -417,13 +417,13 @@
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(4, 4); // УМЕНЬШЕНО В 2 РАЗА (было 8,8)
+                    floorTexture.repeat.set(20, 20); // УВЕЛИЧЕНО В 5 РАЗ (было 4,4)
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(4, 4); // УМЕНЬШЕНО В 2 РАЗА (было 8,8)
+                    roofTexture.repeat.set(20, 20); // УВЕЛИЧЕНО В 5 РАЗ (было 4,4)
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
