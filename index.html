@@ -1160,15 +1160,11 @@
         function showOptions() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'flex';
-            
-            // Музыка продолжает играть в меню настроек
         }
 
         function hideOptions() {
             document.getElementById('optionsMenu').style.display = 'none';
             document.getElementById('startMenu').style.display = 'flex';
-            
-            // Музыка продолжает играть когда возвращаемся в главное меню
         }
 
         // Инициализация меню
@@ -1177,24 +1173,51 @@
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Клик для ПК
-            playButton.addEventListener('click', startGame);
-            optionsButton.addEventListener('click', showOptions);
-            backButton.addEventListener('click', hideOptions);
+            // Функция для запуска музыки при взаимодействии
+            const startMusicOnInteraction = () => {
+                if (!musicStarted && menuMusic) {
+                    menuMusic.volume = musicVolume;
+                    menuMusic.play().then(() => {
+                        console.log('Музыка меню запущена');
+                        musicStarted = true;
+                    }).catch(e => {
+                        // Игнорируем ошибку на мобилках
+                    });
+                }
+            };
             
-            // Тач для мобилок
+            // Клик для ПК - запускаем музыку
+            playButton.addEventListener('click', function(e) {
+                startMusicOnInteraction();
+                startGame();
+            });
+            
+            optionsButton.addEventListener('click', function(e) {
+                startMusicOnInteraction();
+                showOptions();
+            });
+            
+            backButton.addEventListener('click', function(e) {
+                startMusicOnInteraction();
+                hideOptions();
+            });
+            
+            // Тач для мобилок - запускаем музыку
             playButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                startMusicOnInteraction();
                 startGame();
             }, { passive: false });
             
             optionsButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                startMusicOnInteraction();
                 showOptions();
             }, { passive: false });
             
             backButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
+                startMusicOnInteraction();
                 hideOptions();
             }, { passive: false });
         }
@@ -1220,40 +1243,6 @@
             }
         });
 
-        // Улучшенная инициализация звука для мобильных устройств
-        function initAudio() {
-            if (!menuMusic) return;
-            
-            // Устанавливаем громкость
-            menuMusic.volume = musicVolume;
-            
-            // Функция запуска музыки
-            const playMusic = () => {
-                if (menuMusic.paused && !musicStarted) {
-                    menuMusic.play().then(() => {
-                        console.log('Музыка меню запущена');
-                        musicStarted = true;
-                    }).catch(e => {
-                        // Просто игнорируем ошибку, не показываем сообщение
-                    });
-                }
-            };
-            
-            // Пытаемся запустить сразу при загрузке
-            playMusic();
-            
-            // Обработчики для пользовательского взаимодействия
-            const startMusicOnInteraction = () => {
-                playMusic();
-            };
-            
-            // Добавляем обработчики на все возможные взаимодействия
-            document.addEventListener('click', startMusicOnInteraction);
-            document.addEventListener('touchstart', startMusicOnInteraction);
-            document.addEventListener('keydown', startMusicOnInteraction);
-            document.addEventListener('mousedown', startMusicOnInteraction);
-        }
-
         // Запуск игры
         loadTextures().then(() => {
             const materials = createMaterials();
@@ -1264,8 +1253,19 @@
             // Скрываем оружие в меню
             weapon.style.display = 'none';
             
-            // Инициализируем звук - музыка играет в меню
-            initAudio();
+            // На ПК пробуем запустить музыку сразу
+            if (!('ontouchstart' in window)) {
+                // Только на ПК пытаемся запустить музыку автоматически
+                if (menuMusic) {
+                    menuMusic.volume = musicVolume;
+                    menuMusic.play().then(() => {
+                        console.log('Музыка меню запущена на ПК');
+                        musicStarted = true;
+                    }).catch(e => {
+                        // На ПК тоже может быть заблокировано автовоспроизведение
+                    });
+                }
+            }
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
@@ -1275,9 +1275,6 @@
             
             // Скрываем оружие в меню
             weapon.style.display = 'none';
-            
-            // Инициализируем звук - музыка играет в меню
-            initAudio();
         });
     </script>
 </body>
