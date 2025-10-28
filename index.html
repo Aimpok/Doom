@@ -275,6 +275,72 @@
             display: none;
             z-index: 1000;
         }
+
+        /* Панель UI */
+        #uiPanel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: none;
+            z-index: 45;
+            pointer-events: none;
+        }
+
+        #downPanel {
+            width: 100%;
+            height: auto;
+        }
+
+        /* Цифры для HP и патронов */
+        .digit {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        /* Панель настроек UI */
+        #uiSettingsPanel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .ui-setting-group {
+            margin-bottom: 10px;
+        }
+
+        .ui-setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .ui-setting-input {
+            width: 60px;
+            margin: 2px;
+            padding: 2px;
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+
+        .ui-setting-button {
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
@@ -336,6 +402,56 @@
     
     <!-- Оружие -->
     <img id="weapon" src="Gun.png" alt="Weapon">
+    
+    <!-- UI Панель -->
+    <div id="uiPanel">
+        <img id="downPanel" src="DownPanel.png" alt="UI Panel">
+        <div id="hpDisplay"></div>
+        <div id="ammoDisplay"></div>
+    </div>
+    
+    <!-- Панель настроек UI -->
+    <div id="uiSettingsPanel">
+        <h3 style="margin: 0 0 10px 0; color: #ff0000;">Настройки UI</h3>
+        
+        <div class="ui-setting-group">
+            <label>Высота панели (vh):</label>
+            <input type="number" id="panelHeight" class="ui-setting-input" value="15" min="5" max="30">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>Размер цифр (px):</label>
+            <input type="number" id="digitSize" class="ui-setting-input" value="24" min="10" max="50">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>HP X позиция (%):</label>
+            <input type="number" id="hpX" class="ui-setting-input" value="20" min="0" max="100">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>HP Y позиция (%):</label>
+            <input type="number" id="hpY" class="ui-setting-input" value="50" min="0" max="100">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>Патроны X позиция (%):</label>
+            <input type="number" id="ammoX" class="ui-setting-input" value="80" min="0" max="100">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>Патроны Y позиция (%):</label>
+            <input type="number" id="ammoY" class="ui-setting-input" value="50" min="0" max="100">
+        </div>
+        
+        <div class="ui-setting-group">
+            <label>Расстояние между цифрами (px):</label>
+            <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="0" max="10">
+        </div>
+        
+        <button class="ui-setting-button" id="applyUiSettings">Применить</button>
+        <button class="ui-setting-button" id="toggleUiSettings" style="background: #444;">Скрыть</button>
+    </div>
     
     <!-- FPS счетчик -->
     <div id="fpsCounter">FPS: 0</div>
@@ -730,12 +846,24 @@
         let canShoot = true;
         let ammo = 30;
         let maxAmmo = 30;
+        let hp = 100;
 
         // FPS счетчик
         const fpsCounter = document.getElementById('fpsCounter');
         let frameCount = 0;
         let lastTime = performance.now();
         let fps = 0;
+
+        // UI настройки
+        let uiSettings = {
+            panelHeight: 15, // vh
+            digitSize: 24, // px
+            hpX: 20, // %
+            hpY: 50, // %
+            ammoX: 80, // %
+            ammoY: 50, // %
+            digitSpacing: 2 // px
+        };
 
         // ФУНКЦИЯ ДЛЯ ЗАПУСКА МУЗЫКИ ПРИ СТАРТЕ
         function startMenuMusic() {
@@ -776,6 +904,7 @@
             isShooting = true;
             canShoot = false;
             ammo--;
+            updateAmmoDisplay();
             
             console.log('Стрельба! Патронов осталось:', ammo);
             
@@ -892,8 +1021,100 @@
                 ammo = maxAmmo;
                 isReloading = false;
                 canShoot = true;
+                updateAmmoDisplay();
                 console.log('Перезарядка завершена! Патронов:', ammo);
             }, 600);
+        }
+
+        // UI функции
+        function updateHpDisplay() {
+            const hpDisplay = document.getElementById('hpDisplay');
+            hpDisplay.innerHTML = '';
+            
+            const hpString = hp.toString().padStart(3, '0');
+            const panel = document.getElementById('downPanel');
+            const panelRect = panel.getBoundingClientRect();
+            
+            for (let i = 0; i < hpString.length; i++) {
+                const digit = document.createElement('img');
+                digit.className = 'digit';
+                digit.src = `gameui/${hpString[i]}.png`;
+                digit.style.width = `${uiSettings.digitSize}px`;
+                digit.style.height = `${uiSettings.digitSize}px`;
+                
+                // Позиционирование относительно панели
+                const xPos = (uiSettings.hpX / 100) * panelRect.width + (i * (uiSettings.digitSize + uiSettings.digitSpacing));
+                const yPos = (uiSettings.hpY / 100) * panelRect.height;
+                
+                digit.style.left = `${xPos}px`;
+                digit.style.top = `${yPos}px`;
+                
+                hpDisplay.appendChild(digit);
+            }
+        }
+
+        function updateAmmoDisplay() {
+            const ammoDisplay = document.getElementById('ammoDisplay');
+            ammoDisplay.innerHTML = '';
+            
+            const ammoString = ammo.toString().padStart(2, '0');
+            const panel = document.getElementById('downPanel');
+            const panelRect = panel.getBoundingClientRect();
+            
+            for (let i = 0; i < ammoString.length; i++) {
+                const digit = document.createElement('img');
+                digit.className = 'digit';
+                digit.src = `gameui/${ammoString[i]}.png`;
+                digit.style.width = `${uiSettings.digitSize}px`;
+                digit.style.height = `${uiSettings.digitSize}px`;
+                
+                // Позиционирование относительно панели
+                const xPos = (uiSettings.ammoX / 100) * panelRect.width + (i * (uiSettings.digitSize + uiSettings.digitSpacing));
+                const yPos = (uiSettings.ammoY / 100) * panelRect.height;
+                
+                digit.style.left = `${xPos}px`;
+                digit.style.top = `${yPos}px`;
+                
+                ammoDisplay.appendChild(digit);
+            }
+        }
+
+        function applyUiSettings() {
+            // Применяем настройки из инпутов
+            uiSettings.panelHeight = parseInt(document.getElementById('panelHeight').value) || 15;
+            uiSettings.digitSize = parseInt(document.getElementById('digitSize').value) || 24;
+            uiSettings.hpX = parseInt(document.getElementById('hpX').value) || 20;
+            uiSettings.hpY = parseInt(document.getElementById('hpY').value) || 50;
+            uiSettings.ammoX = parseInt(document.getElementById('ammoX').value) || 80;
+            uiSettings.ammoY = parseInt(document.getElementById('ammoY').value) || 50;
+            uiSettings.digitSpacing = parseInt(document.getElementById('digitSpacing').value) || 2;
+            
+            // Применяем настройки к панели
+            const downPanel = document.getElementById('downPanel');
+            downPanel.style.height = `${uiSettings.panelHeight}vh`;
+            
+            // Обновляем отображение
+            updateHpDisplay();
+            updateAmmoDisplay();
+        }
+
+        function initUiSettings() {
+            // Заполняем инпуты текущими значениями
+            document.getElementById('panelHeight').value = uiSettings.panelHeight;
+            document.getElementById('digitSize').value = uiSettings.digitSize;
+            document.getElementById('hpX').value = uiSettings.hpX;
+            document.getElementById('hpY').value = uiSettings.hpY;
+            document.getElementById('ammoX').value = uiSettings.ammoX;
+            document.getElementById('ammoY').value = uiSettings.ammoY;
+            document.getElementById('digitSpacing').value = uiSettings.digitSpacing;
+            
+            // Обработчики для кнопок
+            document.getElementById('applyUiSettings').addEventListener('click', applyUiSettings);
+            document.getElementById('toggleUiSettings').addEventListener('click', function() {
+                const panel = document.getElementById('uiSettingsPanel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                this.textContent = panel.style.display === 'none' ? 'Показать' : 'Скрыть';
+            });
         }
 
         // УПРАВЛЕНИЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ БЕЗ СРЫВА КАМЕРЫ
@@ -1217,6 +1438,16 @@
                     playReloadAnimation();
                 }
             });
+
+            // Показать/скрыть настройки UI по клавише U
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyU') {
+                    const panel = document.getElementById('uiSettingsPanel');
+                    const button = document.getElementById('toggleUiSettings');
+                    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                    button.textContent = panel.style.display === 'none' ? 'Показать' : 'Скрыть';
+                }
+            });
         }
 
         // Инициализация управления
@@ -1286,7 +1517,7 @@
         }
 
         // Анимация с delta time для независимой от FPS скорости
-        const BASE_MOVE_SPEED = 5.0; // Базовая скорость в единицах в секунду
+        const BASE_MOVE_SPEED = 15.0; // УВЕЛИЧЕНА ДО 15
         
         function animate(currentTime) {
             requestAnimationFrame(animate);
@@ -1340,12 +1571,16 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            // При изменении размера окна обновляем UI
+            updateHpDisplay();
+            updateAmmoDisplay();
         });
 
         // Функция запуска игры
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
+            document.getElementById('uiPanel').style.display = 'block';
             
             if (menuMusic) {
                 menuMusic.pause();
@@ -1357,6 +1592,9 @@
             }
             
             weapon.style.display = 'block';
+            
+            // Применяем начальные настройки UI
+            applyUiSettings();
             
             // Сбрасываем время для delta time
             lastTime = performance.now();
@@ -1436,6 +1674,7 @@
             createScene(materials);
             initControls();
             initMenu();
+            initUiSettings();
             weapon.style.display = 'none';
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
@@ -1443,6 +1682,7 @@
             createScene(materials);
             initControls();
             initMenu();
+            initUiSettings();
             weapon.style.display = 'none';
         });
     </script>
