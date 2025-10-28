@@ -302,6 +302,20 @@
         #ammoDisplay {
             color: #44ff44;
         }
+
+        /* Индикатор этажа */
+        #floorDisplay {
+            position: absolute;
+            top: 50px;
+            left: 10px;
+            color: white;
+            font-size: 18px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+            border-radius: 3px;
+            display: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -368,8 +382,10 @@
     <div id="uiPanel">
         <div id="hpDisplay">HP: 100</div>
         <div id="ammoDisplay">ПАТРОНЫ: 2/2</div>
-        <div id="floorDisplay">ЭТАЖ: 1</div>
     </div>
+    
+    <!-- Индикатор этажа -->
+    <div id="floorDisplay">Этаж: 1</div>
     
     <!-- FPS счетчик -->
     <div id="fpsCounter">FPS: 0</div>
@@ -424,17 +440,18 @@
         const CELL_SIZE = 8;
         const WALL_HEIGHT = 8;
         const WALL_THICKNESS = 0.3;
-        const FLOOR_HEIGHT = 16; // Высота между этажами
+        const FLOORS_COUNT = 5;
+        const FLOOR_HEIGHT = WALL_HEIGHT;
 
         // Текстуры
         const textureLoader = new THREE.TextureLoader();
-        let wallTexture, floorTexture, roofTexture;
+        let wallTexture, floorTexture, roofTexture, stairsTexture;
 
         // Загрузка текстур
         function loadTextures() {
             return new Promise((resolve) => {
                 let texturesLoaded = 0;
-                const totalTextures = 3;
+                const totalTextures = 4;
 
                 function onTextureLoad() {
                     texturesLoaded++;
@@ -461,6 +478,12 @@
                     onTextureLoad();
                 });
 
+                stairsTexture = textureLoader.load('Textures/StairsTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры лестницы:', error);
+                    stairsTexture = null;
+                    onTextureLoad();
+                });
+
                 // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
@@ -479,6 +502,12 @@
                     roofTexture.repeat.set(20, 20);
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
+                }
+                if (stairsTexture) {
+                    stairsTexture.wrapS = stairsTexture.wrapT = THREE.RepeatWrapping;
+                    stairsTexture.repeat.set(1, 2);
+                    stairsTexture.minFilter = THREE.LinearFilter;
+                    stairsTexture.magFilter = THREE.LinearFilter;
                 }
             });
         }
@@ -515,44 +544,60 @@
                     fog: true
                 });
             
-            return { wallMaterial, floorMaterial, roofMaterial };
+            const stairsMaterial = stairsTexture ? 
+                new THREE.MeshLambertMaterial({ 
+                    map: stairsTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x888888,
+                    fog: true
+                });
+            
+            return { wallMaterial, floorMaterial, roofMaterial, stairsMaterial };
         }
 
-        // Генератор лабиринта с 2 этажами и углами 45 градусов
+        // Генератор лабиринта
         class MazeGenerator {
-            constructor(width, height) {
+            constructor(width, height, floors) {
                 this.width = width;
                 this.height = height;
-                this.maze = this.generateTwoFloorMaze();
+                this.floors = floors;
+                this.mazes = [];
+                this.stairs = [];
+                this.holes = [];
+                
+                // Генерируем лабиринты для каждого этажа
+                for (let floor = 0; floor < floors; floor++) {
+                    this.mazes.push(this.generateMazeWithMultiplePaths());
+                }
+                
+                // Добавляем лестницы и отверстия между этажами
+                this.addStairsAndHoles();
             }
 
-            generateTwoFloorMaze() {
-                // Создаем два этажа
-                const floor1 = Array(this.height).fill().map(() => Array(this.width).fill(1));
-                const floor2 = Array(this.height).fill().map(() => Array(this.width).fill(1));
+            generateMazeWithMultiplePaths() {
+                let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
+                const paths = [];
+                const numPaths = 3;
                 
-                // Генерируем пути на обоих этажах
-                this.generateFloorPaths(floor1);
-                this.generateFloorPaths(floor2);
+                for (let i = 0; i < numPaths; i++) {
+                    let startX = 1 + Math.floor(Math.random() * (this.width - 3));
+                    let startY = 1 + Math.floor(Math.random() * (this.height - 3));
+                    paths.push(this.generatePath(maze, startX, startY));
+                }
                 
-                // Добавляем углы 45 градусов
-                this.add45DegreeCorners(floor1);
-                this.add45DegreeCorners(floor2);
+                this.connectPaths(maze, paths);
+                this.addRandomPassages(maze);
                 
-                // Добавляем лестницы между этажами
-                this.addStairs(floor1, floor2);
-                
-                // Добавляем большие комнаты
-                this.addLargeRooms(floor1);
-                this.addLargeRooms(floor2);
-                
-                return { floor1, floor2 };
+                return maze;
             }
 
-            generateFloorPaths(maze) {
-                let x = 1, y = 1;
+            generatePath(maze, startX, startY) {
+                let x = startX, y = startY;
                 maze[y][x] = 0;
                 
+                let path = [[x, y]];
                 let directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
                 let stack = [[x, y]];
                 
@@ -573,150 +618,134 @@
                         maze[cy + dy/2][cx + dx/2] = 0;
                         maze[ny][nx] = 0;
                         
+                        path.push([nx, ny]);
                         stack.push([nx, ny]);
                     } else {
                         stack.pop();
                     }
                 }
                 
-                // Добавляем диагональные проходы для углов 45 градусов
-                this.addDiagonalPassages(maze);
+                return path;
             }
 
-            addDiagonalPassages(maze) {
-                // Добавляем диагональные проходы для создания углов 45 градусов
-                for (let y = 1; y < this.height - 1; y++) {
-                    for (let x = 1; x < this.width - 1; x++) {
-                        if (maze[y][x] === 0) {
-                            // Случайно создаем диагональные проходы
-                            if (Math.random() < 0.1) {
-                                if (x > 0 && y > 0 && maze[y-1][x] === 1 && maze[y][x-1] === 1) {
-                                    maze[y-1][x-1] = 0; // Левый верхний угол
-                                }
-                                if (x < this.width - 1 && y > 0 && maze[y-1][x] === 1 && maze[y][x+1] === 1) {
-                                    maze[y-1][x+1] = 0; // Правый верхний угол
-                                }
-                                if (x > 0 && y < this.height - 1 && maze[y+1][x] === 1 && maze[y][x-1] === 1) {
-                                    maze[y+1][x-1] = 0; // Левый нижний угол
-                                }
-                                if (x < this.width - 1 && y < this.height - 1 && maze[y+1][x] === 1 && maze[y][x+1] === 1) {
-                                    maze[y+1][x+1] = 0; // Правый нижний угол
-                                }
-                            }
+            connectPaths(maze, paths) {
+                for (let i = 0; i < paths.length - 1; i++) {
+                    const connectionPoints = 2;
+                    for (let j = 0; j < connectionPoints; j++) {
+                        const point1 = paths[i][Math.floor(Math.random() * paths[i].length)];
+                        const point2 = paths[i+1][Math.floor(Math.random() * paths[i+1].length)];
+                        this.createPassage(maze, point1, point2);
+                    }
+                }
+            }
+
+            createPassage(maze, [x1, y1], [x2, y2]) {
+                let x = x1, y = y1;
+                while (x !== x2 || y !== y2) {
+                    if (Math.random() > 0.5 && x !== x2) {
+                        x += x < x2 ? 1 : -1;
+                    } else if (y !== y2) {
+                        y += y < y2 ? 1 : -1;
+                    }
+                    if (x > 0 && x < this.width - 1 && y > 0 && y < this.height - 1) {
+                        maze[y][x] = 0;
+                    }
+                }
+            }
+
+            addRandomPassages(maze) {
+                const numExtraPassages = Math.floor(this.width * this.height * 0.1);
+                for (let i = 0; i < numExtraPassages; i++) {
+                    const x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    const y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    if (maze[y][x] === 1) {
+                        const neighbors = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ].filter(([nx, ny]) => 
+                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height
+                        );
+                        const passageNeighbors = neighbors.filter(([nx, ny]) => maze[ny][nx] === 0);
+                        if (passageNeighbors.length >= 2) {
+                            maze[y][x] = 0;
                         }
                     }
                 }
             }
 
-            add45DegreeCorners(maze) {
-                // Явно создаем углы 45 градусов
-                for (let y = 1; y < this.height - 1; y++) {
-                    for (let x = 1; x < this.width - 1; x++) {
-                        if (maze[y][x] === 0) {
-                            // Создаем углы в местах, где это имеет смысл
-                            if (maze[y-1][x] === 1 && maze[y][x-1] === 1 && 
-                                maze[y-1][x-1] === 0 && Math.random() < 0.3) {
-                                maze[y-1][x] = 0;
-                                maze[y][x-1] = 0;
-                            }
-                            if (maze[y-1][x] === 1 && maze[y][x+1] === 1 && 
-                                maze[y-1][x+1] === 0 && Math.random() < 0.3) {
-                                maze[y-1][x] = 0;
-                                maze[y][x+1] = 0;
-                            }
-                        }
+            addStairsAndHoles() {
+                // Добавляем лестницы и отверстия между этажами
+                for (let floor = 0; floor < this.floors - 1; floor++) {
+                    // Добавляем 2-3 лестницы на каждом этаже
+                    const numStairs = 2 + Math.floor(Math.random() * 2);
+                    for (let i = 0; i < numStairs; i++) {
+                        this.addStaircase(floor);
+                    }
+                    
+                    // Добавляем отверстия в полу/потолке
+                    const numHoles = 1 + Math.floor(Math.random() * 2);
+                    for (let i = 0; i < numHoles; i++) {
+                        this.addHole(floor);
                     }
                 }
             }
 
-            addStairs(floor1, floor2) {
-                // Добавляем 3-4 лестницы между этажами
-                const numStairs = 3 + Math.floor(Math.random() * 2);
+            addStaircase(floor) {
+                // Находим подходящее место для лестницы
+                let x, y;
+                let attempts = 0;
+                do {
+                    x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    attempts++;
+                } while ((this.mazes[floor][y][x] !== 0 || 
+                         this.mazes[floor+1][y][x] !== 0) && attempts < 100);
                 
-                for (let i = 0; i < numStairs; i++) {
-                    let x, y;
-                    do {
-                        x = 2 + Math.floor(Math.random() * (this.width - 4));
-                        y = 2 + Math.floor(Math.random() * (this.height - 4));
-                    } while (floor1[y][x] !== 0 || floor2[y][x] !== 0);
-                    
-                    // Отмечаем лестницы специальным значением
-                    floor1[y][x] = 2; // 2 - лестница на первом этаже
-                    floor2[y][x] = 3; // 3 - лестница на втором этаже
-                    
-                    // Создаем проход вокруг лестницы
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            if (floor1[y+dy] && floor1[y+dy][x+dx] === 1) {
-                                floor1[y+dy][x+dx] = 0;
-                            }
-                            if (floor2[y+dy] && floor2[y+dy][x+dx] === 1) {
-                                floor2[y+dy][x+dx] = 0;
-                            }
-                        }
-                    }
+                if (attempts < 100) {
+                    // Добавляем лестницу на текущем и следующем этаже
+                    this.stairs.push({
+                        floor,
+                        x,
+                        y,
+                        direction: Math.random() > 0.5 ? 'up' : 'down'
+                    });
                 }
             }
 
-            addLargeRooms(maze) {
-                // Добавляем 2-3 большие комнаты
-                const numRooms = 2 + Math.floor(Math.random() * 2);
+            addHole(floor) {
+                // Находим подходящее место для отверстия
+                let x, y;
+                let attempts = 0;
+                do {
+                    x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    attempts++;
+                } while (this.mazes[floor][y][x] !== 0 && attempts < 100);
                 
-                for (let i = 0; i < numRooms; i++) {
-                    const roomWidth = 5 + Math.floor(Math.random() * 4);
-                    const roomHeight = 5 + Math.floor(Math.random() * 4);
-                    const startX = 2 + Math.floor(Math.random() * (this.width - roomWidth - 4));
-                    const startY = 2 + Math.floor(Math.random() * (this.height - roomHeight - 4));
-                    
-                    // Создаем комнату
-                    for (let y = startY; y < startY + roomHeight; y++) {
-                        for (let x = startX; x < startX + roomWidth; x++) {
-                            if (y >= 0 && y < this.height && x >= 0 && x < this.width) {
-                                maze[y][x] = 0;
-                            }
-                        }
-                    }
-                    
-                    // Добавляем проходы к комнате
-                    this.connectRoomToMaze(maze, startX, startY, roomWidth, roomHeight);
+                if (attempts < 100) {
+                    // Добавляем отверстие
+                    this.holes.push({
+                        floor,
+                        x,
+                        y
+                    });
                 }
             }
 
-            connectRoomToMaze(maze, roomX, roomY, roomWidth, roomHeight) {
-                // Добавляем проходы из комнаты в лабиринт
-                const sides = [
-                    { x: roomX + Math.floor(roomWidth/2), y: roomY - 1, dir: [0, -1] }, // верх
-                    { x: roomX + Math.floor(roomWidth/2), y: roomY + roomHeight, dir: [0, 1] }, // низ
-                    { x: roomX - 1, y: roomY + Math.floor(roomHeight/2), dir: [-1, 0] }, // лево
-                    { x: roomX + roomWidth, y: roomY + Math.floor(roomHeight/2), dir: [1, 0] } // право
-                ];
-                
-                // Выбираем 2 случайные стороны для проходов
-                const selectedSides = [...sides].sort(() => Math.random() - 0.5).slice(0, 2);
-                
-                selectedSides.forEach(side => {
-                    let [dx, dy] = side.dir;
-                    let x = side.x, y = side.y;
-                    
-                    // Создаем проход
-                    for (let i = 0; i < 3; i++) {
-                        const nx = x + dx * i;
-                        const ny = y + dy * i;
-                        if (nx >= 0 && nx < this.width && ny >= 0 && ny < this.height) {
-                            maze[ny][nx] = 0;
-                        }
-                    }
-                });
+            getMaze(floor) {
+                return this.mazes[floor];
             }
 
-            getMaze() {
-                return this.maze;
+            getStairs() {
+                return this.stairs;
+            }
+
+            getHoles() {
+                return this.holes;
             }
         }
 
         // Создаем лабиринт
-        const mazeGen = new MazeGenerator(25, 25);
-        const maze = mazeGen.getMaze();
+        const mazeGen = new MazeGenerator(25, 25, FLOORS_COUNT);
 
         // Освещение
         const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
@@ -730,159 +759,191 @@
         directionalLight2.position.set(-50, 80, -50);
         scene.add(directionalLight2);
 
-        // Переменные для управления этажами
-        let currentFloor = 1;
-        let playerY = 1.7;
-
-        // Создание сцены с двумя этажами
+        // Создание сцены
         function createScene(materials) {
-            createFloorsAndRoofs(materials.floorMaterial, materials.roofMaterial);
-            createMazeWallsWithAngles(materials.wallMaterial);
-        }
-
-        function createFloorsAndRoofs(floorMaterial, roofMaterial) {
-            const floorWidth = maze.floor1[0].length * CELL_SIZE;
-            const floorHeight = maze.floor1.length * CELL_SIZE;
-            
-            // Пол первого этажа
-            const floor1Geometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
-            const floor1 = new THREE.Mesh(floor1Geometry, floorMaterial);
-            floor1.rotation.x = -Math.PI / 2;
-            floor1.position.y = -1;
-            scene.add(floor1);
-            
-            // Потолок первого этажа
-            const roof1Geometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
-            const roof1 = new THREE.Mesh(roof1Geometry, roofMaterial);
-            roof1.rotation.x = Math.PI / 2;
-            roof1.position.y = WALL_HEIGHT - 1;
-            scene.add(roof1);
-            
-            // Пол второго этажа
-            const floor2Geometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
-            const floor2 = new THREE.Mesh(floor2Geometry, floorMaterial);
-            floor2.rotation.x = -Math.PI / 2;
-            floor2.position.y = FLOOR_HEIGHT - 1;
-            scene.add(floor2);
-            
-            // Потолок второго этажа
-            const roof2Geometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
-            const roof2 = new THREE.Mesh(roof2Geometry, roofMaterial);
-            roof2.rotation.x = Math.PI / 2;
-            roof2.position.y = FLOOR_HEIGHT + WALL_HEIGHT - 1;
-            scene.add(roof2);
-        }
-
-        function createMazeWallsWithAngles(wallMaterial) {
-            const wallGroup = new THREE.Group();
-            
-            // Создаем стены для обоих этажей
-            createFloorWalls(wallGroup, maze.floor1, 0, wallMaterial);
-            createFloorWalls(wallGroup, maze.floor2, FLOOR_HEIGHT, wallMaterial);
+            // Создаем пол, потолок и стены для каждого этажа
+            for (let floor = 0; floor < FLOORS_COUNT; floor++) {
+                createFloor(floor, materials.floorMaterial);
+                createRoof(floor, materials.roofMaterial);
+                createMazeWalls(floor, materials.wallMaterial);
+            }
             
             // Создаем лестницы
-            createStairs(wallGroup, wallMaterial);
+            createStairs(materials.stairsMaterial);
             
-            scene.add(wallGroup);
+            // Создаем отверстия в полу/потолке
+            createHoles(materials.floorMaterial, materials.roofMaterial);
         }
 
-        function createFloorWalls(wallGroup, floor, yOffset, wallMaterial) {
-            for (let y = 0; y < floor.length; y++) {
-                for (let x = 0; x < floor[y].length - 1; x++) {
-                    if (floor[y][x] === 1 || floor[y][x+1] === 1) {
-                        if (floor[y][x] !== floor[y][x+1]) {
+        function createFloor(floor, floorMaterial) {
+            const floorWidth = mazeGen.width * CELL_SIZE;
+            const floorHeight = mazeGen.height * CELL_SIZE;
+            const floorGeometry = new THREE.PlaneGeometry(floorWidth, floorHeight);
+            const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.y = floor * FLOOR_HEIGHT - 1;
+            floorMesh.userData = { type: 'floor', floor };
+            scene.add(floorMesh);
+        }
+
+        function createRoof(floor, roofMaterial) {
+            const roofWidth = mazeGen.width * CELL_SIZE;
+            const roofHeight = mazeGen.height * CELL_SIZE;
+            const roofGeometry = new THREE.PlaneGeometry(roofWidth, roofHeight);
+            const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
+            roofMesh.rotation.x = Math.PI / 2;
+            roofMesh.position.y = (floor + 1) * FLOOR_HEIGHT - 1;
+            roofMesh.userData = { type: 'roof', floor };
+            scene.add(roofMesh);
+        }
+
+        function createMazeWalls(floor, wallMaterial) {
+            const wallGroup = new THREE.Group();
+            const maze = mazeGen.getMaze(floor);
+            
+            for (let y = 0; y < maze.length; y++) {
+                for (let x = 0; x < maze[y].length - 1; x++) {
+                    if (maze[y][x] === 1 || maze[y][x+1] === 1) {
+                        if (maze[y][x] !== maze[y][x+1]) {
                             const wallGeometry = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, CELL_SIZE);
                             const wall = new THREE.Mesh(wallGeometry, wallMaterial);
                             wall.position.set(
-                                (x + 0.5 - floor[0].length/2) * CELL_SIZE, 
-                                WALL_HEIGHT/2 - 1 + yOffset,
-                                (y - floor.length/2) * CELL_SIZE
+                                (x + 0.5 - mazeGen.width/2) * CELL_SIZE, 
+                                floor * FLOOR_HEIGHT + WALL_HEIGHT/2 - 1,
+                                (y - mazeGen.height/2) * CELL_SIZE
                             );
+                            wall.userData = { type: 'wall', floor };
                             wallGroup.add(wall);
                         }
                     }
                 }
             }
 
-            for (let y = 0; y < floor.length - 1; y++) {
-                for (let x = 0; x < floor[y].length; x++) {
-                    if (floor[y][x] === 1 || floor[y+1][x] === 1) {
-                        if (floor[y][x] !== floor[y+1][x]) {
+            for (let y = 0; y < maze.length - 1; y++) {
+                for (let x = 0; x < maze[y].length; x++) {
+                    if (maze[y][x] === 1 || maze[y+1][x] === 1) {
+                        if (maze[y][x] !== maze[y+1][x]) {
                             const wallGeometry = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS);
                             const wall = new THREE.Mesh(wallGeometry, wallMaterial);
                             wall.position.set(
-                                (x - floor[0].length/2) * CELL_SIZE, 
-                                WALL_HEIGHT/2 - 1 + yOffset,
-                                (y + 0.5 - floor.length/2) * CELL_SIZE
+                                (x - mazeGen.width/2) * CELL_SIZE, 
+                                floor * FLOOR_HEIGHT + WALL_HEIGHT/2 - 1,
+                                (y + 0.5 - mazeGen.height/2) * CELL_SIZE
                             );
+                            wall.userData = { type: 'wall', floor };
                             wallGroup.add(wall);
                         }
                     }
                 }
             }
 
-            // Добавляем диагональные стены для углов 45 градусов
-            for (let y = 1; y < floor.length - 1; y++) {
-                for (let x = 1; x < floor[y].length - 1; x++) {
-                    if (floor[y][x] === 0) {
-                        // Создаем диагональные стены в углах
-                        if (floor[y-1][x] === 1 && floor[y][x-1] === 1 && 
-                            floor[y-1][x-1] === 0 && Math.random() < 0.7) {
-                            // Левый верхний угол
-                            const cornerGeometry = new THREE.BoxGeometry(WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS * 2);
-                            const corner = new THREE.Mesh(cornerGeometry, wallMaterial);
-                            corner.position.set(
-                                (x - 0.25 - floor[0].length/2) * CELL_SIZE, 
-                                WALL_HEIGHT/2 - 1 + yOffset,
-                                (y - 0.25 - floor.length/2) * CELL_SIZE
-                            );
-                            corner.rotation.y = Math.PI / 4;
-                            wallGroup.add(corner);
-                        }
-                        
-                        if (floor[y-1][x] === 1 && floor[y][x+1] === 1 && 
-                            floor[y-1][x+1] === 0 && Math.random() < 0.7) {
-                            // Правый верхний угол
-                            const cornerGeometry = new THREE.BoxGeometry(WALL_THICKNESS * 2, WALL_HEIGHT, WALL_THICKNESS * 2);
-                            const corner = new THREE.Mesh(cornerGeometry, wallMaterial);
-                            corner.position.set(
-                                (x + 0.25 - floor[0].length/2) * CELL_SIZE, 
-                                WALL_HEIGHT/2 - 1 + yOffset,
-                                (y - 0.25 - floor.length/2) * CELL_SIZE
-                            );
-                            corner.rotation.y = Math.PI / 4;
-                            wallGroup.add(corner);
-                        }
-                    }
-                }
-            }
+            scene.add(wallGroup);
         }
 
-        function createStairs(wallGroup, wallMaterial) {
-            // Создаем лестницы между этажами
-            for (let y = 0; y < maze.floor1.length; y++) {
-                for (let x = 0; x < maze.floor1[y].length; x++) {
-                    if (maze.floor1[y][x] === 2) { // Лестница на первом этаже
-                        // Создаем лестницу
-                        const stairGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.8, FLOOR_HEIGHT, CELL_SIZE * 0.8);
-                        const stair = new THREE.Mesh(stairGeometry, wallMaterial);
-                        stair.position.set(
-                            (x - maze.floor1[0].length/2) * CELL_SIZE, 
-                            FLOOR_HEIGHT/2 - 1,
-                            (y - maze.floor1.length/2) * CELL_SIZE
-                        );
-                        wallGroup.add(stair);
-                    }
+        function createStairs(stairsMaterial) {
+            const stairs = mazeGen.getStairs();
+            
+            stairs.forEach(stair => {
+                const { floor, x, y } = stair;
+                
+                // Создаем ступенчатую лестницу
+                const stairWidth = CELL_SIZE * 0.8;
+                const stairDepth = CELL_SIZE * 0.8;
+                const stairHeight = FLOOR_HEIGHT;
+                const stepCount = 10;
+                const stepHeight = stairHeight / stepCount;
+                const stepDepth = stairDepth / stepCount;
+                
+                for (let i = 0; i < stepCount; i++) {
+                    const stepGeometry = new THREE.BoxGeometry(stairWidth, stepHeight, stepDepth);
+                    const step = new THREE.Mesh(stepGeometry, stairsMaterial);
+                    
+                    step.position.set(
+                        (x - mazeGen.width/2) * CELL_SIZE,
+                        floor * FLOOR_HEIGHT + (i * stepHeight) - 1 + stepHeight/2,
+                        (y - mazeGen.height/2) * CELL_SIZE + (i * stepDepth) - stairDepth/2 + stepDepth/2
+                    );
+                    
+                    step.userData = { 
+                        type: 'stair', 
+                        floor,
+                        isStair: true,
+                        stairIndex: i,
+                        totalSteps: stepCount
+                    };
+                    
+                    scene.add(step);
                 }
-            }
+                
+                // Добавляем поручни
+                const railingHeight = 1.5;
+                const railingGeometry = new THREE.BoxGeometry(0.1, railingHeight, stairDepth);
+                const railingMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+                
+                // Левый поручень
+                const leftRailing = new THREE.Mesh(railingGeometry, railingMaterial);
+                leftRailing.position.set(
+                    (x - mazeGen.width/2) * CELL_SIZE - stairWidth/2 + 0.05,
+                    floor * FLOOR_HEIGHT + railingHeight/2 - 1,
+                    (y - mazeGen.height/2) * CELL_SIZE
+                );
+                leftRailing.userData = { type: 'railing', floor };
+                scene.add(leftRailing);
+                
+                // Правый поручень
+                const rightRailing = new THREE.Mesh(railingGeometry, railingMaterial);
+                rightRailing.position.set(
+                    (x - mazeGen.width/2) * CELL_SIZE + stairWidth/2 - 0.05,
+                    floor * FLOOR_HEIGHT + railingHeight/2 - 1,
+                    (y - mazeGen.height/2) * CELL_SIZE
+                );
+                rightRailing.userData = { type: 'railing', floor };
+                scene.add(rightRailing);
+            });
+        }
+
+        function createHoles(floorMaterial, roofMaterial) {
+            const holes = mazeGen.getHoles();
+            
+            holes.forEach(hole => {
+                const { floor, x, y } = hole;
+                
+                // Создаем отверстие в полу текущего этажа
+                const holeGeometry = new THREE.PlaneGeometry(CELL_SIZE * 0.8, CELL_SIZE * 0.8);
+                const holeMesh = new THREE.Mesh(holeGeometry, floorMaterial);
+                holeMesh.rotation.x = -Math.PI / 2;
+                holeMesh.position.set(
+                    (x - mazeGen.width/2) * CELL_SIZE,
+                    floor * FLOOR_HEIGHT - 0.9,
+                    (y - mazeGen.height/2) * CELL_SIZE
+                );
+                holeMesh.userData = { type: 'hole', floor, isHole: true };
+                scene.add(holeMesh);
+                
+                // Создаем отверстие в потолке предыдущего этажа (если есть)
+                if (floor > 0) {
+                    const ceilingHoleGeometry = new THREE.PlaneGeometry(CELL_SIZE * 0.8, CELL_SIZE * 0.8);
+                    const ceilingHoleMesh = new THREE.Mesh(ceilingHoleGeometry, roofMaterial);
+                    ceilingHoleMesh.rotation.x = Math.PI / 2;
+                    ceilingHoleMesh.position.set(
+                        (x - mazeGen.width/2) * CELL_SIZE,
+                        floor * FLOOR_HEIGHT - 0.1,
+                        (y - mazeGen.height/2) * CELL_SIZE
+                    );
+                    ceilingHoleMesh.userData = { type: 'hole', floor: floor - 1, isHole: true };
+                    scene.add(ceilingHoleMesh);
+                }
+            });
         }
 
         // Позиция игрока
         function findRandomStartPosition() {
             let freeCells = [];
-            for (let y = 1; y < maze.floor1.length - 1; y++) {
-                for (let x = 1; x < maze.floor1[y].length - 1; x++) {
-                    if (maze.floor1[y][x] === 0) {
+            const maze = mazeGen.getMaze(0); // Начинаем с первого этажа
+            
+            for (let y = 1; y < maze.length - 1; y++) {
+                for (let x = 1; x < maze[y].length - 1; x++) {
+                    if (maze[y][x] === 0) {
                         freeCells.push({x, y});
                     }
                 }
@@ -891,19 +952,22 @@
             if (freeCells.length > 0) {
                 const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
                 return {
-                    x: (randomCell.x - maze.floor1[0].length/2) * CELL_SIZE,
-                    z: (randomCell.y - maze.floor1.length/2) * CELL_SIZE
+                    x: (randomCell.x - mazeGen.width/2) * CELL_SIZE,
+                    z: (randomCell.y - mazeGen.height/2) * CELL_SIZE,
+                    floor: 0
                 };
             }
             
             return {
-                x: (-maze.floor1[0].length/2 + 1) * CELL_SIZE,
-                z: (-maze.floor1.length/2 + 1) * CELL_SIZE
+                x: (-mazeGen.width/2 + 1) * CELL_SIZE,
+                z: (-mazeGen.height/2 + 1) * CELL_SIZE,
+                floor: 0
             };
         }
 
         const startPos = findRandomStartPosition();
-        camera.position.set(startPos.x, playerY, startPos.z);
+        camera.position.set(startPos.x, 1.7, startPos.z);
+        let currentFloor = startPos.floor;
         
         // Переменные управления
         let moveForward = false;
@@ -930,12 +994,13 @@
         let isShooting = false;
         let isReloading = false;
         let canShoot = true;
-        let ammo = 2;
+        let ammo = 2; // Только 2 патрона в обойме
         let maxAmmo = 2;
         let hp = 100;
 
         // FPS счетчик
         const fpsCounter = document.getElementById('fpsCounter');
+        const floorDisplay = document.getElementById('floorDisplay');
         let frameCount = 0;
         let lastTime = performance.now();
         let fps = 0;
@@ -975,7 +1040,7 @@
         function updateUI() {
             document.getElementById('hpDisplay').textContent = `HP: ${hp}`;
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
-            document.getElementById('floorDisplay').textContent = `ЭТАЖ: ${currentFloor}`;
+            floorDisplay.textContent = `Этаж: ${currentFloor + 1}`;
         }
 
         // Анимация выстрела
@@ -987,12 +1052,15 @@
             ammo--;
             updateUI();
             
+            console.log('Стрельба! Патронов осталось:', ammo);
+            
             if (shootSound) {
                 shootSound.currentTime = 0;
                 shootSound.volume = musicVolume;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
+            // Анимация выстрела
             setTimeout(() => {
                 weapon.src = 'Guns/DefaultShootGun/GunSh1.png';
             }, 50);
@@ -1005,9 +1073,11 @@
                 weapon.src = 'Guns/DefaultShootGun/Gun.png';
                 isShooting = false;
                 
+                // Если патроны кончились - перезарядка
                 if (ammo <= 0) {
                     playReloadAnimation();
                 } else {
+                    // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
                     }, 200);
@@ -1015,13 +1085,15 @@
             }, 200);
         }
 
-        // Анимация перезарядки
+        // Анимация перезарядки с 3 кадрами
         function playReloadAnimation() {
             if (isReloading || ammo >= maxAmmo) return;
             
             isReloading = true;
             canShoot = false;
+            console.log('Перезарядка!');
             
+            // Анимация перезарядки с 3 кадрами
             setTimeout(() => {
                 weapon.src = 'Guns/DefaultShootGun/GunKD1.png';
             }, 100);
@@ -1040,71 +1112,8 @@
                 isReloading = false;
                 canShoot = true;
                 updateUI();
+                console.log('Перезарядка завершена! Патронов:', ammo);
             }, 700);
-        }
-
-        // Проверка нахождения на лестнице
-        function isOnStairs(x, z) {
-            const mazeX = Math.round((x / CELL_SIZE) + maze.floor1[0].length/2);
-            const mazeZ = Math.round((z / CELL_SIZE) + maze.floor1.length/2);
-            
-            if (mazeZ >= 0 && mazeZ < maze.floor1.length && 
-                mazeX >= 0 && mazeX < maze.floor1[0].length) {
-                
-                if (currentFloor === 1 && maze.floor1[mazeZ][mazeX] === 2) {
-                    return true;
-                }
-                if (currentFloor === 2 && maze.floor2[mazeZ][mazeX] === 3) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // Переключение этажа
-        function switchFloor() {
-            if (currentFloor === 1) {
-                currentFloor = 2;
-                playerY = FLOOR_HEIGHT + 1.7;
-            } else {
-                currentFloor = 1;
-                playerY = 1.7;
-            }
-            camera.position.y = playerY;
-            updateUI();
-        }
-
-        // Проверка коллизий с учетом этажей
-        function checkCollision(newX, newZ) {
-            const playerRadius = 0.3;
-            const points = [
-                [newX - playerRadius, newZ],
-                [newX + playerRadius, newZ],
-                [newX, newZ - playerRadius],
-                [newX, newZ + playerRadius],
-                [newX - playerRadius * 0.7, newZ - playerRadius * 0.7],
-                [newX + playerRadius * 0.7, newZ - playerRadius * 0.7],
-                [newX - playerRadius * 0.7, newZ + playerRadius * 0.7],
-                [newX + playerRadius * 0.7, newZ + playerRadius * 0.7]
-            ];
-            
-            for (let [px, pz] of points) {
-                const mazeX = Math.round((px / CELL_SIZE) + maze.floor1[0].length/2);
-                const mazeZ = Math.round((pz / CELL_SIZE) + maze.floor1.length/2);
-                
-                if (mazeZ >= 0 && mazeZ < maze.floor1.length && 
-                    mazeX >= 0 && mazeX < maze.floor1[0].length) {
-                    
-                    const currentMaze = currentFloor === 1 ? maze.floor1 : maze.floor2;
-                    if (currentMaze[mazeZ][mazeX] === 1) {
-                        return true;
-                    }
-                } else {
-                    return true;
-                }
-            }
-            
-            return false;
         }
 
         // УПРАВЛЕНИЕ
@@ -1157,6 +1166,7 @@
                 moveForward = moveBackward = moveLeft = moveRight = false;
             }
 
+            // Обработка событий джойстика
             joystickBase.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
@@ -1201,6 +1211,7 @@
                 }
             });
 
+            // Кнопка стрельбы
             shootButton.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
@@ -1227,10 +1238,7 @@
 
         // ОБЩИЕ ОБРАБОТЧИКИ
         function initGlobalHandlers() {
-            let gameStarted = false;
-
             document.addEventListener('touchmove', (e) => {
-                if (!gameStarted) return;
                 e.preventDefault();
                 
                 for (let touch of e.touches) {
@@ -1297,7 +1305,6 @@
             });
 
             document.addEventListener('touchend', (e) => {
-                if (!gameStarted) return;
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
                     if (touchData) {
@@ -1325,47 +1332,43 @@
                 shootTouchId = null;
             });
 
+            // Управление стрельбой для ПК - ЛКМ
             document.addEventListener('mousedown', (e) => {
-                if (e.button === 0 && gameStarted) {
+                if (e.button === 0) {
                     e.preventDefault();
                     playShootAnimation();
                 }
             });
 
-            // Переключение этажа по клавише E
+            // Перезарядка по кнопке R
             document.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyE' && gameStarted) {
-                    if (isOnStairs(camera.position.x, camera.position.z)) {
-                        switchFloor();
-                    }
+                if (e.code === 'KeyR') {
+                    playReloadAnimation();
                 }
             });
-
-            return {
-                setGameStarted: function() { gameStarted = true; }
-            };
         }
 
         // Инициализация управления
         function initControls() {
             initJoystick();
             initCameraControls();
-            const handlers = initGlobalHandlers();
+            initGlobalHandlers();
 
-            let gameStarted = false;
-            
+            // Клавиатура для десктопа
             window.addEventListener('keydown', (event) => {
-                if (!gameStarted) return;
                 switch(event.code) {
                     case 'KeyW': moveForward = true; break;
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
+                    case 'Space': 
+                        event.preventDefault();
+                        jump(); 
+                        break;
                 }
             });
             
             window.addEventListener('keyup', (event) => {
-                if (!gameStarted) return;
                 switch(event.code) {
                     case 'KeyW': moveForward = false; break;
                     case 'KeyS': moveBackward = false; break;
@@ -1374,8 +1377,9 @@
                 }
             });
 
+            // Мышь для десктопа
             document.addEventListener('mousemove', (event) => {
-                if (document.pointerLockElement === renderer.domElement && gameStarted) {
+                if (document.pointerLockElement === renderer.domElement) {
                     yaw -= event.movementX * mouseSensitivity;
                     pitch -= event.movementY * mouseSensitivity;
                     pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
@@ -1383,20 +1387,135 @@
             });
 
             renderer.domElement.addEventListener('click', () => {
-                if (gameStarted) {
-                    renderer.domElement.requestPointerLock();
-                }
+                renderer.domElement.requestPointerLock();
             });
-
-            return {
-                setGameStarted: function() { 
-                    gameStarted = true; 
-                    handlers.setGameStarted();
-                }
-            };
         }
 
-        // Анимация
+        // Проверка коллизий
+        function checkCollision(newX, newY, newZ) {
+            const playerRadius = 0.3;
+            const playerHeight = 1.8;
+            const points = [
+                [newX - playerRadius, newY, newZ],
+                [newX + playerRadius, newY, newZ],
+                [newX, newY, newZ - playerRadius],
+                [newX, newY, newZ + playerRadius],
+                [newX - playerRadius, newY + playerHeight, newZ],
+                [newX + playerRadius, newY + playerHeight, newZ],
+                [newX, newY + playerHeight, newZ - playerRadius],
+                [newX, newY + playerHeight, newZ + playerRadius]
+            ];
+            
+            for (let [px, py, pz] of points) {
+                const mazeX = Math.round((px / CELL_SIZE) + mazeGen.width/2);
+                const mazeZ = Math.round((pz / CELL_SIZE) + mazeGen.height/2);
+                const floor = Math.floor((py + 1) / FLOOR_HEIGHT);
+                
+                if (mazeZ >= 0 && mazeZ < mazeGen.height && 
+                    mazeX >= 0 && mazeX < mazeGen.width &&
+                    floor >= 0 && floor < FLOORS_COUNT) {
+                    
+                    const maze = mazeGen.getMaze(floor);
+                    
+                    // Проверяем стены
+                    if (maze[mazeZ][mazeX] === 1) {
+                        return true;
+                    }
+                    
+                    // Проверяем, находимся ли мы на лестнице
+                    if (isOnStairs(px, py, pz)) {
+                        return false; // Лестницы не блокируют движение
+                    }
+                } else {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
+        // Проверка, находится ли игрок на лестнице
+        function isOnStairs(x, y, z) {
+            const stairs = mazeGen.getStairs();
+            
+            for (const stair of stairs) {
+                const stairX = (stair.x - mazeGen.width/2) * CELL_SIZE;
+                const stairZ = (stair.y - mazeGen.height/2) * CELL_SIZE;
+                
+                // Проверяем расстояние до лестницы
+                const distance = Math.sqrt(
+                    Math.pow(x - stairX, 2) + 
+                    Math.pow(z - stairZ, 2)
+                );
+                
+                if (distance < CELL_SIZE * 0.6) {
+                    // Проверяем, находится ли игрок в пределах высоты лестницы
+                    const stairBottom = stair.floor * FLOOR_HEIGHT - 1;
+                    const stairTop = (stair.floor + 1) * FLOOR_HEIGHT - 1;
+                    
+                    if (y >= stairBottom && y <= stairTop) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // Проверка, находится ли игрок над отверстием
+        function isOverHole(x, z) {
+            const holes = mazeGen.getHoles();
+            const currentFloorY = currentFloor * FLOOR_HEIGHT;
+            
+            for (const hole of holes) {
+                if (hole.floor === currentFloor) {
+                    const holeX = (hole.x - mazeGen.width/2) * CELL_SIZE;
+                    const holeZ = (hole.y - mazeGen.height/2) * CELL_SIZE;
+                    
+                    // Проверяем расстояние до отверстия
+                    const distance = Math.sqrt(
+                        Math.pow(x - holeX, 2) + 
+                        Math.pow(z - holeZ, 2)
+                    );
+                    
+                    if (distance < CELL_SIZE * 0.4) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+
+        // Прыжок
+        let isJumping = false;
+        let jumpVelocity = 0;
+        const GRAVITY = -30;
+        const JUMP_FORCE = 10;
+
+        function jump() {
+            if (!isJumping && Math.abs(camera.position.y - (currentFloor * FLOOR_HEIGHT + 1.7)) < 0.1) {
+                isJumping = true;
+                jumpVelocity = JUMP_FORCE;
+            }
+        }
+
+        // Обработка физики прыжка
+        function updateJump(deltaTime) {
+            if (isJumping) {
+                camera.position.y += jumpVelocity * deltaTime;
+                jumpVelocity += GRAVITY * deltaTime;
+                
+                // Проверяем, приземлился ли игрок
+                if (camera.position.y <= currentFloor * FLOOR_HEIGHT + 1.7) {
+                    camera.position.y = currentFloor * FLOOR_HEIGHT + 1.7;
+                    isJumping = false;
+                    jumpVelocity = 0;
+                }
+            }
+        }
+
+        // Анимация с delta time для независимой от FPS скорости
         const BASE_MOVE_SPEED = 15.0;
         
         function animate(currentTime) {
@@ -1429,19 +1548,92 @@
             direction.applyEuler(new THREE.Euler(0, yaw, 0));
             
             let newX = camera.position.x;
+            let newY = camera.position.y;
             let newZ = camera.position.z;
             
-            if (!checkCollision(newX + direction.x, newZ)) {
+            // Обновляем физику прыжка
+            updateJump(deltaTime);
+            
+            // Проверяем коллизии по горизонтали
+            if (!checkCollision(newX + direction.x, newY, newZ)) {
                 newX += direction.x;
             }
-            if (!checkCollision(newX, newZ + direction.z)) {
+            if (!checkCollision(newX, newY, newZ + direction.z)) {
                 newZ += direction.z;
             }
             
+            // Проверяем, упал ли игрок в отверстие
+            if (isOverHole(newX, newZ) && !isJumping) {
+                if (currentFloor < FLOORS_COUNT - 1) {
+                    currentFloor++;
+                    newY = currentFloor * FLOOR_HEIGHT + 1.7;
+                    updateUI();
+                }
+            }
+            
+            // Проверяем, поднимается ли игрок по лестнице
+            if (isOnStairs(newX, newY, newZ) && !isJumping) {
+                // Позволяем игроку подниматься по лестнице
+                newY += actualMoveSpeed * 0.5;
+                
+                // Проверяем, перешел ли игрок на следующий этаж
+                if (newY >= (currentFloor + 1) * FLOOR_HEIGHT + 1.7) {
+                    currentFloor++;
+                    newY = currentFloor * FLOOR_HEIGHT + 1.7;
+                    updateUI();
+                }
+            }
+            
+            // Проверяем, спускается ли игрок по лестнице
+            if (isOnStairs(newX, newY - 0.5, newZ) && !isJumping) {
+                // Позволяем игроку спускаться по лестнице
+                newY -= actualMoveSpeed * 0.5;
+                
+                // Проверяем, перешел ли игрок на предыдущий этаж
+                if (newY <= currentFloor * FLOOR_HEIGHT + 1.2) {
+                    if (currentFloor > 0) {
+                        currentFloor--;
+                        newY = currentFloor * FLOOR_HEIGHT + 1.7;
+                        updateUI();
+                    }
+                }
+            }
+            
             camera.position.x = newX;
+            camera.position.y = newY;
             camera.position.z = newZ;
             
+            // Оптимизация рендеринга - скрываем объекты, которые не видны камере
+            optimizeRendering();
+            
             renderer.render(scene, camera);
+        }
+        
+        // Оптимизация рендеринга с помощью простого Occlusion Culling
+        function optimizeRendering() {
+            const cameraPos = camera.position;
+            const cameraFloor = Math.floor((cameraPos.y + 1) / FLOOR_HEIGHT);
+            
+            // Проходим по всем объектам сцены
+            scene.traverse((object) => {
+                if (object.userData && object.userData.floor !== undefined) {
+                    // Показываем объекты только на текущем и соседних этажах
+                    const objectFloor = object.userData.floor;
+                    const floorDiff = Math.abs(objectFloor - cameraFloor);
+                    
+                    if (floorDiff <= 1) {
+                        object.visible = true;
+                        
+                        // Дополнительная оптимизация: скрываем объекты, которые слишком далеко
+                        const distance = object.position.distanceTo(cameraPos);
+                        if (distance > 40) {
+                            object.visible = false;
+                        }
+                    } else {
+                        object.visible = false;
+                    }
+                }
+            });
         }
         
         window.addEventListener('resize', () => {
@@ -1454,6 +1646,7 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
+            floorDisplay.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
             
             if (menuMusic) {
@@ -1467,8 +1660,6 @@
             
             weapon.style.display = 'block';
             updateUI();
-            
-            controls.setGameStarted();
             
             lastTime = performance.now();
             animate(performance.now());
@@ -1504,18 +1695,6 @@
             backButton.addEventListener('click', function(e) {
                 hideOptions();
             });
-            
-            playButton.addEventListener('mousedown', function(e) {
-                e.stopPropagation();
-            });
-            
-            optionsButton.addEventListener('mousedown', function(e) {
-                e.stopPropagation();
-            });
-            
-            backButton.addEventListener('mousedown', function(e) {
-                e.stopPropagation();
-            });
         }
 
         // Настройки
@@ -1539,18 +1718,17 @@
         });
 
         // Запуск игры
-        let controls;
         loadTextures().then(() => {
             const materials = createMaterials();
             createScene(materials);
-            controls = initControls();
+            initControls();
             initMenu();
             weapon.style.display = 'none';
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
-            controls = initControls();
+            initControls();
             initMenu();
             weapon.style.display = 'none';
         });
