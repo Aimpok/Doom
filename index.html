@@ -312,6 +312,7 @@
             z-index: 1000;
             border: 2px solid #ff0000;
             min-width: 200px;
+            pointer-events: auto; /* РАЗРЕШАЕМ КЛИКИ */
         }
 
         .ui-setting-group {
@@ -334,6 +335,7 @@
             border: 1px solid #555;
             border-radius: 3px;
             font-size: 12px;
+            pointer-events: auto; /* РАЗРЕШАЕМ ВВОД */
         }
 
         .ui-setting-button {
@@ -347,6 +349,7 @@
             margin-right: 5px;
             font-size: 12px;
             font-weight: bold;
+            pointer-events: auto; /* РАЗРЕШАЕМ КЛИКИ */
         }
 
         .ui-setting-button:hover {
@@ -461,8 +464,7 @@
         </div>
         
         <div style="text-align: center; margin-top: 10px;">
-            <button class="ui-setting-button" id="applyUiSettings">ПРИМЕНИТЬ</button>
-            <button class="ui-setting-button" id="toggleUiSettings" style="background: #444;">СКРЫТЬ</button>
+            <button class="ui-setting-button" id="toggleUiSettings">СКРЫТЬ</button>
         </div>
     </div>
     
@@ -1046,12 +1048,19 @@
             
             const hpString = hp.toString().padStart(3, '0');
             const panel = document.getElementById('downPanel');
+            
+            // Проверяем загрузилась ли панель
+            if (!panel.complete || panel.naturalWidth === 0) {
+                setTimeout(updateHpDisplay, 100);
+                return;
+            }
+            
             const panelRect = panel.getBoundingClientRect();
             
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${hpString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
+                digit.src = `GameUi/${hpString[i]}.png`;
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1072,12 +1081,19 @@
             
             const ammoString = ammo.toString().padStart(2, '0');
             const panel = document.getElementById('downPanel');
+            
+            // Проверяем загрузилась ли панель
+            if (!panel.complete || panel.naturalWidth === 0) {
+                setTimeout(updateAmmoDisplay, 100);
+                return;
+            }
+            
             const panelRect = panel.getBoundingClientRect();
             
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${ammoString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
+                digit.src = `GameUi/${ammoString[i]}.png`;
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1121,8 +1137,14 @@
             document.getElementById('ammoY').value = uiSettings.ammoY;
             document.getElementById('digitSpacing').value = uiSettings.digitSpacing;
             
-            // Обработчики для кнопок
-            document.getElementById('applyUiSettings').addEventListener('click', applyUiSettings);
+            // АВТОПРИМЕНЕНИЕ ПРИ ИЗМЕНЕНИИ ЗНАЧЕНИЙ
+            const inputs = document.querySelectorAll('.ui-setting-input');
+            inputs.forEach(input => {
+                input.addEventListener('input', applyUiSettings);
+                input.addEventListener('change', applyUiSettings);
+            });
+            
+            // Обработчик для кнопки скрыть/показать
             document.getElementById('toggleUiSettings').addEventListener('click', function() {
                 const panel = document.getElementById('uiSettingsPanel');
                 panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -1415,7 +1437,7 @@
 
             // Управление стрельбой для ПК - ЛКМ
             document.addEventListener('mousedown', (e) => {
-                if (e.button === 0) {
+                if (e.button === 0 && e.target.className !== 'ui-setting-input') {
                     e.preventDefault();
                     playShootAnimation();
                 }
@@ -1429,7 +1451,7 @@
             // Автоматическая стрельба при зажатии ЛКМ
             let mouseShootInterval;
             document.addEventListener('mousedown', (e) => {
-                if (e.button === 0) {
+                if (e.button === 0 && e.target.className !== 'ui-setting-input') {
                     playShootAnimation();
                     mouseShootInterval = setInterval(() => {
                         if (canShoot && !isShooting && !isReloading) {
