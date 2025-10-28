@@ -873,12 +873,12 @@
             }, 600);
         }
 
-        // УПРАВЛЕНИЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // УПРАВЛЕНИЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ БЕЗ СРЫВА КАМЕРЫ
         let activeTouches = new Map();
         let isShootingTouch = false;
-        let lastShootTouchX = 0;
-        let lastShootTouchY = 0;
         let shootTouchId = null;
+        let lastCameraTouchX = 0;
+        let lastCameraTouchY = 0;
 
         // Инициализация джойстика
         function initJoystick() {
@@ -943,7 +943,7 @@
             });
         }
 
-        // Инициализация поворота камеры и стрельбы - ИСПРАВЛЕННАЯ
+        // Инициализация поворота камеры и стрельбы - ИСПРАВЛЕННАЯ БЕЗ СРЫВА
         function initCameraControls() {
             const cameraArea = document.getElementById('cameraTouchArea');
             const shootButton = document.getElementById('shootButton');
@@ -965,17 +965,20 @@
                         lastX: touch.clientX,
                         lastY: touch.clientY
                     });
+                    lastCameraTouchX = touch.clientX;
+                    lastCameraTouchY = touch.clientY;
                 }
             });
 
-            // Кнопка стрельбы - ТОЛЬКО СТРЕЛЬБА, без поворота камеры
+            // Кнопка стрельбы - стрельба И поворот камеры
             shootButton.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
                 
-                // Запоминаем ID касания для стрельбы
                 shootTouchId = touch.identifier;
                 isShootingTouch = true;
+                lastCameraTouchX = touch.clientX;
+                lastCameraTouchY = touch.clientY;
                 
                 // Стрельба при касании
                 playShootAnimation();
@@ -1021,7 +1024,7 @@
 
         let shootAutoInterval = null;
 
-        // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ - ИСПРАВЛЕННЫЕ
+        // ОБЩИЕ ОБРАБОТЧИКИ - ИСПРАВЛЕННЫЕ БЕЗ СРЫВА КАМЕРЫ
         function initGlobalHandlers() {
             // Обработка перемещения всех касаний
             document.addEventListener('touchmove', (e) => {
@@ -1029,9 +1032,8 @@
                 
                 for (let touch of e.touches) {
                     const touchData = activeTouches.get(touch.identifier);
-                    if (!touchData) continue;
                     
-                    if (touchData.type === 'joystick') {
+                    if (touchData && touchData.type === 'joystick') {
                         const joystickStick = document.getElementById('joystickStick');
                         const joystickBase = document.getElementById('movementJoystick');
                         
@@ -1063,7 +1065,7 @@
                         moveLeft = normalizedX < -0.3;
                         moveRight = normalizedX > 0.3;
                         
-                    } else if (touchData.type === 'camera') {
+                    } else if (touchData && touchData.type === 'camera') {
                         if (touchData.lastX && touchData.lastY) {
                             const deltaX = touch.clientX - touchData.lastX;
                             const deltaY = touch.clientY - touchData.lastY;
@@ -1075,6 +1077,20 @@
                         
                         touchData.lastX = touch.clientX;
                         touchData.lastY = touch.clientY;
+                    }
+                    
+                    // Обработка поворота камеры через кнопку стрельбы
+                    if (touch.identifier === shootTouchId && isShootingTouch) {
+                        const deltaX = touch.clientX - lastCameraTouchX;
+                        const deltaY = touch.clientY - lastCameraTouchY;
+                        
+                        // Плавный поворот камеры
+                        yaw -= deltaX * mouseSensitivity * 1.5;
+                        pitch -= deltaY * mouseSensitivity * 1.5;
+                        pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
+                        
+                        lastCameraTouchX = touch.clientX;
+                        lastCameraTouchY = touch.clientY;
                     }
                 }
             });
@@ -1092,7 +1108,6 @@
                         activeTouches.delete(touch.identifier);
                     }
                     
-                    // Обработка завершения касания для стрельбы
                     if (touch.identifier === shootTouchId) {
                         isShootingTouch = false;
                         shootTouchId = null;
@@ -1143,7 +1158,7 @@
 
             // Управление стрельбой для ПК - ЛКМ
             document.addEventListener('mousedown', (e) => {
-                if (e.button === 0) { // Левая кнопка мыши
+                if (e.button === 0) {
                     e.preventDefault();
                     playShootAnimation();
                 }
@@ -1158,7 +1173,7 @@
             let mouseShootInterval;
             document.addEventListener('mousedown', (e) => {
                 if (e.button === 0) {
-                    playShootAnimation(); // Первый выстрел сразу
+                    playShootAnimation();
                     mouseShootInterval = setInterval(() => {
                         if (canShoot && !isShooting && !isReloading) {
                             playShootAnimation();
@@ -1248,7 +1263,7 @@
         }
 
         // Анимация
-        const moveSpeed = 0.15; // Одинаковая скорость для всех платформ
+        const moveSpeed = 0.15;
         
         function animate() {
             requestAnimationFrame(animate);
@@ -1290,24 +1305,18 @@
 
         // Функция запуска игры
         function startGame() {
-            // Скрываем меню
             document.getElementById('startMenu').style.display = 'none';
             
-            // Останавливаем музыку меню
             if (menuMusic) {
                 menuMusic.pause();
                 menuMusic.currentTime = 0;
             }
             
-            // Показываем мобильное управление на мобильных устройствах
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
             }
             
-            // Показываем оружие
             weapon.style.display = 'block';
-            
-            // Запускаем анимацию
             animate();
         }
 
@@ -1328,10 +1337,8 @@
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Запускаем музыку при загрузке
             startMenuMusic();
             
-            // Клик для ПК
             playButton.addEventListener('click', function(e) {
                 startGame();
             });
@@ -1344,7 +1351,6 @@
                 hideOptions();
             });
             
-            // Тач для мобилок
             playButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
                 startGame();
@@ -1371,7 +1377,6 @@
             mouseSensitivity = e.target.value * 0.0004;
         });
 
-        // Настройка громкости
         document.getElementById('volumeSlider').addEventListener('input', function(e) {
             musicVolume = e.target.value / 100;
             if (menuMusic) {
@@ -1388,18 +1393,13 @@
             createScene(materials);
             initControls();
             initMenu();
-            
-            // Скрываем оружие в меню
             weapon.style.display = 'none';
-            
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
             initControls();
             initMenu();
-            
-            // Скрываем оружие в меню
             weapon.style.display = 'none';
         });
     </script>
