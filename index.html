@@ -285,13 +285,14 @@
             display: none;
             z-index: 45;
             pointer-events: none;
-            justify-content: flex-start; /* Изменено с center на flex-start */
         }
 
+        /* DownPanel - ИСПРАВЛЕНА: привязана к левому нижнему углу */
         #downPanel {
+            width: 100%;
             height: auto;
-            max-width: 100%;
-            object-fit: contain;
+            object-fit: fill;
+            display: block;
         }
 
         /* Цифры для HP и патронов - ИСПРАВЛЕНО: позиционирование относительно панели */
@@ -312,7 +313,7 @@
         #uiSettingsPanel {
             position: absolute;
             top: 10px;
-            left: 10px; /* ПЕРЕМЕЩЕНО СЛЕВА */
+            left: 10px;
             background: rgba(0,0,0,0.9);
             padding: 15px;
             border-radius: 5px;
@@ -336,7 +337,7 @@
         }
 
         .ui-setting-input {
-            width: 80px; /* УВЕЛИЧЕНА ШИРИНА */
+            width: 80px;
             margin: 2px;
             padding: 4px;
             background: #333;
@@ -433,7 +434,7 @@
         <div id="ammoDisplay"></div>
     </div>
     
-    <!-- Панель настроек UI - ПЕРЕМЕЩЕНА СЛЕВА -->
+    <!-- Панель настроек UI -->
     <div id="uiSettingsPanel">
         <h3 style="margin: 0 0 10px 0; color: #ff0000; text-align: center;">НАСТРОЙКИ UI</h3>
         
@@ -447,29 +448,31 @@
             <input type="number" id="digitSize" class="ui-setting-input" value="24" min="1" max="200">
         </div>
         
+        <!-- Поменял местами HP и патроны -->
         <div class="ui-setting-group">
-            <label>HP X позиция (%):</label>
+            <label>Патроны X позиция (%):</label>
             <input type="number" id="hpX" class="ui-setting-input" value="20" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
-            <label>HP Y позиция (%):</label>
+            <label>Патроны Y позиция (%):</label>
             <input type="number" id="hpY" class="ui-setting-input" value="50" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
-            <label>Патроны X позиция (%):</label>
+            <label>HP X позиция (%):</label>
             <input type="number" id="ammoX" class="ui-setting-input" value="80" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
-            <label>Патроны Y позиция (%):</label>
+            <label>HP Y позиция (%):</label>
             <input type="number" id="ammoY" class="ui-setting-input" value="50" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>Расстояние между цифрами (px):</label>
-            <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="0" max="50">
+            <!-- Изменил min на -50 чтобы можно было ставить отрицательные значения -->
+            <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="-50" max="50">
         </div>
         
         <div style="text-align: center; margin-top: 10px;">
@@ -569,19 +572,19 @@
                 // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
-                    wallTexture.repeat.set(1, 1); // Нормальное повторение для стен
+                    wallTexture.repeat.set(1, 1);
                     wallTexture.minFilter = THREE.LinearFilter;
                     wallTexture.magFilter = THREE.LinearFilter;
                 }
                 if (floorTexture) {
                     floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-                    floorTexture.repeat.set(20, 20); // УВЕЛИЧЕНО В 5 РАЗ (было 4,4)
+                    floorTexture.repeat.set(20, 20);
                     floorTexture.minFilter = THREE.LinearFilter;
                     floorTexture.magFilter = THREE.LinearFilter;
                 }
                 if (roofTexture) {
                     roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
-                    roofTexture.repeat.set(20, 20); // УВЕЛИЧЕНО В 5 РАЗ (было 4,4)
+                    roofTexture.repeat.set(20, 20);
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
                 }
@@ -878,15 +881,17 @@
         let lastTime = performance.now();
         let fps = 0;
 
-        // UI настройки
+        // UI настройки - ПОМЕНЯЛ МЕСТАМИ HP И ПАТРОНЫ
         let uiSettings = {
-            panelHeight: 15, // vh
-            digitSize: 24, // px
-            hpX: 20, // %
-            hpY: 50, // %
-            ammoX: 80, // %
-            ammoY: 50, // %
-            digitSpacing: 2 // px
+            panelHeight: 15,
+            digitSize: 24,
+            // Теперь hpX/hpY - это позиция ПАТРОНОВ
+            hpX: 20, // ПАТРОНЫ X
+            hpY: 50, // ПАТРОНЫ Y  
+            // Теперь ammoX/ammoY - это позиция HP
+            ammoX: 80, // HP X
+            ammoY: 50, // HP Y
+            digitSpacing: 2
         };
 
         // ФУНКЦИЯ ДЛЯ ЗАПУСКА МУЗЫКИ ПРИ СТАРТЕ
@@ -900,7 +905,6 @@
                     musicStarted = true;
                 }).catch(e => {
                     console.log('Автовоспроизведение заблокировано, будет запущено при взаимодействии');
-                    // Запустим при первом взаимодействии
                     document.addEventListener('click', startMenuMusicOnInteraction, { once: true });
                     document.addEventListener('touchstart', startMenuMusicOnInteraction, { once: true });
                 });
@@ -921,7 +925,7 @@
             }
         }
 
-        // Анимация оружия - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // Анимация оружия
         function playShootAnimation() {
             if (!canShoot || isReloading || isShooting) return;
             
@@ -932,14 +936,12 @@
             
             console.log('Стрельба! Патронов осталось:', ammo);
             
-            // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
                 shootSound.volume = musicVolume;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
-            // Анимация выстрела с проверкой доступности изображений
             let frame1Loaded = false;
             let frame2Loaded = false;
             
@@ -964,30 +966,25 @@
             };
             frame2.src = 'GunSh2.png';
             
-            // Первый кадр анимации
             setTimeout(() => {
                 if (frame1Loaded) {
                     weapon.src = 'GunSh1.png';
                 }
             }, 50);
             
-            // Второй кадр анимации
             setTimeout(() => {
                 if (frame2Loaded) {
                     weapon.src = 'GunSh2.png';
                 }
             }, 100);
             
-            // Возврат к обычному виду
             setTimeout(() => {
                 weapon.src = 'Gun.png';
                 isShooting = false;
                 
-                // Автоперезарядка если патроны кончились
                 if (ammo <= 0) {
                     playReloadAnimation();
                 } else {
-                    // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
                     }, 200);
@@ -1002,7 +999,6 @@
             canShoot = false;
             console.log('Перезарядка!');
             
-            // Проверка доступности изображений перезарядки
             let kd1Loaded = false;
             let kd2Loaded = false;
             
@@ -1027,7 +1023,6 @@
             };
             kd2.src = 'GunKD2.png';
             
-            // Анимация перезарядки
             setTimeout(() => {
                 if (kd1Loaded) {
                     weapon.src = 'GunKD1.png';
@@ -1067,8 +1062,9 @@
             const panelRect = panel.getBoundingClientRect();
             
             // Устанавливаем позицию контейнера HP относительно панели
-            hpDisplay.style.left = `${(uiSettings.hpX / 100) * panelRect.width}px`;
-            hpDisplay.style.bottom = `${(uiSettings.hpY / 100) * panelRect.height}px`;
+            // ТЕПЕРЬ ammoX/ammoY - это позиция HP (поменяли местами)
+            hpDisplay.style.left = `${(uiSettings.ammoX / 100) * panelRect.width}px`;
+            hpDisplay.style.bottom = `${(uiSettings.ammoY / 100) * panelRect.height}px`;
             
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
@@ -1101,8 +1097,9 @@
             const panelRect = panel.getBoundingClientRect();
             
             // Устанавливаем позицию контейнера Ammo относительно панели
-            ammoDisplay.style.left = `${(uiSettings.ammoX / 100) * panelRect.width}px`;
-            ammoDisplay.style.bottom = `${(uiSettings.ammoY / 100) * panelRect.height}px`;
+            // ТЕПЕРЬ hpX/hpY - это позиция ПАТРОНОВ (поменяли местами)
+            ammoDisplay.style.left = `${(uiSettings.hpX / 100) * panelRect.width}px`;
+            ammoDisplay.style.bottom = `${(uiSettings.hpY / 100) * panelRect.height}px`;
             
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
@@ -1123,10 +1120,13 @@
             // Применяем настройки из инпутов
             uiSettings.panelHeight = parseInt(document.getElementById('panelHeight').value) || 15;
             uiSettings.digitSize = parseInt(document.getElementById('digitSize').value) || 24;
+            // ТЕПЕРЬ hpX/hpY - это позиция ПАТРОНОВ
             uiSettings.hpX = parseInt(document.getElementById('hpX').value) || 20;
             uiSettings.hpY = parseInt(document.getElementById('hpY').value) || 50;
+            // ТЕПЕРЬ ammoX/ammoY - это позиция HP
             uiSettings.ammoX = parseInt(document.getElementById('ammoX').value) || 80;
             uiSettings.ammoY = parseInt(document.getElementById('ammoY').value) || 50;
+            // Теперь можно ставить отрицательные значения
             uiSettings.digitSpacing = parseInt(document.getElementById('digitSpacing').value) || 2;
             
             // Применяем настройки к панели
@@ -1142,8 +1142,10 @@
             // Заполняем инпуты текущими значениями
             document.getElementById('panelHeight').value = uiSettings.panelHeight;
             document.getElementById('digitSize').value = uiSettings.digitSize;
+            // ТЕПЕРЬ hpX/hpY - это позиция ПАТРОНОВ
             document.getElementById('hpX').value = uiSettings.hpX;
             document.getElementById('hpY').value = uiSettings.hpY;
+            // ТЕПЕРЬ ammoX/ammoY - это позиция HP
             document.getElementById('ammoX').value = uiSettings.ammoX;
             document.getElementById('ammoY').value = uiSettings.ammoY;
             document.getElementById('digitSpacing').value = uiSettings.digitSpacing;
@@ -1626,7 +1628,7 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
-            document.getElementById('uiPanel').style.display = 'flex';
+            document.getElementById('uiPanel').style.display = 'block';
             
             if (menuMusic) {
                 menuMusic.pause();
