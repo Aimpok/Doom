@@ -33,7 +33,7 @@
             justify-content: center;
             align-items: center;
             z-index: 100;
-            background-image: url('MenuBg.png');
+            background-image: url('MenuUi/MenuBg.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -308,12 +308,12 @@
     
     <!-- Стартовое меню -->
     <div id="startMenu">
-        <img src="Logo.png" alt="DOOM" class="logo">
+        <img src="MenuUi/Logo.png" alt="DOOM" class="logo">
         <div class="menu-buttons">
-            <img src="PlayText.png" alt="Играть" class="menu-button" id="playButton">
-            <img src="OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
+            <img src="MenuUi/PlayText.png" alt="Играть" class="menu-button" id="playButton">
+            <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
-        <img src="companyname.png" alt="Company Name" class="company-name">
+        <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
     </div>
     
     <!-- Панель настроек меню - СКРЫТА -->
@@ -375,12 +375,12 @@
     
     <!-- Аудио для меню -->
     <audio id="menuMusic" loop preload="auto">
-        <source src="MenuMusic.mp3" type="audio/mpeg">
+        <source src="Sounds/MenuMusic.mp3" type="audio/mpeg">
     </audio>
     
     <!-- Звук выстрела -->
     <audio id="shootSound" preload="auto">
-        <source src="Shoot.mp3" type="audio/mpeg">
+        <source src="Sounds/Shoot.mp3" type="audio/mpeg">
     </audio>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -441,19 +441,19 @@
                     }
                 }
 
-                wallTexture = textureLoader.load('WallTex.jpg', onTextureLoad, undefined, (error) => {
+                wallTexture = textureLoader.load('Textures/WallTex.jpg', onTextureLoad, undefined, (error) => {
                     console.error('Ошибка загрузки текстуры стен:', error);
                     wallTexture = null;
                     onTextureLoad();
                 });
 
-                floorTexture = textureLoader.load('FloorTex.jpg', onTextureLoad, undefined, (error) => {
+                floorTexture = textureLoader.load('Textures/FloorTex.jpg', onTextureLoad, undefined, (error) => {
                     console.error('Ошибка загрузки текстуры пола:', error);
                     floorTexture = null;
                     onTextureLoad();
                 });
 
-                roofTexture = textureLoader.load('RoofTex.jpg', onTextureLoad, undefined, (error) => {
+                roofTexture = textureLoader.load('Textures/RoofTex.jpg', onTextureLoad, undefined, (error) => {
                     console.error('Ошибка загрузки текстуры потолка:', error);
                     roofTexture = null;
                     onTextureLoad();
