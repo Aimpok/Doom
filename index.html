@@ -312,7 +312,7 @@
             z-index: 1000;
             border: 2px solid #ff0000;
             min-width: 200px;
-            pointer-events: auto; /* РАЗРЕШАЕМ КЛИКИ */
+            pointer-events: auto;
         }
 
         .ui-setting-group {
@@ -335,7 +335,7 @@
             border: 1px solid #555;
             border-radius: 3px;
             font-size: 12px;
-            pointer-events: auto; /* РАЗРЕШАЕМ ВВОД */
+            pointer-events: auto;
         }
 
         .ui-setting-button {
@@ -349,7 +349,7 @@
             margin-right: 5px;
             font-size: 12px;
             font-weight: bold;
-            pointer-events: auto; /* РАЗРЕШАЕМ КЛИКИ */
+            pointer-events: auto;
         }
 
         .ui-setting-button:hover {
@@ -419,7 +419,7 @@
     
     <!-- UI Панель -->
     <div id="uiPanel">
-        <img id="downPanel" src="DownPanel.png" alt="UI Panel">
+        <img id="downPanel" src="GameUi/DownPanel.png" alt="UI Panel">
         <div id="hpDisplay"></div>
         <div id="ammoDisplay"></div>
     </div>
@@ -1060,7 +1060,7 @@
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${hpString[i]}.png`;
+                digit.src = `GameUi/${hpString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1093,7 +1093,7 @@
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${ammoString[i]}.png`;
+                digit.src = `GameUi/${ammoString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1552,13 +1552,13 @@
         }
 
         // Анимация с delta time для независимой от FPS скорости
-        const BASE_MOVE_SPEED = 15.0; // УВЕЛИЧЕНА ДО 15
+        const BASE_MOVE_SPEED = 15.0;
         
         function animate(currentTime) {
             requestAnimationFrame(animate);
             
             // Расчет delta time
-            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1); // Ограничиваем delta time
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
             lastTime = currentTime;
             
             // Расчет FPS
@@ -1615,7 +1615,7 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
-            document.getElementById('uiPanel').style.display = 'flex'; // FLEX для центрирования
+            document.getElementById('uiPanel').style.display = 'flex';
             
             if (menuMusic) {
                 menuMusic.pause();
