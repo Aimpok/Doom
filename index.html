@@ -276,7 +276,7 @@
             z-index: 1000;
         }
 
-        /* Панель UI */
+        /* Панель UI - ИСПРАВЛЕНА: привязана к левому нижнему углу */
         #uiPanel {
             position: absolute;
             bottom: 0;
@@ -285,17 +285,26 @@
             display: none;
             z-index: 45;
             pointer-events: none;
-            justify-content: center;
+            justify-content: flex-start; /* Изменено с center на flex-start */
         }
 
         #downPanel {
             height: auto;
             max-width: 100%;
+            object-fit: contain;
         }
 
-        /* Цифры для HP и патронов */
+        /* Цифры для HP и патронов - ИСПРАВЛЕНО: позиционирование относительно панели */
         .digit {
             position: absolute;
+            pointer-events: none;
+        }
+
+        /* Контейнеры для цифр - ИСПРАВЛЕНО: позиционирование относительно панели */
+        #hpDisplay, #ammoDisplay {
+            position: absolute;
+            bottom: 0;
+            display: flex;
             pointer-events: none;
         }
 
@@ -417,7 +426,7 @@
     <!-- Оружие -->
     <img id="weapon" src="Gun.png" alt="Weapon">
     
-    <!-- UI Панель -->
+    <!-- UI Панель - ИСПРАВЛЕНА: привязана к левому нижнему углу -->
     <div id="uiPanel">
         <img id="downPanel" src="GameUi/DownPanel.png" alt="UI Panel">
         <div id="hpDisplay"></div>
@@ -1041,7 +1050,7 @@
             }, 600);
         }
 
-        // UI функции
+        // UI функции - ИСПРАВЛЕННЫЕ: цифры привязаны к панели
         function updateHpDisplay() {
             const hpDisplay = document.getElementById('hpDisplay');
             hpDisplay.innerHTML = '';
@@ -1057,6 +1066,10 @@
             
             const panelRect = panel.getBoundingClientRect();
             
+            // Устанавливаем позицию контейнера HP относительно панели
+            hpDisplay.style.left = `${(uiSettings.hpX / 100) * panelRect.width}px`;
+            hpDisplay.style.bottom = `${(uiSettings.hpY / 100) * panelRect.height}px`;
+            
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
@@ -1064,12 +1077,9 @@
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
-                // Позиционирование относительно панели
-                const xPos = (uiSettings.hpX / 100) * panelRect.width + (i * (uiSettings.digitSize + uiSettings.digitSpacing));
-                const yPos = (uiSettings.hpY / 100) * panelRect.height;
-                
-                digit.style.left = `${xPos}px`;
-                digit.style.top = `${yPos}px`;
+                // Позиционирование цифр внутри контейнера
+                digit.style.position = 'relative';
+                digit.style.left = `${i * (uiSettings.digitSize + uiSettings.digitSpacing)}px`;
                 
                 hpDisplay.appendChild(digit);
             }
@@ -1090,6 +1100,10 @@
             
             const panelRect = panel.getBoundingClientRect();
             
+            // Устанавливаем позицию контейнера Ammo относительно панели
+            ammoDisplay.style.left = `${(uiSettings.ammoX / 100) * panelRect.width}px`;
+            ammoDisplay.style.bottom = `${(uiSettings.ammoY / 100) * panelRect.height}px`;
+            
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
@@ -1097,12 +1111,9 @@
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
-                // Позиционирование относительно панели
-                const xPos = (uiSettings.ammoX / 100) * panelRect.width + (i * (uiSettings.digitSize + uiSettings.digitSpacing));
-                const yPos = (uiSettings.ammoY / 100) * panelRect.height;
-                
-                digit.style.left = `${xPos}px`;
-                digit.style.top = `${yPos}px`;
+                // Позиционирование цифр внутри контейнера
+                digit.style.position = 'relative';
+                digit.style.left = `${i * (uiSettings.digitSize + uiSettings.digitSpacing)}px`;
                 
                 ammoDisplay.appendChild(digit);
             }
