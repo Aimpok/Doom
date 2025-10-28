@@ -873,11 +873,12 @@
             }, 600);
         }
 
-        // УПРАВЛЕНИЕ
+        // УПРАВЛЕНИЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ
         let activeTouches = new Map();
         let isShootingTouch = false;
         let lastShootTouchX = 0;
         let lastShootTouchY = 0;
+        let shootTouchId = null;
 
         // Инициализация джойстика
         function initJoystick() {
@@ -942,7 +943,7 @@
             });
         }
 
-        // Инициализация поворота камеры и стрельбы
+        // Инициализация поворота камеры и стрельбы - ИСПРАВЛЕННАЯ
         function initCameraControls() {
             const cameraArea = document.getElementById('cameraTouchArea');
             const shootButton = document.getElementById('shootButton');
@@ -950,6 +951,7 @@
             cameraArea.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
+                
                 // Проверяем, что касание НЕ в кнопке стрельбы
                 const shootRect = shootButton.getBoundingClientRect();
                 const touchX = touch.clientX;
@@ -966,47 +968,60 @@
                 }
             });
 
-            // Кнопка стрельбы - поворот камеры и стрельба
+            // Кнопка стрельбы - ТОЛЬКО СТРЕЛЬБА, без поворота камеры
             shootButton.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 const touch = e.changedTouches[0];
+                
+                // Запоминаем ID касания для стрельбы
+                shootTouchId = touch.identifier;
                 isShootingTouch = true;
-                lastShootTouchX = touch.clientX;
-                lastShootTouchY = touch.clientY;
                 
                 // Стрельба при касании
                 playShootAnimation();
-            });
-
-            shootButton.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!isShootingTouch) return;
-                
-                const touch = e.changedTouches[0];
-                const deltaX = touch.clientX - lastShootTouchX;
-                const deltaY = touch.clientY - lastShootTouchY;
-                
-                // Поворот камеры
-                yaw -= deltaX * 0.005;
-                pitch -= deltaY * 0.005;
-                pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
-                
-                lastShootTouchX = touch.clientX;
-                lastShootTouchY = touch.clientY;
                 
                 // Автострельба при долгом зажатии
-                if (!isShooting && !isReloading && canShoot) {
-                    playShootAnimation();
-                }
+                shootAutoInterval = setInterval(() => {
+                    if (isShootingTouch && !isShooting && !isReloading && canShoot) {
+                        playShootAnimation();
+                    }
+                }, 300);
             });
 
             shootButton.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                isShootingTouch = false;
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === shootTouchId) {
+                        isShootingTouch = false;
+                        shootTouchId = null;
+                        if (shootAutoInterval) {
+                            clearInterval(shootAutoInterval);
+                            shootAutoInterval = null;
+                        }
+                        break;
+                    }
+                }
+            });
+
+            shootButton.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === shootTouchId) {
+                        isShootingTouch = false;
+                        shootTouchId = null;
+                        if (shootAutoInterval) {
+                            clearInterval(shootAutoInterval);
+                            shootAutoInterval = null;
+                        }
+                        break;
+                    }
+                }
             });
         }
 
-        // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ
+        let shootAutoInterval = null;
+
+        // ОБЩИЕ ОБРАБОТЧИКИ ДЛЯ ОДНОВРЕМЕННОЙ РАБОТЫ - ИСПРАВЛЕННЫЕ
         function initGlobalHandlers() {
             // Обработка перемещения всех касаний
             document.addEventListener('touchmove', (e) => {
@@ -1053,8 +1068,8 @@
                             const deltaX = touch.clientX - touchData.lastX;
                             const deltaY = touch.clientY - touchData.lastY;
                             
-                            yaw -= deltaX * 0.005;
-                            pitch -= deltaY * 0.005;
+                            yaw -= deltaX * mouseSensitivity * 2;
+                            pitch -= deltaY * mouseSensitivity * 2;
                             pitch = Math.max(-PI_2, Math.min(PI_2, pitch));
                         }
                         
@@ -1068,14 +1083,48 @@
             document.addEventListener('touchend', (e) => {
                 for (let touch of e.changedTouches) {
                     const touchData = activeTouches.get(touch.identifier);
-                    if (touchData && touchData.type === 'joystick') {
-                        const joystickStick = document.getElementById('joystickStick');
-                        joystickStick.style.transform = 'translate(0, 0)';
-                        moveForward = moveBackward = moveLeft = moveRight = false;
+                    if (touchData) {
+                        if (touchData.type === 'joystick') {
+                            const joystickStick = document.getElementById('joystickStick');
+                            joystickStick.style.transform = 'translate(0, 0)';
+                            moveForward = moveBackward = moveLeft = moveRight = false;
+                        }
+                        activeTouches.delete(touch.identifier);
                     }
-                    activeTouches.delete(touch.identifier);
+                    
+                    // Обработка завершения касания для стрельбы
+                    if (touch.identifier === shootTouchId) {
+                        isShootingTouch = false;
+                        shootTouchId = null;
+                        if (shootAutoInterval) {
+                            clearInterval(shootAutoInterval);
+                            shootAutoInterval = null;
+                        }
+                    }
                 }
-                isShootingTouch = false;
+            });
+
+            document.addEventListener('touchcancel', (e) => {
+                for (let touch of e.changedTouches) {
+                    const touchData = activeTouches.get(touch.identifier);
+                    if (touchData) {
+                        if (touchData.type === 'joystick') {
+                            const joystickStick = document.getElementById('joystickStick');
+                            joystickStick.style.transform = 'translate(0, 0)';
+                            moveForward = moveBackward = moveLeft = moveRight = false;
+                        }
+                        activeTouches.delete(touch.identifier);
+                    }
+                    
+                    if (touch.identifier === shootTouchId) {
+                        isShootingTouch = false;
+                        shootTouchId = null;
+                        if (shootAutoInterval) {
+                            clearInterval(shootAutoInterval);
+                            shootAutoInterval = null;
+                        }
+                    }
+                }
             });
 
             // Сброс при потере фокуса
@@ -1085,6 +1134,11 @@
                 joystickStick.style.transform = 'translate(0, 0)';
                 moveForward = moveBackward = moveLeft = moveRight = false;
                 isShootingTouch = false;
+                shootTouchId = null;
+                if (shootAutoInterval) {
+                    clearInterval(shootAutoInterval);
+                    shootAutoInterval = null;
+                }
             });
 
             // Управление стрельбой для ПК - ЛКМ
@@ -1104,6 +1158,7 @@
             let mouseShootInterval;
             document.addEventListener('mousedown', (e) => {
                 if (e.button === 0) {
+                    playShootAnimation(); // Первый выстрел сразу
                     mouseShootInterval = setInterval(() => {
                         if (canShoot && !isShooting && !isReloading) {
                             playShootAnimation();
@@ -1350,5 +1405,3 @@
     </script>
 </body>
 </html>
-
-
