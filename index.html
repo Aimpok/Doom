@@ -242,6 +242,7 @@
             height: auto;
             pointer-events: none;
             z-index: 40;
+            display: none;
         }
 
         /* Запрет перетаскивания для всех изображений */
@@ -713,29 +714,95 @@
         let ammo = 30;
         let maxAmmo = 30;
 
-        // Анимация оружия
+        // ФУНКЦИЯ ДЛЯ ЗАПУСКА МУЗЫКИ ПРИ СТАРТЕ
+        function startMenuMusic() {
+            if (musicStarted || !menuMusic) return;
+            
+            try {
+                menuMusic.volume = musicVolume;
+                menuMusic.play().then(() => {
+                    console.log('Музыка меню запущена');
+                    musicStarted = true;
+                }).catch(e => {
+                    console.log('Автовоспроизведение заблокировано, будет запущено при взаимодействии');
+                    // Запустим при первом взаимодействии
+                    document.addEventListener('click', startMenuMusicOnInteraction, { once: true });
+                    document.addEventListener('touchstart', startMenuMusicOnInteraction, { once: true });
+                });
+            } catch (error) {
+                console.log('Ошибка запуска музыки:', error);
+            }
+        }
+
+        function startMenuMusicOnInteraction() {
+            if (!musicStarted && menuMusic) {
+                menuMusic.volume = musicVolume;
+                menuMusic.play().then(() => {
+                    console.log('Музыка меню запущена после взаимодействия');
+                    musicStarted = true;
+                }).catch(e => {
+                    console.log('Не удалось запустить музыку после взаимодействия');
+                });
+            }
+        }
+
+        // Анимация оружия - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playShootAnimation() {
-            if (!canShoot || isReloading) return;
+            if (!canShoot || isReloading || isShooting) return;
             
             isShooting = true;
             canShoot = false;
             ammo--;
             
+            console.log('Стрельба! Патронов осталось:', ammo);
+            
             // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
+                shootSound.volume = musicVolume;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
-            // Анимация выстрела - БЕЗ ДВИЖЕНИЯ ПУШКИ
+            // Анимация выстрела с проверкой доступности изображений
+            let frame1Loaded = false;
+            let frame2Loaded = false;
+            
+            const frame1 = new Image();
+            const frame2 = new Image();
+            
+            frame1.onload = function() {
+                frame1Loaded = true;
+            };
+            frame1.onerror = function() {
+                console.log('Ошибка загрузки GunSh1.png');
+                frame1Loaded = true;
+            };
+            frame1.src = 'GunSh1.png';
+            
+            frame2.onload = function() {
+                frame2Loaded = true;
+            };
+            frame2.onerror = function() {
+                console.log('Ошибка загрузки GunSh2.png');
+                frame2Loaded = true;
+            };
+            frame2.src = 'GunSh2.png';
+            
+            // Первый кадр анимации
             setTimeout(() => {
-                weapon.src = 'GunSh1.png';
+                if (frame1Loaded) {
+                    weapon.src = 'GunSh1.png';
+                }
             }, 50);
             
+            // Второй кадр анимации
             setTimeout(() => {
-                weapon.src = 'GunSh2.png';
-            }, 150);
+                if (frame2Loaded) {
+                    weapon.src = 'GunSh2.png';
+                }
+            }, 100);
             
+            // Возврат к обычному виду
             setTimeout(() => {
                 weapon.src = 'Gun.png';
                 isShooting = false;
@@ -747,9 +814,9 @@
                     // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
-                    }, 300);
+                    }, 200);
                 }
-            }, 250);
+            }, 200);
         }
 
         function playReloadAnimation() {
@@ -757,21 +824,53 @@
             
             isReloading = true;
             canShoot = false;
+            console.log('Перезарядка!');
             
+            // Проверка доступности изображений перезарядки
+            let kd1Loaded = false;
+            let kd2Loaded = false;
+            
+            const kd1 = new Image();
+            const kd2 = new Image();
+            
+            kd1.onload = function() {
+                kd1Loaded = true;
+            };
+            kd1.onerror = function() {
+                console.log('Ошибка загрузки GunKD1.png');
+                kd1Loaded = true;
+            };
+            kd1.src = 'GunKD1.png';
+            
+            kd2.onload = function() {
+                kd2Loaded = true;
+            };
+            kd2.onerror = function() {
+                console.log('Ошибка загрузки GunKD2.png');
+                kd2Loaded = true;
+            };
+            kd2.src = 'GunKD2.png';
+            
+            // Анимация перезарядки
             setTimeout(() => {
-                weapon.src = 'GunKD1.png';
+                if (kd1Loaded) {
+                    weapon.src = 'GunKD1.png';
+                }
             }, 100);
             
             setTimeout(() => {
-                weapon.src = 'GunKD2.png';
-            }, 400);
+                if (kd2Loaded) {
+                    weapon.src = 'GunKD2.png';
+                }
+            }, 300);
             
             setTimeout(() => {
                 weapon.src = 'Gun.png';
                 ammo = maxAmmo;
                 isReloading = false;
                 canShoot = true;
-            }, 700);
+                console.log('Перезарядка завершена! Патронов:', ammo);
+            }, 600);
         }
 
         // УПРАВЛЕНИЕ
@@ -1142,6 +1241,7 @@
             // Останавливаем музыку меню
             if (menuMusic) {
                 menuMusic.pause();
+                menuMusic.currentTime = 0;
             }
             
             // Показываем мобильное управление на мобильных устройствах
@@ -1173,51 +1273,35 @@
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            // Функция для запуска музыки при взаимодействии
-            const startMusicOnInteraction = () => {
-                if (!musicStarted && menuMusic) {
-                    menuMusic.volume = musicVolume;
-                    menuMusic.play().then(() => {
-                        console.log('Музыка меню запущена');
-                        musicStarted = true;
-                    }).catch(e => {
-                        // Игнорируем ошибку на мобилках
-                    });
-                }
-            };
+            // Запускаем музыку при загрузке
+            startMenuMusic();
             
-            // Клик для ПК - запускаем музыку
+            // Клик для ПК
             playButton.addEventListener('click', function(e) {
-                startMusicOnInteraction();
                 startGame();
             });
             
             optionsButton.addEventListener('click', function(e) {
-                startMusicOnInteraction();
                 showOptions();
             });
             
             backButton.addEventListener('click', function(e) {
-                startMusicOnInteraction();
                 hideOptions();
             });
             
-            // Тач для мобилок - запускаем музыку
+            // Тач для мобилок
             playButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
-                startMusicOnInteraction();
                 startGame();
             }, { passive: false });
             
             optionsButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
-                startMusicOnInteraction();
                 showOptions();
             }, { passive: false });
             
             backButton.addEventListener('touchend', function(e) {
                 e.preventDefault();
-                startMusicOnInteraction();
                 hideOptions();
             }, { passive: false });
         }
@@ -1253,19 +1337,6 @@
             // Скрываем оружие в меню
             weapon.style.display = 'none';
             
-            // На ПК пробуем запустить музыку сразу
-            if (!('ontouchstart' in window)) {
-                // Только на ПК пытаемся запустить музыку автоматически
-                if (menuMusic) {
-                    menuMusic.volume = musicVolume;
-                    menuMusic.play().then(() => {
-                        console.log('Музыка меню запущена на ПК');
-                        musicStarted = true;
-                    }).catch(e => {
-                        // На ПК тоже может быть заблокировано автовоспроизведение
-                    });
-                }
-            }
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
