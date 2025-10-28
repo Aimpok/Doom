@@ -782,7 +782,12 @@
             const floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
             floorMesh.rotation.x = -Math.PI / 2;
             floorMesh.position.y = floor * FLOOR_HEIGHT - 1;
-            floorMesh.userData = { type: 'floor', floor };
+            floorMesh.userData = { 
+                type: 'floor', 
+                floor,
+                isFloor: true,
+                alwaysVisible: true // Пол всегда должен быть виден
+            };
             scene.add(floorMesh);
         }
 
@@ -793,7 +798,12 @@
             const roofMesh = new THREE.Mesh(roofGeometry, roofMaterial);
             roofMesh.rotation.x = Math.PI / 2;
             roofMesh.position.y = (floor + 1) * FLOOR_HEIGHT - 1;
-            roofMesh.userData = { type: 'roof', floor };
+            roofMesh.userData = { 
+                type: 'roof', 
+                floor,
+                isRoof: true,
+                alwaysVisible: true // Потолок всегда должен быть виден
+            };
             scene.add(roofMesh);
         }
 
@@ -812,7 +822,11 @@
                                 floor * FLOOR_HEIGHT + WALL_HEIGHT/2 - 1,
                                 (y - mazeGen.height/2) * CELL_SIZE
                             );
-                            wall.userData = { type: 'wall', floor };
+                            wall.userData = { 
+                                type: 'wall', 
+                                floor,
+                                isWall: true
+                            };
                             wallGroup.add(wall);
                         }
                     }
@@ -830,7 +844,11 @@
                                 floor * FLOOR_HEIGHT + WALL_HEIGHT/2 - 1,
                                 (y + 0.5 - mazeGen.height/2) * CELL_SIZE
                             );
-                            wall.userData = { type: 'wall', floor };
+                            wall.userData = { 
+                                type: 'wall', 
+                                floor,
+                                isWall: true
+                            };
                             wallGroup.add(wall);
                         }
                     }
@@ -869,7 +887,8 @@
                         floor,
                         isStair: true,
                         stairIndex: i,
-                        totalSteps: stepCount
+                        totalSteps: stepCount,
+                        isCollider: true // Лестница теперь имеет коллизию
                     };
                     
                     scene.add(step);
@@ -887,7 +906,11 @@
                     floor * FLOOR_HEIGHT + railingHeight/2 - 1,
                     (y - mazeGen.height/2) * CELL_SIZE
                 );
-                leftRailing.userData = { type: 'railing', floor };
+                leftRailing.userData = { 
+                    type: 'railing', 
+                    floor,
+                    isCollider: true
+                };
                 scene.add(leftRailing);
                 
                 // Правый поручень
@@ -897,7 +920,11 @@
                     floor * FLOOR_HEIGHT + railingHeight/2 - 1,
                     (y - mazeGen.height/2) * CELL_SIZE
                 );
-                rightRailing.userData = { type: 'railing', floor };
+                rightRailing.userData = { 
+                    type: 'railing', 
+                    floor,
+                    isCollider: true
+                };
                 scene.add(rightRailing);
             });
         }
@@ -917,7 +944,12 @@
                     floor * FLOOR_HEIGHT - 0.9,
                     (y - mazeGen.height/2) * CELL_SIZE
                 );
-                holeMesh.userData = { type: 'hole', floor, isHole: true };
+                holeMesh.userData = { 
+                    type: 'hole', 
+                    floor, 
+                    isHole: true,
+                    alwaysVisible: true // Отверстия всегда должны быть видны
+                };
                 scene.add(holeMesh);
                 
                 // Создаем отверстие в потолке предыдущего этажа (если есть)
@@ -930,7 +962,12 @@
                         floor * FLOOR_HEIGHT - 0.1,
                         (y - mazeGen.height/2) * CELL_SIZE
                     );
-                    ceilingHoleMesh.userData = { type: 'hole', floor: floor - 1, isHole: true };
+                    ceilingHoleMesh.userData = { 
+                        type: 'hole', 
+                        floor: floor - 1, 
+                        isHole: true,
+                        alwaysVisible: true // Отверстия всегда должны быть видны
+                    };
                     scene.add(ceilingHoleMesh);
                 }
             });
@@ -1422,9 +1459,10 @@
                         return true;
                     }
                     
-                    // Проверяем, находимся ли мы на лестнице
-                    if (isOnStairs(px, py, pz)) {
-                        return false; // Лестницы не блокируют движение
+                    // Проверяем коллизии с объектами сцены
+                    const collision = checkSceneCollision(px, py, pz);
+                    if (collision) {
+                        return true;
                     }
                 } else {
                     return true;
@@ -1432,6 +1470,28 @@
             }
             
             return false;
+        }
+
+        // Проверка коллизий с объектами сцены
+        function checkSceneCollision(x, y, z) {
+            const playerRadius = 0.3;
+            const collisionBox = new THREE.Box3(
+                new THREE.Vector3(x - playerRadius, y - 0.1, z - playerRadius),
+                new THREE.Vector3(x + playerRadius, y + 1.8, z + playerRadius)
+            );
+            
+            let collision = false;
+            
+            scene.traverse((object) => {
+                if (object.userData && object.userData.isCollider && object.visible) {
+                    const objectBox = new THREE.Box3().setFromObject(object);
+                    if (collisionBox.intersectsBox(objectBox)) {
+                        collision = true;
+                    }
+                }
+            });
+            
+            return collision;
         }
 
         // Проверка, находится ли игрок на лестнице
@@ -1621,7 +1681,10 @@
                     const objectFloor = object.userData.floor;
                     const floorDiff = Math.abs(objectFloor - cameraFloor);
                     
-                    if (floorDiff <= 1) {
+                    // Пол и потолок всегда видны на текущем этаже
+                    if (object.userData.alwaysVisible && objectFloor === cameraFloor) {
+                        object.visible = true;
+                    } else if (floorDiff <= 1) {
                         object.visible = true;
                         
                         // Дополнительная оптимизация: скрываем объекты, которые слишком далеко
