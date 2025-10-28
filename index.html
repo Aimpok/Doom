@@ -299,11 +299,11 @@
             pointer-events: none;
         }
 
-        /* Панель настроек UI */
+        /* Панель настроек UI - ПЕРЕМЕЩЕНА СЛЕВА */
         #uiSettingsPanel {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px; /* ПЕРЕМЕЩЕНО СЛЕВА */
             background: rgba(0,0,0,0.9);
             padding: 15px;
             border-radius: 5px;
@@ -327,7 +327,7 @@
         }
 
         .ui-setting-input {
-            width: 60px;
+            width: 80px; /* УВЕЛИЧЕНА ШИРИНА */
             margin: 2px;
             padding: 4px;
             background: #333;
@@ -424,43 +424,43 @@
         <div id="ammoDisplay"></div>
     </div>
     
-    <!-- Панель настроек UI -->
+    <!-- Панель настроек UI - ПЕРЕМЕЩЕНА СЛЕВА -->
     <div id="uiSettingsPanel">
         <h3 style="margin: 0 0 10px 0; color: #ff0000; text-align: center;">НАСТРОЙКИ UI</h3>
         
         <div class="ui-setting-group">
             <label>Высота панели (vh):</label>
-            <input type="number" id="panelHeight" class="ui-setting-input" value="15" min="5" max="30">
+            <input type="number" id="panelHeight" class="ui-setting-input" value="15" min="5" max="100">
         </div>
         
         <div class="ui-setting-group">
             <label>Размер цифр (px):</label>
-            <input type="number" id="digitSize" class="ui-setting-input" value="24" min="10" max="50">
+            <input type="number" id="digitSize" class="ui-setting-input" value="24" min="1" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>HP X позиция (%):</label>
-            <input type="number" id="hpX" class="ui-setting-input" value="20" min="0" max="100">
+            <input type="number" id="hpX" class="ui-setting-input" value="20" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>HP Y позиция (%):</label>
-            <input type="number" id="hpY" class="ui-setting-input" value="50" min="0" max="100">
+            <input type="number" id="hpY" class="ui-setting-input" value="50" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>Патроны X позиция (%):</label>
-            <input type="number" id="ammoX" class="ui-setting-input" value="80" min="0" max="100">
+            <input type="number" id="ammoX" class="ui-setting-input" value="80" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>Патроны Y позиция (%):</label>
-            <input type="number" id="ammoY" class="ui-setting-input" value="50" min="0" max="100">
+            <input type="number" id="ammoY" class="ui-setting-input" value="50" min="0" max="200">
         </div>
         
         <div class="ui-setting-group">
             <label>Расстояние между цифрами (px):</label>
-            <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="0" max="10">
+            <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="0" max="50">
         </div>
         
         <div style="text-align: center; margin-top: 10px;">
@@ -1060,7 +1060,7 @@
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${hpString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
+                digit.src = `GameUi/${hpString[i]}.png`;
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1093,7 +1093,7 @@
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `GameUi/${ammoString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
+                digit.src = `GameUi/${ammoString[i]}.png`;
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
