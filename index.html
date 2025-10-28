@@ -261,6 +261,20 @@
         .menu-button {
             pointer-events: auto;
         }
+
+        /* FPS счетчик */
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+            border-radius: 3px;
+            display: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -322,6 +336,9 @@
     
     <!-- Оружие -->
     <img id="weapon" src="Gun.png" alt="Weapon">
+    
+    <!-- FPS счетчик -->
+    <div id="fpsCounter">FPS: 0</div>
     
     <!-- Аудио для меню -->
     <audio id="menuMusic" loop preload="auto">
@@ -713,6 +730,12 @@
         let canShoot = true;
         let ammo = 30;
         let maxAmmo = 30;
+
+        // FPS счетчик
+        const fpsCounter = document.getElementById('fpsCounter');
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 0;
 
         // ФУНКЦИЯ ДЛЯ ЗАПУСКА МУЗЫКИ ПРИ СТАРТЕ
         function startMenuMusic() {
@@ -1262,11 +1285,24 @@
             return false;
         }
 
-        // Анимация
-        const moveSpeed = 0.15;
+        // Анимация с delta time для независимой от FPS скорости
+        const BASE_MOVE_SPEED = 5.0; // Базовая скорость в единицах в секунду
         
-        function animate() {
+        function animate(currentTime) {
             requestAnimationFrame(animate);
+            
+            // Расчет delta time
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1); // Ограничиваем delta time
+            lastTime = currentTime;
+            
+            // Расчет FPS
+            frameCount++;
+            if (currentTime > lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                frameCount = 0;
+                lastTime = currentTime;
+                fpsCounter.textContent = `FPS: ${fps}`;
+            }
             
             camera.rotation.order = 'YXZ';
             camera.rotation.y = yaw;
@@ -1274,10 +1310,13 @@
             
             const direction = new THREE.Vector3();
             
-            if (moveForward) direction.z -= moveSpeed;
-            if (moveBackward) direction.z += moveSpeed;
-            if (moveLeft) direction.x -= moveSpeed;
-            if (moveRight) direction.x += moveSpeed;
+            // Используем delta time для независимой от FPS скорости
+            const actualMoveSpeed = BASE_MOVE_SPEED * deltaTime;
+            
+            if (moveForward) direction.z -= actualMoveSpeed;
+            if (moveBackward) direction.z += actualMoveSpeed;
+            if (moveLeft) direction.x -= actualMoveSpeed;
+            if (moveRight) direction.x += actualMoveSpeed;
             
             direction.applyEuler(new THREE.Euler(0, yaw, 0));
             
@@ -1306,6 +1345,7 @@
         // Функция запуска игры
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
+            fpsCounter.style.display = 'block';
             
             if (menuMusic) {
                 menuMusic.pause();
@@ -1317,7 +1357,10 @@
             }
             
             weapon.style.display = 'block';
-            animate();
+            
+            // Сбрасываем время для delta time
+            lastTime = performance.now();
+            animate(performance.now());
         }
 
         // Функции для меню
