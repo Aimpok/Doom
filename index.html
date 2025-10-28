@@ -276,32 +276,31 @@
             z-index: 1000;
         }
 
-        /* Панель UI - ИСПРАВЛЕНА: привязана к левому нижнему углу */
+        /* Панель UI - ИСПРАВЛЕНА: привязана к левому нижнему углу как изображение */
         #uiPanel {
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 100%;
             display: none;
             z-index: 45;
             pointer-events: none;
         }
 
-        /* DownPanel - ИСПРАВЛЕНА: привязана к левому нижнему углу */
+        /* DownPanel - ИСПРАВЛЕНА: обычное изображение в левом нижнем углу */
         #downPanel {
-            width: 100%;
-            height: auto;
-            object-fit: fill;
+            width: auto;
+            height: 15vh;
+            object-fit: contain;
             display: block;
         }
 
-        /* Цифры для HP и патронов - ИСПРАВЛЕНО: позиционирование относительно панели */
+        /* Цифры для HP и патронов - позиционирование относительно панели */
         .digit {
             position: absolute;
             pointer-events: none;
         }
 
-        /* Контейнеры для цифр - ИСПРАВЛЕНО: позиционирование относительно панели */
+        /* Контейнеры для цифр - позиционирование относительно панели */
         #hpDisplay, #ammoDisplay {
             position: absolute;
             bottom: 0;
@@ -427,7 +426,7 @@
     <!-- Оружие -->
     <img id="weapon" src="Gun.png" alt="Weapon">
     
-    <!-- UI Панель - ИСПРАВЛЕНА: привязана к левому нижнему углу -->
+    <!-- UI Панель - ИСПРАВЛЕНА: обычное изображение в левом нижнем углу -->
     <div id="uiPanel">
         <img id="downPanel" src="GameUi/DownPanel.png" alt="UI Panel">
         <div id="hpDisplay"></div>
