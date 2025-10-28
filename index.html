@@ -285,11 +285,12 @@
             display: none;
             z-index: 45;
             pointer-events: none;
+            justify-content: center;
         }
 
         #downPanel {
-            width: 100%;
             height: auto;
+            max-width: 100%;
         }
 
         /* Цифры для HP и патронов */
@@ -303,13 +304,14 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             padding: 15px;
             border-radius: 5px;
             color: white;
             font-size: 12px;
             z-index: 1000;
-            display: none;
+            border: 2px solid #ff0000;
+            min-width: 200px;
         }
 
         .ui-setting-group {
@@ -320,26 +322,35 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            color: #ff0000;
         }
 
         .ui-setting-input {
             width: 60px;
             margin: 2px;
-            padding: 2px;
+            padding: 4px;
             background: #333;
             color: white;
             border: 1px solid #555;
             border-radius: 3px;
+            font-size: 12px;
         }
 
         .ui-setting-button {
             background: #ff0000;
             color: white;
             border: none;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 3px;
             cursor: pointer;
             margin-top: 5px;
+            margin-right: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .ui-setting-button:hover {
+            background: #ff3333;
         }
     </style>
 </head>
@@ -412,7 +423,7 @@
     
     <!-- Панель настроек UI -->
     <div id="uiSettingsPanel">
-        <h3 style="margin: 0 0 10px 0; color: #ff0000;">Настройки UI</h3>
+        <h3 style="margin: 0 0 10px 0; color: #ff0000; text-align: center;">НАСТРОЙКИ UI</h3>
         
         <div class="ui-setting-group">
             <label>Высота панели (vh):</label>
@@ -449,8 +460,10 @@
             <input type="number" id="digitSpacing" class="ui-setting-input" value="2" min="0" max="10">
         </div>
         
-        <button class="ui-setting-button" id="applyUiSettings">Применить</button>
-        <button class="ui-setting-button" id="toggleUiSettings" style="background: #444;">Скрыть</button>
+        <div style="text-align: center; margin-top: 10px;">
+            <button class="ui-setting-button" id="applyUiSettings">ПРИМЕНИТЬ</button>
+            <button class="ui-setting-button" id="toggleUiSettings" style="background: #444;">СКРЫТЬ</button>
+        </div>
     </div>
     
     <!-- FPS счетчик -->
@@ -1038,7 +1051,7 @@
             for (let i = 0; i < hpString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `gameui/${hpString[i]}.png`;
+                digit.src = `GameUi/${hpString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1064,7 +1077,7 @@
             for (let i = 0; i < ammoString.length; i++) {
                 const digit = document.createElement('img');
                 digit.className = 'digit';
-                digit.src = `gameui/${ammoString[i]}.png`;
+                digit.src = `GameUi/${ammoString[i]}.png`; // ПРАВИЛЬНЫЙ ПУТЬ
                 digit.style.width = `${uiSettings.digitSize}px`;
                 digit.style.height = `${uiSettings.digitSize}px`;
                 
@@ -1113,7 +1126,7 @@
             document.getElementById('toggleUiSettings').addEventListener('click', function() {
                 const panel = document.getElementById('uiSettingsPanel');
                 panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                this.textContent = panel.style.display === 'none' ? 'Показать' : 'Скрыть';
+                this.textContent = panel.style.display === 'none' ? 'ПОКАЗАТЬ' : 'СКРЫТЬ';
             });
         }
 
@@ -1445,7 +1458,7 @@
                     const panel = document.getElementById('uiSettingsPanel');
                     const button = document.getElementById('toggleUiSettings');
                     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                    button.textContent = panel.style.display === 'none' ? 'Показать' : 'Скрыть';
+                    button.textContent = panel.style.display === 'none' ? 'ПОКАЗАТЬ' : 'СКРЫТЬ';
                 }
             });
         }
@@ -1580,7 +1593,7 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
-            document.getElementById('uiPanel').style.display = 'block';
+            document.getElementById('uiPanel').style.display = 'flex'; // FLEX для центрирования
             
             if (menuMusic) {
                 menuMusic.pause();
