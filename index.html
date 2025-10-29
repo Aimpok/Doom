@@ -387,6 +387,11 @@
         <source src="Sounds/Shoot.mp3" type="audio/mpeg">
     </audio>
     
+    <!-- Звук перезарядки -->
+    <audio id="reloadSound" preload="auto">
+        <source src="Sounds/Reload.mp3" type="audio/mpeg">
+    </audio>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
@@ -761,12 +766,19 @@
         // Оружие
         const weapon = document.getElementById('weapon');
         const shootSound = document.getElementById('shootSound');
+        const reloadSound = document.getElementById('reloadSound');
         let isShooting = false;
         let isReloading = false;
         let canShoot = true;
         let ammo = 2;
         let maxAmmo = 2;
         let hp = 100;
+        
+        // Переменные для автоматической стрельбы
+        let isMouseDown = false;
+        let autoShootInterval = null;
+        let lastShootTime = 0;
+        const SHOOT_DELAY = 300; // Задержка между выстрелами в мс
 
         // Предзагрузка изображений оружия
         const gunImages = {
@@ -884,6 +896,13 @@
             isReloading = true;
             canShoot = false;
             
+            // Звук перезарядки
+            if (reloadSound) {
+                reloadSound.currentTime = 0;
+                reloadSound.volume = musicVolume;
+                reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
+            }
+            
             // Первый кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
@@ -911,6 +930,26 @@
                 canShoot = true;
                 updateUI();
             }, 700);
+        }
+
+        // Функция для автоматической стрельбы при удержании
+        function startAutoShoot() {
+            if (autoShootInterval) return;
+            
+            autoShootInterval = setInterval(() => {
+                const currentTime = Date.now();
+                if (currentTime - lastShootTime >= SHOOT_DELAY) {
+                    playShootAnimation();
+                    lastShootTime = currentTime;
+                }
+            }, 100); // Проверяем каждые 100мс
+        }
+
+        function stopAutoShoot() {
+            if (autoShootInterval) {
+                clearInterval(autoShootInterval);
+                autoShootInterval = null;
+            }
         }
 
         // УПРАВЛЕНИЕ
@@ -1127,6 +1166,8 @@
                 moveForward = moveBackward = moveLeft = moveRight = false;
                 isShootingTouch = false;
                 shootTouchId = null;
+                stopAutoShoot();
+                isMouseDown = false;
             });
 
             // Управление стрельбой для ПК - ЛКМ (только в игре)
@@ -1134,7 +1175,16 @@
                 // Проверяем, что игра активна (меню скрыто)
                 if (e.button === 0 && document.getElementById('startMenu').style.display === 'none') {
                     e.preventDefault();
+                    isMouseDown = true;
                     playShootAnimation();
+                    startAutoShoot();
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (e.button === 0) {
+                    isMouseDown = false;
+                    stopAutoShoot();
                 }
             });
 
@@ -1304,6 +1354,8 @@
             isReloading = false;
             canShoot = true;
             weapon.src = gunImages.normal;
+            isMouseDown = false;
+            stopAutoShoot();
             
             updateUI();
             
@@ -1355,6 +1407,9 @@
             }
             if (shootSound) {
                 shootSound.volume = musicVolume;
+            }
+            if (reloadSound) {
+                reloadSound.volume = musicVolume;
             }
         });
 
