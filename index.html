@@ -149,6 +149,15 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 1vmin 2vmin;
             border-radius: 5px;
+            width: 80%;
+            max-width: 400px;
+        }
+        
+        .option-item label {
+            display: flex;
+            flex-direction: column;
+            gap: 1vmin;
+            width: 100%;
         }
         
         .back-button {
@@ -336,8 +345,15 @@
         
         <div class="option-item">
             <label>
-                Громкость: 
-                <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                Громкость музыки: 
+                <input type="range" id="musicVolumeSlider" min="0" max="100" value="50">
+            </label>
+        </div>
+        
+        <div class="option-item">
+            <label>
+                Громкость звуков: 
+                <input type="range" id="soundVolumeSlider" min="0" max="100" value="50">
             </label>
         </div>
         
@@ -377,20 +393,7 @@
     <!-- FPS счетчик -->
     <div id="fpsCounter">FPS: 0</div>
     
-    <!-- Аудио для меню -->
-    <audio id="menuMusic" loop preload="auto">
-        <source src="Sounds/MenuMusic.mp3" type="audio/mpeg">
-    </audio>
-    
-    <!-- Звук выстрела -->
-    <audio id="shootSound" preload="auto">
-        <source src="Sounds/Shoot.mp3" type="audio/mpeg">
-    </audio>
-    
-    <!-- Звук перезарядки -->
-    <audio id="reloadSound" preload="auto">
-        <source src="Sounds/Reload.mp3" type="audio/mpeg">
-    </audio>
+    <!-- Аудио элементы будут созданы динамически -->
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
@@ -758,15 +761,20 @@
         // Настройки
         let mouseSensitivity = 0.002;
 
-        // Музыка меню
-        const menuMusic = document.getElementById('menuMusic');
+        // Аудио система
         let musicVolume = 0.5;
+        let soundVolume = 0.5;
+        let currentMusic = null;
+        let musicTracks = [];
+        let currentTrackIndex = 0;
         let musicStarted = false;
+
+        // Звуковые эффекты
+        let shootSound = null;
+        let reloadSound = null;
 
         // Оружие
         const weapon = document.getElementById('weapon');
-        const shootSound = document.getElementById('shootSound');
-        const reloadSound = document.getElementById('reloadSound');
         let isShooting = false;
         let isReloading = false;
         let canShoot = true;
@@ -798,40 +806,85 @@
             });
         }
 
-        // FPS счетчик
-        const fpsCounter = document.getElementById('fpsCounter');
-        let frameCount = 0;
-        let lastTime = performance.now();
-        let fps = 0;
-
-        // ФУНКЦИЯ ДЛЯ ЗАПУСКА МУЗЫКИ ПРИ СТАРТЕ
-        function startMenuMusic() {
-            if (musicStarted || !menuMusic) return;
+        // Инициализация аудио системы
+        function initAudio() {
+            // Создаем звуковые эффекты
+            shootSound = new Audio('Sounds/Shoot.mp3');
+            reloadSound = new Audio('Sounds/Reload.mp3');
             
-            try {
-                menuMusic.volume = musicVolume;
-                menuMusic.play().then(() => {
-                    console.log('Музыка меню запущена');
-                    musicStarted = true;
-                }).catch(e => {
-                    console.log('Автовоспроизведение заблокировано, будет запущено при взаимодействии');
-                    document.addEventListener('click', startMenuMusicOnInteraction, { once: true });
-                    document.addEventListener('touchstart', startMenuMusicOnInteraction, { once: true });
-                });
-            } catch (error) {
-                console.log('Ошибка запуска музыки:', error);
+            // Настраиваем звуковые эффекты
+            shootSound.volume = soundVolume;
+            reloadSound.volume = soundVolume;
+            
+            // Предзагружаем звуки
+            shootSound.preload = 'auto';
+            reloadSound.preload = 'auto';
+            
+            // Создаем список музыкальных треков
+            musicTracks = [
+                'Sounds/MenuMusic.mp3',
+                'Sounds/MenuMusic1.mp3',
+                'Sounds/MenuMusic2.mp3'
+                // Добавь сюда больше треков по необходимости
+            ];
+            
+            // Случайный выбор первого трека
+            currentTrackIndex = Math.floor(Math.random() * musicTracks.length);
+        }
+
+        // Функция для воспроизведения следующего трека
+        function playNextTrack() {
+            if (musicTracks.length === 0) return;
+            
+            // Останавливаем текущую музыку
+            if (currentMusic) {
+                currentMusic.pause();
+                currentMusic.currentTime = 0;
+            }
+            
+            // Переходим к следующему треку
+            currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+            
+            // Создаем новый аудио элемент
+            currentMusic = new Audio(musicTracks[currentTrackIndex]);
+            currentMusic.volume = musicVolume;
+            currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
+            
+            // Когда трек заканчивается, играем следующий
+            currentMusic.addEventListener('ended', playNextTrack);
+            
+            // Пытаемся воспроизвести
+            currentMusic.play().catch(e => {
+                console.log('Автовоспроизведение музыки заблокировано');
+            });
+            
+            musicStarted = true;
+        }
+
+        // Функция запуска музыки
+        function startMusic() {
+            if (musicStarted || musicTracks.length === 0) return;
+            
+            playNextTrack();
+        }
+
+        // Функция для принудительного запуска музыки при взаимодействии
+        function startMusicOnInteraction() {
+            if (!musicStarted) {
+                startMusic();
             }
         }
 
-        function startMenuMusicOnInteraction() {
-            if (!musicStarted && menuMusic) {
-                menuMusic.volume = musicVolume;
-                menuMusic.play().then(() => {
-                    console.log('Музыка меню запущена после взаимодействия');
-                    musicStarted = true;
-                }).catch(e => {
-                    console.log('Не удалось запустить музыку после взаимодействия');
-                });
+        // Обновление громкости
+        function updateVolumes() {
+            if (currentMusic) {
+                currentMusic.volume = musicVolume;
+            }
+            if (shootSound) {
+                shootSound.volume = soundVolume;
+            }
+            if (reloadSound) {
+                reloadSound.volume = soundVolume;
             }
         }
 
@@ -859,7 +912,6 @@
             // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
-                shootSound.volume = musicVolume;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
@@ -899,7 +951,6 @@
             // Звук перезарядки
             if (reloadSound) {
                 reloadSound.currentTime = 0;
-                reloadSound.volume = musicVolume;
                 reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
             }
             
@@ -951,6 +1002,12 @@
                 autoShootInterval = null;
             }
         }
+
+        // FPS счетчик
+        const fpsCounter = document.getElementById('fpsCounter');
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 0;
 
         // УПРАВЛЕНИЕ
         let activeTouches = new Map();
@@ -1172,8 +1229,10 @@
 
             // Управление стрельбой для ПК - ЛКМ (только в игре)
             document.addEventListener('mousedown', (e) => {
-                // Проверяем, что игра активна (меню скрыто)
-                if (e.button === 0 && document.getElementById('startMenu').style.display === 'none') {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (e.button === 0 && 
+                    document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none') {
                     e.preventDefault();
                     isMouseDown = true;
                     playShootAnimation();
@@ -1190,8 +1249,10 @@
 
             // Перезарядка по кнопке R (только в игре)
             document.addEventListener('keydown', (e) => {
-                // Проверяем, что игра активна (меню скрыто)
-                if (e.code === 'KeyR' && document.getElementById('startMenu').style.display === 'none') {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (e.code === 'KeyR' && 
+                    document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none') {
                     // Если уже перезаряжаемся или патроны полные - игнорируем
                     if (!isReloading && ammo < maxAmmo) {
                         playReloadAnimation();
@@ -1208,8 +1269,9 @@
 
             // Клавиатура для десктопа (только в игре)
             window.addEventListener('keydown', (event) => {
-                // Проверяем, что игра активна (меню скрыто)
-                if (document.getElementById('startMenu').style.display === 'none') {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none') {
                     switch(event.code) {
                         case 'KeyW': moveForward = true; break;
                         case 'KeyS': moveBackward = true; break;
@@ -1220,8 +1282,9 @@
             });
             
             window.addEventListener('keyup', (event) => {
-                // Проверяем, что игра активна (меню скрыто)
-                if (document.getElementById('startMenu').style.display === 'none') {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none') {
                     switch(event.code) {
                         case 'KeyW': moveForward = false; break;
                         case 'KeyS': moveBackward = false; break;
@@ -1233,8 +1296,9 @@
 
             // Мышь для десктопа (только в игре)
             document.addEventListener('mousemove', (event) => {
-                // Проверяем, что игра активна (меню скрыто)
-                if (document.getElementById('startMenu').style.display === 'none' && 
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none' && 
                     document.pointerLockElement === renderer.domElement) {
                     yaw -= event.movementX * mouseSensitivity;
                     pitch -= event.movementY * mouseSensitivity;
@@ -1244,7 +1308,8 @@
 
             renderer.domElement.addEventListener('click', () => {
                 // Запрос блокировки указателя только в игре
-                if (document.getElementById('startMenu').style.display === 'none') {
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none') {
                     renderer.domElement.requestPointerLock();
                 }
             });
@@ -1334,13 +1399,9 @@
         // Функция запуска игры
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('optionsMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
-            
-            if (menuMusic) {
-                menuMusic.pause();
-                menuMusic.currentTime = 0;
-            }
             
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
@@ -1380,7 +1441,12 @@
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
-            startMenuMusic();
+            // Запускаем музыку при инициализации
+            startMusic();
+            
+            // Добавляем обработчики для принудительного запуска музыки
+            document.addEventListener('click', startMusicOnInteraction, { once: true });
+            document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             
             playButton.addEventListener('click', function(e) {
                 startGame();
@@ -1400,23 +1466,21 @@
             mouseSensitivity = e.target.value * 0.0004;
         });
 
-        document.getElementById('volumeSlider').addEventListener('input', function(e) {
+        document.getElementById('musicVolumeSlider').addEventListener('input', function(e) {
             musicVolume = e.target.value / 100;
-            if (menuMusic) {
-                menuMusic.volume = musicVolume;
-            }
-            if (shootSound) {
-                shootSound.volume = musicVolume;
-            }
-            if (reloadSound) {
-                reloadSound.volume = musicVolume;
-            }
+            updateVolumes();
+        });
+
+        document.getElementById('soundVolumeSlider').addEventListener('input', function(e) {
+            soundVolume = e.target.value / 100;
+            updateVolumes();
         });
 
         // Запуск игры
         loadTextures().then(() => {
             const materials = createMaterials();
             createScene(materials);
+            initAudio(); // Инициализируем аудио систему
             initControls();
             initMenu();
             weapon.style.display = 'none';
@@ -1427,6 +1491,7 @@
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
+            initAudio(); // Инициализируем аудио систему даже при ошибках
             initControls();
             initMenu();
             weapon.style.display = 'none';
