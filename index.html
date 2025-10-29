@@ -463,7 +463,7 @@
                     onTextureLoad();
                 });
 
-                // НАСТРОЙКИ ТЕКСТУР - ИСПРАВЛЕНЫ
+                // НАСТРОЙКИ ТЕКСТУР
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
                     wallTexture.repeat.set(1, 1);
@@ -764,9 +764,27 @@
         let isShooting = false;
         let isReloading = false;
         let canShoot = true;
-        let ammo = 2; // Только 2 патрона в обойме
+        let ammo = 2;
         let maxAmmo = 2;
         let hp = 100;
+
+        // Предзагрузка изображений оружия
+        const gunImages = {
+            normal: 'Guns/DefaultShootGun/Gun.png',
+            shoot1: 'Guns/DefaultShootGun/GunSh1.png',
+            shoot2: 'Guns/DefaultShootGun/GunSh2.png',
+            reload1: 'Guns/DefaultShootGun/GunKD1.png',
+            reload2: 'Guns/DefaultShootGun/GunKD2.png',
+            reload3: 'Guns/DefaultShootGun/GunKD3.png'
+        };
+
+        // Функция предзагрузки изображений
+        function preloadWeaponImages() {
+            Object.values(gunImages).forEach(src => {
+                const img = new Image();
+                img.src = src;
+            });
+        }
 
         // FPS счетчик
         const fpsCounter = document.getElementById('fpsCounter');
@@ -811,34 +829,38 @@
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
         }
 
-        // Анимация выстрела
+        // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playShootAnimation() {
-            if (!canShoot || isReloading || isShooting || ammo <= 0) return;
+            // Проверяем возможность стрельбы
+            if (!canShoot || isReloading || isShooting || ammo <= 0) {
+                return;
+            }
             
             isShooting = true;
             canShoot = false;
             ammo--;
             updateUI();
             
-            console.log('Стрельба! Патронов осталось:', ammo);
+            // Сразу меняем на первый кадр выстрела
+            weapon.src = gunImages.shoot1;
             
+            // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
                 shootSound.volume = musicVolume;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
-            // Анимация выстрела
+            // Второй кадр выстрела
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/GunSh1.png';
+                if (!isShooting) return;
+                weapon.src = gunImages.shoot2;
             }, 50);
             
+            // Возврат к нормальному состоянию
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/GunSh2.png';
-            }, 100);
-            
-            setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/Gun.png';
+                if (!isShooting) return;
+                weapon.src = gunImages.normal;
                 isShooting = false;
                 
                 // Если патроны кончились - перезарядка
@@ -848,39 +870,46 @@
                     // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
-                    }, 200);
+                    }, 300);
                 }
-            }, 200);
+            }, 150);
         }
 
-        // Анимация перезарядки с 3 кадрами
+        // Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playReloadAnimation() {
-            if (isReloading || ammo >= maxAmmo) return;
+            if (isReloading || ammo >= maxAmmo) {
+                return;
+            }
             
             isReloading = true;
             canShoot = false;
-            console.log('Перезарядка!');
             
-            // Анимация перезарядки с 3 кадрами
+            // Первый кадр перезарядки
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/GunKD1.png';
+                if (!isReloading) return;
+                weapon.src = gunImages.reload1;
             }, 100);
             
+            // Второй кадр перезарядки
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/GunKD2.png';
+                if (!isReloading) return;
+                weapon.src = gunImages.reload2;
             }, 300);
             
+            // Третий кадр перезарядки
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/GunKD3.png';
+                if (!isReloading) return;
+                weapon.src = gunImages.reload3;
             }, 500);
             
+            // Завершение перезарядки
             setTimeout(() => {
-                weapon.src = 'Guns/DefaultShootGun/Gun.png';
+                if (!isReloading) return;
+                weapon.src = gunImages.normal;
                 ammo = maxAmmo;
                 isReloading = false;
                 canShoot = true;
                 updateUI();
-                console.log('Перезарядка завершена! Патронов:', ammo);
             }, 700);
         }
 
@@ -1113,7 +1142,10 @@
             document.addEventListener('keydown', (e) => {
                 // Проверяем, что игра активна (меню скрыто)
                 if (e.code === 'KeyR' && document.getElementById('startMenu').style.display === 'none') {
-                    playReloadAnimation();
+                    // Если уже перезаряжаемся или патроны полные - игнорируем
+                    if (!isReloading && ammo < maxAmmo) {
+                        playReloadAnimation();
+                    }
                 }
             });
         }
@@ -1265,6 +1297,14 @@
             }
             
             weapon.style.display = 'block';
+            
+            // СБРОС СОСТОЯНИЯ ОРУЖИЯ ПРИ СТАРТЕ ИГРЫ
+            ammo = maxAmmo;
+            isShooting = false;
+            isReloading = false;
+            canShoot = true;
+            weapon.src = gunImages.normal;
+            
             updateUI();
             
             lastTime = performance.now();
@@ -1325,6 +1365,9 @@
             initControls();
             initMenu();
             weapon.style.display = 'none';
+            
+            // Предзагружаем изображения оружия
+            preloadWeaponImages();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
@@ -1332,6 +1375,9 @@
             initControls();
             initMenu();
             weapon.style.display = 'none';
+            
+            // Предзагружаем изображения оружия даже при ошибках
+            preloadWeaponImages();
         });
     </script>
 </body>
