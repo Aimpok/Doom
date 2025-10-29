@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Лабиринт</title>
+    <title>3D Лабиринт - Мультиплеер</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <style>
         body { 
@@ -43,7 +43,7 @@
             width: 55vmin;
             max-width: 800px;
             position: absolute;
-            top: 30%;
+            top: 20%;
             transform: translateY(-50%);
             object-fit: contain;
             -webkit-user-drag: none;
@@ -58,7 +58,7 @@
             align-items: center;
             gap: 2.4vmin;
             position: absolute;
-            top: 70%;
+            top: 50%;
             transform: translateY(-50%);
         }
         
@@ -162,9 +162,9 @@
         
         .back-button {
             margin-top: 5vmin;
-            width: 30vmin;
-            max-width: 300px;
-            min-width: 150px;
+            width: 60vmin;
+            max-width: 600px;
+            min-width: 250px;
             cursor: pointer;
             transition: all 0.3s ease;
             object-fit: contain;
@@ -308,7 +308,7 @@
             pointer-events: none;
         }
 
-        #hpDisplay, #ammoDisplay {
+        #hpDisplay, #ammoDisplay, #roomDisplay {
             margin-bottom: 10px;
             font-weight: bold;
         }
@@ -320,6 +320,68 @@
         #ammoDisplay {
             color: #44ff44;
         }
+
+        #roomDisplay {
+            color: #4444ff;
+        }
+
+        /* Мультиплеер элементы */
+        .multiplayer-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2vmin;
+            margin-top: 3vmin;
+        }
+
+        .room-input {
+            width: 50vmin;
+            max-width: 400px;
+            min-width: 200px;
+            padding: 1.5vmin;
+            font-size: 2.5vmin;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #8B0000;
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+        }
+
+        .room-input::placeholder {
+            color: #888;
+        }
+
+        .player-name-input {
+            width: 50vmin;
+            max-width: 400px;
+            min-width: 200px;
+            padding: 1.5vmin;
+            font-size: 2.5vmin;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #006400;
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+        }
+
+        .connection-status {
+            color: #ffff00;
+            font-size: 2.5vmin;
+            margin-top: 1vmin;
+            text-align: center;
+        }
+
+        /* Спрайты игроков */
+        .player-sprite {
+            position: absolute;
+            width: 2vmin;
+            height: 3vmin;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 30;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -329,7 +391,15 @@
         <img src="MenuUi/Logo.png" alt="DOOM" class="logo">
         <div class="menu-buttons">
             <img src="MenuUi/PlayText.png" alt="Играть" class="menu-button" id="playButton">
+            <img src="MenuUi/ConnectText.png" alt="Подключиться" class="menu-button" id="connectButton">
             <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
+            
+            <!-- Мультиплеер секция -->
+            <div class="multiplayer-section">
+                <input type="text" id="playerNameInput" class="player-name-input" placeholder="Имя игрока" maxlength="12">
+                <input type="text" id="roomCodeInput" class="room-input" placeholder="Код комнаты (6 цифр)" maxlength="6" pattern="[0-9]*">
+                <div id="connectionStatus" class="connection-status"></div>
+            </div>
         </div>
         <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
     </div>
@@ -386,6 +456,7 @@
     
     <!-- UI Панель с текстом -->
     <div id="uiPanel">
+        <div id="roomDisplay">КОМНАТА: ---</div>
         <div id="hpDisplay">HP: 100</div>
         <div id="ammoDisplay">ПАТРОНЫ: 2/2</div>
     </div>
@@ -393,9 +464,11 @@
     <!-- FPS счетчик -->
     <div id="fpsCounter">FPS: 0</div>
     
-    <!-- Аудио элементы будут созданы динамически -->
+    <!-- Контейнер для спрайтов игроков -->
+    <div id="playersContainer"></div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/photon-pun@2.0.0/dist/pun.min.js"></script>
     <script>
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
         document.addEventListener('contextmenu', function(e) {
@@ -413,7 +486,348 @@
             return false;
         });
 
-        // Базовые настройки
+        // МУЛЬТИПЛЕЕР КОНФИГУРАЦИЯ
+        const photonConfig = {
+            appId: 'b5d37841-1bb5-401f-a1b9-3349609baa63', // Замените на ваш App ID
+            version: '1.0'
+        };
+
+        // Глобальные переменные мультиплеера
+        let photonClient = null;
+        let isConnected = false;
+        let currentRoom = null;
+        let playerName = 'Player';
+        let otherPlayers = new Map();
+        let playerSprites = new Map();
+        let lastPositionUpdate = 0;
+        const POSITION_UPDATE_RATE = 100; // мс
+
+        // Инициализация Photon
+        function initPhoton() {
+            try {
+                photonClient = new Photon.LoadBalancing.LoadBalancingClient(
+                    Photon.ConnectionProtocol.Ws,
+                    photonConfig.appId,
+                    photonConfig.version
+                );
+
+                // Обработчики событий Photon
+                photonClient.onStateChange = onPhotonStateChange;
+                photonClient.onOperationResponse = onPhotonOperationResponse;
+                photonClient.onEvent = onPhotonEvent;
+
+                // Подключение к Photon
+                photonClient.connect();
+                updateConnectionStatus('Подключение к серверу...');
+            } catch (error) {
+                console.error('Ошибка инициализации Photon:', error);
+                updateConnectionStatus('Ошибка подключения');
+            }
+        }
+
+        // Обработчик изменения состояния Photon
+        function onPhotonStateChange(state) {
+            console.log('Photon state:', state);
+            
+            switch(state) {
+                case Photon.LoadBalancing.State.Joined:
+                    isConnected = true;
+                    updateConnectionStatus('Подключено к комнате: ' + currentRoom);
+                    document.getElementById('roomDisplay').textContent = 'КОМНАТА: ' + currentRoom;
+                    spawnPlayer();
+                    break;
+                    
+                case Photon.LoadBalancing.State.ConnectedToMaster:
+                    updateConnectionStatus('Подключено к серверу');
+                    break;
+                    
+                case Photon.LoadBalancing.State.Disconnected:
+                    isConnected = false;
+                    updateConnectionStatus('Отключено от сервера');
+                    cleanupMultiplayer();
+                    break;
+            }
+        }
+
+        // Обработчик ответов операций Photon
+        function onPhotonOperationResponse(response) {
+            console.log('Photon operation response:', response);
+        }
+
+        // Обработчик событий Photon
+        function onPhotonEvent(event) {
+            switch(event.code) {
+                case 1: // PlayerJoined
+                    onPlayerJoined(event);
+                    break;
+                case 2: // PlayerLeft
+                    onPlayerLeft(event);
+                    break;
+                case 3: // PlayerPositionUpdate
+                    onPlayerPositionUpdate(event);
+                    break;
+                case 4: // PlayerAnimationUpdate
+                    onPlayerAnimationUpdate(event);
+                    break;
+            }
+        }
+
+        // Игрок присоединился
+        function onPlayerJoined(event) {
+            const playerId = event.sender;
+            if (playerId !== photonClient.playerId) {
+                createPlayerSprite(playerId, event.content);
+            }
+        }
+
+        // Игрок вышел
+        function onPlayerLeft(event) {
+            const playerId = event.sender;
+            removePlayerSprite(playerId);
+        }
+
+        // Обновление позиции игрока
+        function onPlayerPositionUpdate(event) {
+            const playerId = event.sender;
+            if (playerId !== photonClient.playerId) {
+                updatePlayerPosition(playerId, event.content);
+            }
+        }
+
+        // Обновление анимации игрока
+        function onPlayerAnimationUpdate(event) {
+            const playerId = event.sender;
+            if (playerId !== photonClient.playerId) {
+                updatePlayerAnimation(playerId, event.content);
+            }
+        }
+
+        // Создание спрайта игрока
+        function createPlayerSprite(playerId, playerData) {
+            const sprite = document.createElement('div');
+            sprite.className = 'player-sprite';
+            sprite.id = 'player-' + playerId;
+            sprite.style.backgroundImage = `url('GameUi/Player/Front/0.png')`;
+            
+            document.getElementById('playersContainer').appendChild(sprite);
+            playerSprites.set(playerId, sprite);
+            otherPlayers.set(playerId, {
+                position: playerData.position || { x: 0, z: 0 },
+                rotation: playerData.rotation || 0,
+                animation: 'idle',
+                direction: 'front'
+            });
+        }
+
+        // Удаление спрайта игрока
+        function removePlayerSprite(playerId) {
+            const sprite = playerSprites.get(playerId);
+            if (sprite) {
+                sprite.remove();
+                playerSprites.delete(playerId);
+                otherPlayers.delete(playerId);
+            }
+        }
+
+        // Обновление позиции игрока
+        function updatePlayerPosition(playerId, data) {
+            const player = otherPlayers.get(playerId);
+            if (player) {
+                player.position = data.position;
+                player.rotation = data.rotation;
+                updatePlayerSprite(playerId);
+            }
+        }
+
+        // Обновление анимации игрока
+        function updatePlayerAnimation(playerId, data) {
+            const player = otherPlayers.get(playerId);
+            if (player) {
+                player.animation = data.animation;
+                player.direction = data.direction;
+                updatePlayerSprite(playerId);
+            }
+        }
+
+        // Обновление спрайта игрока
+        function updatePlayerSprite(playerId) {
+            const player = otherPlayers.get(playerId);
+            const sprite = playerSprites.get(playerId);
+            
+            if (player && sprite) {
+                // Преобразование 3D координат в экранные
+                const screenPos = worldToScreenPosition(player.position.x, 0, player.position.z);
+                sprite.style.left = screenPos.x + 'px';
+                sprite.style.top = screenPos.y + 'px';
+                
+                // Определение направления для анимации
+                const direction = getPlayerDirection(player.rotation);
+                const animationFrame = getAnimationFrame(player.animation, direction);
+                
+                // Установка спрайта
+                sprite.style.backgroundImage = `url('GameUi/Player/${direction}/${animationFrame}.png')`;
+            }
+        }
+
+        // Преобразование мировых координат в экранные
+        function worldToScreenPosition(x, y, z) {
+            const vector = new THREE.Vector3(x, y, z);
+            vector.project(camera);
+            
+            return {
+                x: (vector.x * 0.5 + 0.5) * window.innerWidth,
+                y: (-vector.y * 0.5 + 0.5) * window.innerHeight
+            };
+        }
+
+        // Определение направления игрока
+        function getPlayerDirection(rotation) {
+            // Нормализация угла
+            let angle = (rotation * 180 / Math.PI) % 360;
+            if (angle < 0) angle += 360;
+            
+            // Определение направления по углу
+            if (angle >= 45 && angle < 135) return 'left';
+            if (angle >= 135 && angle < 225) return 'back';
+            if (angle >= 225 && angle < 315) return 'right';
+            return 'front';
+        }
+
+        // Получение кадра анимации
+        function getAnimationFrame(animation, direction) {
+            if (animation === 'idle') return '0';
+            
+            const walkFrames = {
+                'front': ['1', '2', '3', '4', '3', '2'],
+                'back': ['1', '2', '3', '4', '3', '2'],
+                'left': ['1', '2', '3', '2'],
+                'right': ['1', '2', '3', '2']
+            };
+            
+            const frames = walkFrames[direction] || walkFrames.front;
+            const time = Date.now() * 0.01; // Анимация основанная на времени
+            const frameIndex = Math.floor(time % frames.length);
+            
+            return frames[frameIndex];
+        }
+
+        // Отправка данных позиции
+        function sendPositionUpdate() {
+            if (isConnected && photonClient) {
+                const data = {
+                    position: {
+                        x: camera.position.x,
+                        z: camera.position.z
+                    },
+                    rotation: yaw
+                };
+                
+                photonClient.sendEvent(3, data);
+            }
+        }
+
+        // Отправка данных анимации
+        function sendAnimationUpdate() {
+            if (isConnected && photonClient) {
+                const isMoving = moveForward || moveBackward || moveLeft || moveRight;
+                const data = {
+                    animation: isMoving ? 'walk' : 'idle',
+                    direction: getPlayerDirection(yaw)
+                };
+                
+                photonClient.sendEvent(4, data);
+            }
+        }
+
+        // Спавн игрока
+        function spawnPlayer() {
+            if (isConnected && photonClient) {
+                const playerData = {
+                    name: playerName,
+                    position: {
+                        x: camera.position.x,
+                        z: camera.position.z
+                    },
+                    rotation: yaw
+                };
+                
+                photonClient.sendEvent(1, playerData);
+            }
+        }
+
+        // Очистка мультиплеера
+        function cleanupMultiplayer() {
+            otherPlayers.clear();
+            playerSprites.forEach(sprite => sprite.remove());
+            playerSprites.clear();
+            document.getElementById('roomDisplay').textContent = 'КОМНАТА: ---';
+        }
+
+        // Обновление статуса подключения
+        function updateConnectionStatus(status) {
+            document.getElementById('connectionStatus').textContent = status;
+        }
+
+        // Подключение к комнате
+        function connectToRoom() {
+            const roomCode = document.getElementById('roomCodeInput').value;
+            const name = document.getElementById('playerNameInput').value;
+            
+            if (!roomCode || roomCode.length !== 6 || !/^\d+$/.test(roomCode)) {
+                updateConnectionStatus('Ошибка: код комнаты должен быть 6 цифр');
+                return;
+            }
+            
+            if (name.trim()) {
+                playerName = name.trim();
+            }
+            
+            if (photonClient && photonClient.isConnectedToMaster) {
+                currentRoom = roomCode;
+                
+                const roomOptions = {
+                    roomName: roomCode,
+                    maxPlayers: 4,
+                    playerTtl: 0,
+                    emptyRoomTtl: 0
+                };
+                
+                photonClient.joinRoom(roomCode, roomOptions);
+                updateConnectionStatus('Подключение к комнате ' + roomCode + '...');
+            } else {
+                updateConnectionStatus('Сначала подключитесь к серверу');
+            }
+        }
+
+        // Создание комнаты
+        function createRoom() {
+            const name = document.getElementById('playerNameInput').value;
+            if (name.trim()) {
+                playerName = name.trim();
+            }
+            
+            // Генерация случайного 6-значного кода комнаты
+            const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+            document.getElementById('roomCodeInput').value = roomCode;
+            
+            if (photonClient && photonClient.isConnectedToMaster) {
+                currentRoom = roomCode;
+                
+                const roomOptions = {
+                    roomName: roomCode,
+                    maxPlayers: 4,
+                    playerTtl: 0,
+                    emptyRoomTtl: 0
+                };
+                
+                photonClient.createRoom(roomCode, roomOptions);
+                updateConnectionStatus('Создание комнаты ' + roomCode + '...');
+            } else {
+                updateConnectionStatus('Сначала подключитесь к серверу');
+            }
+        }
+
+        // Базовые настройки Three.js
         const scene = new THREE.Scene();
         
         // ТУМАН - добавляем в сцену (теперь нельзя отключить)
@@ -820,13 +1234,14 @@
             shootSound.preload = 'auto';
             reloadSound.preload = 'auto';
             
-            // Создаем список музыкальных треков
+            // Создаем список музыкальных треков (только 3 трека)
             musicTracks = [
                 'Sounds/MenuMusic.mp3',
                 'Sounds/MenuMusic1.mp3',
                 'Sounds/MenuMusic2.mp3'
-                // Добавь сюда больше треков по необходимости
             ];
+            
+            console.log('Загружено музыкальных треков:', musicTracks.length);
             
             // Случайный выбор первого трека
             currentTrackIndex = Math.floor(Math.random() * musicTracks.length);
@@ -834,16 +1249,22 @@
 
         // Функция для воспроизведения следующего трека
         function playNextTrack() {
-            if (musicTracks.length === 0) return;
+            if (musicTracks.length === 0) {
+                console.log('Нет музыкальных треков для воспроизведения');
+                return;
+            }
             
             // Останавливаем текущую музыку
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
+                currentMusic.removeEventListener('ended', playNextTrack);
             }
             
             // Переходим к следующему треку
             currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+            
+            console.log('Воспроизведение трека:', musicTracks[currentTrackIndex]);
             
             // Создаем новый аудио элемент
             currentMusic = new Audio(musicTracks[currentTrackIndex]);
@@ -854,23 +1275,33 @@
             currentMusic.addEventListener('ended', playNextTrack);
             
             // Пытаемся воспроизвести
-            currentMusic.play().catch(e => {
-                console.log('Автовоспроизведение музыки заблокировано');
-            });
+            const playPromise = currentMusic.play();
             
-            musicStarted = true;
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('Музыка успешно запущена');
+                    musicStarted = true;
+                }).catch(error => {
+                    console.log('Автовоспроизведение музыки заблокировано:', error);
+                    // Пытаемся снова при взаимодействии
+                    document.addEventListener('click', startMusicOnInteraction, { once: true });
+                    document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
+                });
+            }
         }
 
         // Функция запуска музыки
         function startMusic() {
-            if (musicStarted || musicTracks.length === 0) return;
+            if (musicStarted) return;
             
+            console.log('Запуск музыки...');
             playNextTrack();
         }
 
         // Функция для принудительного запуска музыки при взаимодействии
         function startMusicOnInteraction() {
             if (!musicStarted) {
+                console.log('Принудительный запуск музыки после взаимодействия');
                 startMusic();
             }
         }
@@ -1387,6 +1818,18 @@
             camera.position.x = newX;
             camera.position.z = newZ;
             
+            // Обновление мультиплеера
+            if (isConnected && currentTime - lastPositionUpdate > POSITION_UPDATE_RATE) {
+                sendPositionUpdate();
+                sendAnimationUpdate();
+                lastPositionUpdate = currentTime;
+            }
+            
+            // Обновление спрайтов других игроков
+            otherPlayers.forEach((player, playerId) => {
+                updatePlayerSprite(playerId);
+            });
+            
             renderer.render(scene, camera);
         }
         
@@ -1438,6 +1881,7 @@
         // Инициализация меню
         function initMenu() {
             const playButton = document.getElementById('playButton');
+            const connectButton = document.getElementById('connectButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             
@@ -1449,7 +1893,11 @@
             document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             
             playButton.addEventListener('click', function(e) {
-                startGame();
+                createRoom();
+            });
+            
+            connectButton.addEventListener('click', function(e) {
+                connectToRoom();
             });
             
             optionsButton.addEventListener('click', function(e) {
@@ -1487,6 +1935,9 @@
             
             // Предзагружаем изображения оружия
             preloadWeaponImages();
+            
+            // Инициализируем Photon
+            initPhoton();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
@@ -1498,6 +1949,9 @@
             
             // Предзагружаем изображения оружия даже при ошибках
             preloadWeaponImages();
+            
+            // Инициализируем Photon даже при ошибках
+            initPhoton();
         });
     </script>
 </body>
