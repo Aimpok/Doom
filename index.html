@@ -131,6 +131,25 @@
             color: #fff;
         }
         
+        /* Экран подключения */
+        #connectMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('MenuUi/MenuBg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+            color: #fff;
+        }
+        
         .options-title {
             width: 60vmin;
             max-width: 600px;
@@ -393,13 +412,6 @@
             <img src="MenuUi/PlayText.png" alt="Играть" class="menu-button" id="playButton">
             <img src="MenuUi/ConnectText.png" alt="Подключиться" class="menu-button" id="connectButton">
             <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
-            
-            <!-- Мультиплеер секция -->
-            <div class="multiplayer-section">
-                <input type="text" id="playerNameInput" class="player-name-input" placeholder="Имя игрока" maxlength="12">
-                <input type="text" id="roomCodeInput" class="room-input" placeholder="Код комнаты (6 цифр)" maxlength="6" pattern="[0-9]*">
-                <div id="connectionStatus" class="connection-status"></div>
-            </div>
         </div>
         <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
     </div>
@@ -437,6 +449,20 @@
         <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backButton">
     </div>
     
+    <!-- Меню подключения -->
+    <div id="connectMenu">
+        <img src="MenuUi/ConnectText.png" alt="ПОДКЛЮЧЕНИЕ" class="options-title">
+        
+        <div class="multiplayer-section">
+            <input type="text" id="playerNameInput" class="player-name-input" placeholder="Имя игрока" maxlength="12" value="Игрок">
+            <input type="text" id="roomCodeInput" class="room-input" placeholder="Код комнаты (6 цифр)" maxlength="6" pattern="[0-9]*">
+            <div id="connectionStatus" class="connection-status">Введите код комнаты</div>
+            <img src="MenuUi/PlayText.png" alt="ПОДКЛЮЧИТЬСЯ" class="menu-button" id="joinRoomButton">
+        </div>
+        
+        <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="connectBackButton">
+    </div>
+    
     <!-- Мобильное управление -->
     <div id="mobileControls">
         <div id="movementJoystick">
@@ -468,7 +494,6 @@
     <div id="playersContainer"></div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/photon-pun@2.0.0/dist/pun.min.js"></script>
     <script>
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
         document.addEventListener('contextmenu', function(e) {
@@ -486,120 +511,52 @@
             return false;
         });
 
-        // МУЛЬТИПЛЕЕР КОНФИГУРАЦИЯ
-        const photonConfig = {
-            appId: 'b5d37841-1bb5-401f-a1b9-3349609baa63', // Замените на ваш App ID
-            version: '1.0'
-        };
-
-        // Глобальные переменные мультиплеера
-        let photonClient = null;
-        let isConnected = false;
+        // ПРОСТАЯ СИСТЕМА МУЛЬТИПЛЕЕРА БЕЗ PHOTON
+        let isMultiplayer = false;
         let currentRoom = null;
-        let playerName = 'Player';
+        let playerName = 'Игрок';
         let otherPlayers = new Map();
         let playerSprites = new Map();
-        let lastPositionUpdate = 0;
-        const POSITION_UPDATE_RATE = 100; // мс
 
-        // Инициализация Photon
-        function initPhoton() {
-            try {
-                photonClient = new Photon.LoadBalancing.LoadBalancingClient(
-                    Photon.ConnectionProtocol.Ws,
-                    photonConfig.appId,
-                    photonConfig.version
-                );
-
-                // Обработчики событий Photon
-                photonClient.onStateChange = onPhotonStateChange;
-                photonClient.onOperationResponse = onPhotonOperationResponse;
-                photonClient.onEvent = onPhotonEvent;
-
-                // Подключение к Photon
-                photonClient.connect();
-                updateConnectionStatus('Подключение к серверу...');
-            } catch (error) {
-                console.error('Ошибка инициализации Photon:', error);
-                updateConnectionStatus('Ошибка подключения');
-            }
-        }
-
-        // Обработчик изменения состояния Photon
-        function onPhotonStateChange(state) {
-            console.log('Photon state:', state);
+        // Функции мультиплеера
+        function createRoom() {
+            // Генерация случайного 6-значного кода комнаты
+            const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+            currentRoom = roomCode;
+            isMultiplayer = true;
             
-            switch(state) {
-                case Photon.LoadBalancing.State.Joined:
-                    isConnected = true;
-                    updateConnectionStatus('Подключено к комнате: ' + currentRoom);
-                    document.getElementById('roomDisplay').textContent = 'КОМНАТА: ' + currentRoom;
-                    spawnPlayer();
-                    break;
-                    
-                case Photon.LoadBalancing.State.ConnectedToMaster:
-                    updateConnectionStatus('Подключено к серверу');
-                    break;
-                    
-                case Photon.LoadBalancing.State.Disconnected:
-                    isConnected = false;
-                    updateConnectionStatus('Отключено от сервера');
-                    cleanupMultiplayer();
-                    break;
+            document.getElementById('roomDisplay').textContent = 'КОМНАТА: ' + roomCode;
+            updateConnectionStatus('Комната создана: ' + roomCode);
+            
+            // Сразу начинаем игру
+            startGame();
+        }
+
+        function joinRoom() {
+            const roomCode = document.getElementById('roomCodeInput').value;
+            const name = document.getElementById('playerNameInput').value;
+            
+            if (!roomCode || roomCode.length !== 6 || !/^\d+$/.test(roomCode)) {
+                updateConnectionStatus('Ошибка: код комнаты должен быть 6 цифр');
+                return;
             }
-        }
-
-        // Обработчик ответов операций Photon
-        function onPhotonOperationResponse(response) {
-            console.log('Photon operation response:', response);
-        }
-
-        // Обработчик событий Photon
-        function onPhotonEvent(event) {
-            switch(event.code) {
-                case 1: // PlayerJoined
-                    onPlayerJoined(event);
-                    break;
-                case 2: // PlayerLeft
-                    onPlayerLeft(event);
-                    break;
-                case 3: // PlayerPositionUpdate
-                    onPlayerPositionUpdate(event);
-                    break;
-                case 4: // PlayerAnimationUpdate
-                    onPlayerAnimationUpdate(event);
-                    break;
+            
+            if (name.trim()) {
+                playerName = name.trim();
             }
+            
+            currentRoom = roomCode;
+            isMultiplayer = true;
+            
+            document.getElementById('roomDisplay').textContent = 'КОМНАТА: ' + roomCode;
+            updateConnectionStatus('Подключение к комнате ' + roomCode);
+            
+            // Сразу начинаем игру
+            startGame();
         }
 
-        // Игрок присоединился
-        function onPlayerJoined(event) {
-            const playerId = event.sender;
-            if (playerId !== photonClient.playerId) {
-                createPlayerSprite(playerId, event.content);
-            }
-        }
-
-        // Игрок вышел
-        function onPlayerLeft(event) {
-            const playerId = event.sender;
-            removePlayerSprite(playerId);
-        }
-
-        // Обновление позиции игрока
-        function onPlayerPositionUpdate(event) {
-            const playerId = event.sender;
-            if (playerId !== photonClient.playerId) {
-                updatePlayerPosition(playerId, event.content);
-            }
-        }
-
-        // Обновление анимации игрока
-        function onPlayerAnimationUpdate(event) {
-            const playerId = event.sender;
-            if (playerId !== photonClient.playerId) {
-                updatePlayerAnimation(playerId, event.content);
-            }
+        function updateConnectionStatus(status) {
+            document.getElementById('connectionStatus').textContent = status;
         }
 
         // Создание спрайта игрока
@@ -617,36 +574,6 @@
                 animation: 'idle',
                 direction: 'front'
             });
-        }
-
-        // Удаление спрайта игрока
-        function removePlayerSprite(playerId) {
-            const sprite = playerSprites.get(playerId);
-            if (sprite) {
-                sprite.remove();
-                playerSprites.delete(playerId);
-                otherPlayers.delete(playerId);
-            }
-        }
-
-        // Обновление позиции игрока
-        function updatePlayerPosition(playerId, data) {
-            const player = otherPlayers.get(playerId);
-            if (player) {
-                player.position = data.position;
-                player.rotation = data.rotation;
-                updatePlayerSprite(playerId);
-            }
-        }
-
-        // Обновление анимации игрока
-        function updatePlayerAnimation(playerId, data) {
-            const player = otherPlayers.get(playerId);
-            if (player) {
-                player.animation = data.animation;
-                player.direction = data.direction;
-                updatePlayerSprite(playerId);
-            }
         }
 
         // Обновление спрайта игрока
@@ -709,122 +636,6 @@
             const frameIndex = Math.floor(time % frames.length);
             
             return frames[frameIndex];
-        }
-
-        // Отправка данных позиции
-        function sendPositionUpdate() {
-            if (isConnected && photonClient) {
-                const data = {
-                    position: {
-                        x: camera.position.x,
-                        z: camera.position.z
-                    },
-                    rotation: yaw
-                };
-                
-                photonClient.sendEvent(3, data);
-            }
-        }
-
-        // Отправка данных анимации
-        function sendAnimationUpdate() {
-            if (isConnected && photonClient) {
-                const isMoving = moveForward || moveBackward || moveLeft || moveRight;
-                const data = {
-                    animation: isMoving ? 'walk' : 'idle',
-                    direction: getPlayerDirection(yaw)
-                };
-                
-                photonClient.sendEvent(4, data);
-            }
-        }
-
-        // Спавн игрока
-        function spawnPlayer() {
-            if (isConnected && photonClient) {
-                const playerData = {
-                    name: playerName,
-                    position: {
-                        x: camera.position.x,
-                        z: camera.position.z
-                    },
-                    rotation: yaw
-                };
-                
-                photonClient.sendEvent(1, playerData);
-            }
-        }
-
-        // Очистка мультиплеера
-        function cleanupMultiplayer() {
-            otherPlayers.clear();
-            playerSprites.forEach(sprite => sprite.remove());
-            playerSprites.clear();
-            document.getElementById('roomDisplay').textContent = 'КОМНАТА: ---';
-        }
-
-        // Обновление статуса подключения
-        function updateConnectionStatus(status) {
-            document.getElementById('connectionStatus').textContent = status;
-        }
-
-        // Подключение к комнате
-        function connectToRoom() {
-            const roomCode = document.getElementById('roomCodeInput').value;
-            const name = document.getElementById('playerNameInput').value;
-            
-            if (!roomCode || roomCode.length !== 6 || !/^\d+$/.test(roomCode)) {
-                updateConnectionStatus('Ошибка: код комнаты должен быть 6 цифр');
-                return;
-            }
-            
-            if (name.trim()) {
-                playerName = name.trim();
-            }
-            
-            if (photonClient && photonClient.isConnectedToMaster) {
-                currentRoom = roomCode;
-                
-                const roomOptions = {
-                    roomName: roomCode,
-                    maxPlayers: 4,
-                    playerTtl: 0,
-                    emptyRoomTtl: 0
-                };
-                
-                photonClient.joinRoom(roomCode, roomOptions);
-                updateConnectionStatus('Подключение к комнате ' + roomCode + '...');
-            } else {
-                updateConnectionStatus('Сначала подключитесь к серверу');
-            }
-        }
-
-        // Создание комнаты
-        function createRoom() {
-            const name = document.getElementById('playerNameInput').value;
-            if (name.trim()) {
-                playerName = name.trim();
-            }
-            
-            // Генерация случайного 6-значного кода комнаты
-            const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-            document.getElementById('roomCodeInput').value = roomCode;
-            
-            if (photonClient && photonClient.isConnectedToMaster) {
-                currentRoom = roomCode;
-                
-                const roomOptions = {
-                    roomName: roomCode,
-                    maxPlayers: 4,
-                    playerTtl: 0,
-                    emptyRoomTtl: 0
-                };
-                
-                photonClient.createRoom(roomCode, roomOptions);
-                updateConnectionStatus('Создание комнаты ' + roomCode + '...');
-            } else {
-                updateConnectionStatus('Сначала подключитесь к серверу');
-            }
         }
 
         // Базовые настройки Three.js
@@ -1818,13 +1629,6 @@
             camera.position.x = newX;
             camera.position.z = newZ;
             
-            // Обновление мультиплеера
-            if (isConnected && currentTime - lastPositionUpdate > POSITION_UPDATE_RATE) {
-                sendPositionUpdate();
-                sendAnimationUpdate();
-                lastPositionUpdate = currentTime;
-            }
-            
             // Обновление спрайтов других игроков
             otherPlayers.forEach((player, playerId) => {
                 updatePlayerSprite(playerId);
@@ -1843,6 +1647,7 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'none';
+            document.getElementById('connectMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
             
@@ -1873,8 +1678,18 @@
             document.getElementById('optionsMenu').style.display = 'flex';
         }
 
+        function showConnectMenu() {
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('connectMenu').style.display = 'flex';
+        }
+
         function hideOptions() {
             document.getElementById('optionsMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+        }
+
+        function hideConnectMenu() {
+            document.getElementById('connectMenu').style.display = 'none';
             document.getElementById('startMenu').style.display = 'flex';
         }
 
@@ -1884,6 +1699,8 @@
             const connectButton = document.getElementById('connectButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
+            const connectBackButton = document.getElementById('connectBackButton');
+            const joinRoomButton = document.getElementById('joinRoomButton');
             
             // Запускаем музыку при инициализации
             startMusic();
@@ -1897,7 +1714,7 @@
             });
             
             connectButton.addEventListener('click', function(e) {
-                connectToRoom();
+                showConnectMenu();
             });
             
             optionsButton.addEventListener('click', function(e) {
@@ -1906,6 +1723,14 @@
             
             backButton.addEventListener('click', function(e) {
                 hideOptions();
+            });
+            
+            connectBackButton.addEventListener('click', function(e) {
+                hideConnectMenu();
+            });
+            
+            joinRoomButton.addEventListener('click', function(e) {
+                joinRoom();
             });
         }
 
@@ -1935,9 +1760,6 @@
             
             // Предзагружаем изображения оружия
             preloadWeaponImages();
-            
-            // Инициализируем Photon
-            initPhoton();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
@@ -1949,9 +1771,6 @@
             
             // Предзагружаем изображения оружия даже при ошибках
             preloadWeaponImages();
-            
-            // Инициализируем Photon даже при ошибках
-            initPhoton();
         });
     </script>
 </body>
