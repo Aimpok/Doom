@@ -334,26 +334,6 @@
             transition: background 0.3s ease;
             display: none;
         }
-
-        /* Спрайты врагов */
-        .enemy {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            pointer-events: none;
-            z-index: 30;
-            display: none;
-        }
-
-        /* Огненные шары */
-        .fireball {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            pointer-events: none;
-            z-index: 35;
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -842,25 +822,21 @@
                 this.currentFrame = 1;
                 this.animationTimer = 0;
                 
-                // Создаем DOM элемент для врага
-                this.element = document.createElement('img');
-                this.element.className = 'enemy';
-                this.element.src = 'GameUi/Enemy/Imp/Front1.png';
-                document.body.appendChild(this.element);
-                
-                this.updatePosition();
+                // Создаем спрайт для врага
+                this.spriteMap = new THREE.TextureLoader().load('GameUi/Enemy/Imp/Front1.png');
+                this.spriteMaterial = new THREE.SpriteMaterial({ 
+                    map: this.spriteMap,
+                    transparent: true,
+                    fog: true
+                });
+                this.sprite = new THREE.Sprite(this.spriteMaterial);
+                this.sprite.scale.set(2, 2, 1);
+                this.sprite.position.set(this.x, 1, this.z);
+                scene.add(this.sprite);
             }
             
             updatePosition() {
-                // Конвертируем 3D координаты в экранные
-                const vector = new THREE.Vector3(this.x, 0, this.z);
-                vector.project(camera);
-                
-                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                const y = -(vector.y * 0.5 + 0.5) * window.innerHeight;
-                
-                this.element.style.left = (x - 40) + 'px';
-                this.element.style.top = (y - 40) + 'px';
+                this.sprite.position.set(this.x, 1, this.z);
                 
                 // Анимация ходьбы
                 if (this.isMoving) {
@@ -868,13 +844,17 @@
                     if (this.animationTimer >= 10) {
                         this.animationTimer = 0;
                         this.currentFrame = this.currentFrame === 1 ? 2 : 1;
-                        this.element.src = `GameUi/Enemy/Imp/Front${this.currentFrame}.png`;
+                        this.spriteMap = new THREE.TextureLoader().load(`GameUi/Enemy/Imp/Front${this.currentFrame}.png`);
+                        this.sprite.material.map = this.spriteMap;
+                        this.sprite.material.needsUpdate = true;
                     }
                 }
+                
+                // Всегда поворачиваем спрайт к камере
+                this.sprite.lookAt(camera.position);
             }
             
             findPathToPlayer() {
-                // Простой ИИ для движения к игроку с обходом стен
                 const playerX = camera.position.x;
                 const playerZ = camera.position.z;
                 
@@ -932,12 +912,14 @@
                 if (distance <= this.attackRange && currentTime - this.lastAttackTime > this.attackCooldown) {
                     takeDamage(10);
                     this.lastAttackTime = currentTime;
+                    console.log('Враг атаковал в ближнем бою!');
                 }
                 
                 // Огненный шар
                 if (distance <= this.fireballRange && currentTime - this.lastFireballTime > this.fireballCooldown) {
                     createFireball(this.x, this.z, camera.position.x, camera.position.z);
                     this.lastFireballTime = currentTime;
+                    console.log('Враг бросил огненный шар!');
                 }
             }
             
@@ -951,6 +933,8 @@
                     enemyHitSound.play();
                 }
                 
+                console.log(`Враг получил ${actualDamage} урона. Здоровье: ${this.health}`);
+                
                 if (this.health <= 0) {
                     this.destroy();
                     return true;
@@ -959,9 +943,8 @@
             }
             
             destroy() {
-                if (this.element.parentNode) {
-                    this.element.parentNode.removeChild(this.element);
-                }
+                scene.remove(this.sprite);
+                console.log('Враг уничтожен!');
             }
             
             update() {
@@ -988,29 +971,30 @@
                 this.dirX = dx / distance;
                 this.dirZ = dz / distance;
                 
-                // Создаем DOM элемент
-                this.element = document.createElement('img');
-                this.element.className = 'fireball';
-                this.element.src = 'GameUi/Enemy/Imp/Fireball.png';
-                document.body.appendChild(this.element);
+                // Создаем спрайт для огненного шара
+                this.spriteMap = new THREE.TextureLoader().load('GameUi/Enemy/Imp/Fireball.png');
+                this.spriteMaterial = new THREE.SpriteMaterial({ 
+                    map: this.spriteMap,
+                    transparent: true,
+                    fog: true
+                });
+                this.sprite = new THREE.Sprite(this.spriteMaterial);
+                this.sprite.scale.set(0.8, 0.8, 1);
+                this.sprite.position.set(this.x, 1, this.z);
+                scene.add(this.sprite);
                 
                 this.rotation = 0;
-                this.updatePosition();
             }
             
             updatePosition() {
-                const vector = new THREE.Vector3(this.x, 0, this.z);
-                vector.project(camera);
-                
-                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                const y = -(vector.y * 0.5 + 0.5) * window.innerHeight;
-                
-                this.element.style.left = (x - 20) + 'px';
-                this.element.style.top = (y - 20) + 'px';
+                this.sprite.position.set(this.x, 1, this.z);
                 
                 // Вращение шара для 3D эффекта
                 this.rotation += 0.1;
-                this.element.style.transform = `rotate(${this.rotation}rad)`;
+                this.sprite.rotation.z = this.rotation;
+                
+                // Поворачиваем к камере
+                this.sprite.lookAt(camera.position);
             }
             
             update() {
@@ -1021,6 +1005,7 @@
                 
                 // Проверяем коллизию со стенами
                 if (checkCollision(this.x, this.z)) {
+                    console.log('Огненный шар столкнулся со стеной');
                     this.destroy();
                     return;
                 }
@@ -1032,7 +1017,19 @@
                 );
                 
                 if (distanceToPlayer < 1.5) {
+                    console.log('Огненный шар попал в игрока!');
                     takeDamage(15);
+                    this.destroy();
+                    return;
+                }
+                
+                // Уничтожаем если улетел слишком далеко
+                const distanceFromStart = Math.sqrt(
+                    Math.pow(this.x - this.startX, 2) + 
+                    Math.pow(this.z - this.startZ, 2)
+                );
+                
+                if (distanceFromStart > 20) {
                     this.destroy();
                     return;
                 }
@@ -1042,9 +1039,7 @@
             
             destroy() {
                 this.active = false;
-                if (this.element.parentNode) {
-                    this.element.parentNode.removeChild(this.element);
-                }
+                scene.remove(this.sprite);
             }
         }
 
@@ -1071,13 +1066,18 @@
                 
                 const enemy = new Enemy(position.x, position.z);
                 enemies.push(enemy);
+                console.log(`Создан враг на позиции: ${position.x}, ${position.z}`);
             }
+            console.log(`Создано врагов: ${enemies.length}`);
         }
 
         // Функция создания огненного шара
         function createFireball(x, z, targetX, targetZ) {
             const fireball = new Fireball(x, z, targetX, targetZ);
+            fireball.startX = x;
+            fireball.startZ = z;
             fireballs.push(fireball);
+            console.log('Создан огненный шар');
         }
 
         // Функция получения урона игроком
@@ -1090,6 +1090,8 @@
                 playerHitSound.currentTime = 0;
                 playerHitSound.play();
             }
+            
+            console.log(`Игрок получил ${amount} урона. HP: ${hp}`);
             
             // Эффект крови
             const damageEffect = document.getElementById('damageEffect');
@@ -1112,7 +1114,6 @@
         // Функция завершения игры
         function gameOver() {
             alert('Игра окончена! Вы погибли.');
-            // Можно добавить перезапуск игры
             location.reload();
         }
 
@@ -1166,7 +1167,7 @@
             enemyHitSound.preload = 'auto';
             playerHitSound.preload = 'auto';
             
-            // Создаем список музыкальных треков (только 3 трека)
+            // Создаем список музыкальных треков
             musicTracks = [
                 'Sounds/MenuMusic.mp3',
                 'Sounds/MenuMusic1.mp3',
@@ -1201,12 +1202,10 @@
             // Создаем новый аудио элемент
             currentMusic = new Audio(musicTracks[currentTrackIndex]);
             currentMusic.volume = musicVolume;
-            currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
+            currentMusic.loop = false;
             
-            // Когда трек заканчивается, играем следующий
             currentMusic.addEventListener('ended', playNextTrack);
             
-            // Пытаемся воспроизвести
             const playPromise = currentMusic.play();
             
             if (playPromise !== undefined) {
@@ -1215,7 +1214,6 @@
                     musicStarted = true;
                 }).catch(error => {
                     console.log('Автовоспроизведение музыки заблокировано:', error);
-                    // Пытаемся снова при взаимодействии
                     document.addEventListener('click', startMusicOnInteraction, { once: true });
                     document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
                 });
@@ -1263,9 +1261,8 @@
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
         }
 
-        // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // Анимация выстрела
         function playShootAnimation() {
-            // Проверяем возможность стрельбы
             if (!canShoot || isReloading || isShooting || ammo <= 0) {
                 return;
             }
@@ -1275,35 +1272,29 @@
             ammo--;
             updateUI();
             
-            // Сразу меняем на первый кадр выстрела
             weapon.src = gunImages.shoot1;
             
-            // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
-                shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
+                shootSound.play();
             }
             
             // Проверяем попадание во врагов
             checkEnemyHit();
             
-            // Второй кадр выстрела
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.shoot2;
             }, 50);
             
-            // Возврат к нормальному состоянию
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.normal;
                 isShooting = false;
                 
-                // Если патроны кончились - перезарядка
                 if (ammo <= 0) {
                     playReloadAnimation();
                 } else {
-                    // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
                     }, 300);
@@ -1335,20 +1326,21 @@
                 toEnemy.normalize();
                 const dotProduct = shootDirection.dot(toEnemy);
                 
-                // Если враг в поле зрения (в пределах 30 градусов)
-                if (dotProduct > 0.866) { // cos(30°) ≈ 0.866
+                // Если враг в поле зрения (в пределах 45 градусов) и на расстоянии менее 15 единиц
+                if (dotProduct > 0.7 && distance < 15) {
                     // Определяем дистанцию для расчета урона
-                    const isCloseRange = distance < 3.0; // Ближняя дистанция
+                    const isCloseRange = distance < 3.0;
                     const killed = enemy.takeDamage(1, isCloseRange);
                     
                     if (killed) {
                         enemies.splice(i, 1);
                     }
+                    break; // Попадание только в одного врага за выстрел
                 }
             }
         }
 
-        // Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // Анимация перезарядки
         function playReloadAnimation() {
             if (isReloading || ammo >= maxAmmo) {
                 return;
@@ -1357,31 +1349,26 @@
             isReloading = true;
             canShoot = false;
             
-            // Звук перезарядки
             if (reloadSound) {
                 reloadSound.currentTime = 0;
-                reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
+                reloadSound.play();
             }
             
-            // Первый кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload1;
             }, 100);
             
-            // Второй кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload2;
             }, 300);
             
-            // Третий кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload3;
             }, 500);
             
-            // Завершение перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.normal;
@@ -1402,7 +1389,7 @@
                     playShootAnimation();
                     lastShootTime = currentTime;
                 }
-            }, 100); // Проверяем каждые 100мс
+            }, 100);
         }
 
         function stopAutoShoot() {
