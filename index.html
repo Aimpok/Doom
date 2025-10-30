@@ -788,8 +788,12 @@
         // Звуковые эффекты
         let shootSound = null;
         let reloadSound = null;
-        let enemyHitSound = null;
         let playerHitSound = null;
+        let impDamageSound1 = null;
+        let impDamageSound2 = null;
+        let impDeathSound1 = null;
+        let impDeathSound2 = null;
+        let impDeathSound3 = null;
 
         // Оружие
         const weapon = document.getElementById('weapon');
@@ -829,20 +833,34 @@
             // Создаем звуковые эффекты
             shootSound = new Audio('Sounds/Shoot.mp3');
             reloadSound = new Audio('Sounds/Reload.mp3');
-            enemyHitSound = new Audio('Sounds/EnemyHit.mp3');
             playerHitSound = new Audio('Sounds/PlayerHit.mp3');
+            
+            // Звуки врагов
+            impDamageSound1 = new Audio('Sounds/Imp/ImpDamage.mp3');
+            impDamageSound2 = new Audio('Sounds/Imp/ImpDamage1.mp3');
+            impDeathSound1 = new Audio('Sounds/Imp/ImpDeath.mp3');
+            impDeathSound2 = new Audio('Sounds/Imp/ImpDeath1.mp3');
+            impDeathSound3 = new Audio('Sounds/Imp/ImpDeath2.mp3');
             
             // Настраиваем звуковые эффекты
             shootSound.volume = soundVolume;
             reloadSound.volume = soundVolume;
-            enemyHitSound.volume = soundVolume;
             playerHitSound.volume = soundVolume;
+            impDamageSound1.volume = soundVolume;
+            impDamageSound2.volume = soundVolume;
+            impDeathSound1.volume = soundVolume;
+            impDeathSound2.volume = soundVolume;
+            impDeathSound3.volume = soundVolume;
             
             // Предзагружаем звуки
             shootSound.preload = 'auto';
             reloadSound.preload = 'auto';
-            enemyHitSound.preload = 'auto';
             playerHitSound.preload = 'auto';
+            impDamageSound1.preload = 'auto';
+            impDamageSound2.preload = 'auto';
+            impDeathSound1.preload = 'auto';
+            impDeathSound2.preload = 'auto';
+            impDeathSound3.preload = 'auto';
             
             // Создаем список музыкальных треков (только 3 трека)
             musicTracks = [
@@ -927,11 +945,23 @@
             if (reloadSound) {
                 reloadSound.volume = soundVolume;
             }
-            if (enemyHitSound) {
-                enemyHitSound.volume = soundVolume;
-            }
             if (playerHitSound) {
                 playerHitSound.volume = soundVolume;
+            }
+            if (impDamageSound1) {
+                impDamageSound1.volume = soundVolume;
+            }
+            if (impDamageSound2) {
+                impDamageSound2.volume = soundVolume;
+            }
+            if (impDeathSound1) {
+                impDeathSound1.volume = soundVolume;
+            }
+            if (impDeathSound2) {
+                impDeathSound2.volume = soundVolume;
+            }
+            if (impDeathSound3) {
+                impDeathSound3.volume = soundVolume;
             }
         }
 
@@ -1397,19 +1427,17 @@
             constructor() {
                 this.nodes = [];
                 this.edges = [];
-                this.gridSize = 1.0; // Размер сетки в метрах
+                this.gridSize = 1.0;
                 this.generateNavigationGraph();
             }
             
             generateNavigationGraph() {
-                // Создаем узлы навигации в проходимых местах
                 for (let y = 0; y < maze.length; y++) {
                     for (let x = 0; x < maze[y].length; x++) {
                         if (maze[y][x] === 0) {
                             const worldX = (x - maze[0].length/2) * CELL_SIZE;
                             const worldZ = (y - maze.length/2) * CELL_SIZE;
                             
-                            // Создаем узел в центре клетки
                             this.nodes.push({
                                 x: worldX,
                                 z: worldZ,
@@ -1419,11 +1447,9 @@
                     }
                 }
                 
-                // Создаем связи между соседними узлами
                 for (let i = 0; i < this.nodes.length; i++) {
                     const node = this.nodes[i];
                     
-                    // Ищем соседние узлы в радиусе 1.5 клетки
                     for (let j = 0; j < this.nodes.length; j++) {
                         if (i === j) continue;
                         
@@ -1432,9 +1458,7 @@
                         const dz = otherNode.z - node.z;
                         const distance = Math.sqrt(dx * dx + dz * dz);
                         
-                        // Если узлы соседние и нет стены между ними
                         if (distance <= CELL_SIZE * 1.5) {
-                            // Проверяем, что между узлами нет стены
                             const midX = (node.x + otherNode.x) / 2;
                             const midZ = (node.z + otherNode.z) / 2;
                             
@@ -1459,13 +1483,11 @@
             }
             
             findPath(startX, startZ, targetX, targetZ) {
-                // Находим ближайшие узлы к началу и цели
                 const startNode = this.findNearestNode(startX, startZ);
                 const targetNode = this.findNearestNode(targetX, targetZ);
                 
                 if (!startNode || !targetNode) return null;
                 
-                // Алгоритм A* для поиска пути
                 const openSet = [startNode];
                 const closedSet = new Set();
                 const cameFrom = new Map();
@@ -1476,7 +1498,6 @@
                 fScore.set(startNode.id, this.heuristic(startNode, targetNode));
                 
                 while (openSet.length > 0) {
-                    // Находим узел с наименьшей fScore
                     let current = openSet[0];
                     let currentIndex = 0;
                     
@@ -1487,7 +1508,6 @@
                         }
                     }
                     
-                    // Если дошли до цели
                     if (current.id === targetNode.id) {
                         return this.reconstructPath(cameFrom, current);
                     }
@@ -1495,7 +1515,6 @@
                     openSet.splice(currentIndex, 1);
                     closedSet.add(current.id);
                     
-                    // Проверяем соседей
                     const neighbors = this.getNeighbors(current);
                     
                     for (let neighbor of neighbors) {
@@ -1515,7 +1534,7 @@
                     }
                 }
                 
-                return null; // Путь не найден
+                return null;
             }
             
             findNearestNode(x, z) {
@@ -1580,7 +1599,7 @@
                 this.x = x;
                 this.z = z;
                 this.health = 3;
-                this.speed = 3.0;
+                this.speed = 9.0; // Увеличил скорость в 3 раза
                 this.attackRange = 2.0;
                 this.attackCooldown = 0;
                 this.fireballCooldown = 0;
@@ -1592,6 +1611,9 @@
                 this.path = [];
                 this.currentPathIndex = 0;
                 this.pathUpdateTimer = 0;
+                this.isDying = false;
+                this.deathFrame = 0;
+                this.deathTimer = 0;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1606,17 +1628,14 @@
             }
             
             createEnemyTexture() {
-                // Создаем канвас для текстуры врага
                 const canvas = document.createElement('canvas');
                 canvas.width = 64;
                 canvas.height = 64;
                 const context = canvas.getContext('2d');
                 
-                // Загружаем изображение врага
                 const img = new Image();
                 img.src = 'GameUi/Enemy/Imp/Front/1.png';
                 
-                // Рисуем изображение на канвасе
                 context.fillStyle = 'transparent';
                 context.fillRect(0, 0, 64, 64);
                 context.drawImage(img, 0, 0, 64, 64);
@@ -1627,6 +1646,11 @@
             
             update(deltaTime, playerX, playerZ) {
                 if (!this.isAlive) return;
+                
+                if (this.isDying) {
+                    this.updateDeathAnimation(deltaTime);
+                    return;
+                }
                 
                 // Обновляем анимацию
                 this.animationTimer += deltaTime;
@@ -1671,17 +1695,14 @@
                     const distanceToNode = Math.sqrt(dx * dx + dz * dz);
                     
                     if (distanceToNode < 0.5) {
-                        // Достигли узла, переходим к следующему
                         this.currentPathIndex++;
                     } else {
-                        // Двигаемся к узлу
                         const dirX = dx / distanceToNode;
                         const dirZ = dz / distanceToNode;
                         
                         const newX = this.x + dirX * this.speed * deltaTime;
                         const newZ = this.z + dirZ * this.speed * deltaTime;
                         
-                        // Проверяем коллизии
                         if (!this.checkWallCollision(newX, newZ)) {
                             this.x = newX;
                             this.z = newZ;
@@ -1695,14 +1716,59 @@
                 // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
                 
-                // Проверяем атаку
+                // Ближняя атака - раз в 1 секунду
                 if (distance < this.attackRange && this.attackCooldown <= 0) {
                     this.meleeAttack();
+                    this.attackCooldown = 1.0; // 1 секунда перезарядки
                 }
                 
-                // Проверяем бросок файрбола
+                // Бросок файрбола - раз в 5 секунд
                 if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
                     this.throwFireball(playerX, playerZ);
+                    this.fireballCooldown = 5.0; // 5 секунд перезарядки
+                }
+            }
+            
+            updateDeathAnimation(deltaTime) {
+                this.deathTimer += deltaTime;
+                
+                if (this.deathTimer > 0.2) {
+                    this.deathTimer = 0;
+                    this.deathFrame++;
+                    
+                    if (this.deathFrame <= 3) {
+                        this.updateDeathTexture();
+                    } else {
+                        this.finalizeDeath();
+                    }
+                }
+            }
+            
+            updateDeathTexture() {
+                const img = new Image();
+                img.src = `GameUi/Enemy/Imp/Front/Die${this.deathFrame}.png`;
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const context = canvas.getContext('2d');
+                    context.fillStyle = 'transparent';
+                    context.fillRect(0, 0, 64, 64);
+                    context.drawImage(img, 0, 0, 64, 64);
+                    
+                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
+                    this.sprite.material.needsUpdate = true;
+                };
+            }
+            
+            finalizeDeath() {
+                this.isAlive = false;
+                scene.remove(this.sprite);
+                
+                const index = enemies.indexOf(this);
+                if (index > -1) {
+                    enemies.splice(index, 1);
                 }
             }
             
@@ -1733,8 +1799,6 @@
             }
             
             meleeAttack() {
-                this.attackCooldown = 2.0;
-                
                 const dx = this.lastPlayerX - this.x;
                 const dz = this.lastPlayerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
@@ -1745,7 +1809,6 @@
             }
             
             throwFireball(playerX, playerZ) {
-                this.fireballCooldown = 10.0;
                 const fireball = new Fireball(this.x, this.z, playerX, playerZ);
                 fireballs.push(fireball);
             }
@@ -1782,14 +1845,39 @@
                 
                 this.health -= damage;
                 
-                if (enemyHitSound) {
-                    enemyHitSound.currentTime = 0;
-                    enemyHitSound.play().catch(e => console.log('Не удалось воспроизвести звук попадания по врагу'));
+                // Воспроизводим случайный звук получения урона
+                if (Math.random() > 0.5) {
+                    if (impDamageSound1) {
+                        impDamageSound1.currentTime = 0;
+                        impDamageSound1.play().catch(e => console.log('Не удалось воспроизвести звук получения урона врагом'));
+                    }
+                } else {
+                    if (impDamageSound2) {
+                        impDamageSound2.currentTime = 0;
+                        impDamageSound2.play().catch(e => console.log('Не удалось воспроизвести звук получения урона врагом'));
+                    }
                 }
                 
-                if (this.health <= 0) {
-                    this.die();
+                if (this.health <= 0 && !this.isDying) {
+                    this.startDeath();
                 }
+            }
+            
+            startDeath() {
+                this.isDying = true;
+                this.deathFrame = 1;
+                this.deathTimer = 0;
+                
+                // Воспроизводим случайный звук смерти
+                const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
+                const randomSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
+                
+                if (randomSound) {
+                    randomSound.currentTime = 0;
+                    randomSound.play().catch(e => console.log('Не удалось воспроизвести звук смерти врага'));
+                }
+                
+                this.updateDeathTexture();
             }
             
             die() {
