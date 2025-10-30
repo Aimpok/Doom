@@ -1082,7 +1082,7 @@
                 
                 const deltaX = touchX - baseCenterX;
                 const deltaY = touchY - baseCenterY;
-                const distance = Math.sqrt(deltaX * deltaY + deltaY * deltaY);
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 
                 let stickX = deltaX;
                 let stickY = deltaY;
@@ -1407,6 +1407,9 @@
                 this.animationTimer = 0;
                 this.lastPlayerX = 0;
                 this.lastPlayerZ = 0;
+                this.stuckTimer = 0;
+                this.lastX = x;
+                this.lastZ = z;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1415,8 +1418,8 @@
                     fog: true
                 }));
                 
-                this.sprite.position.set(this.x, 2.5, this.z); // Подняли выше над землей
-                this.sprite.scale.set(4, 4, 1); // Увеличили размер
+                this.sprite.position.set(this.x, 1.5, this.z); // Понизили до земли
+                this.sprite.scale.set(3, 3, 1);
                 scene.add(this.sprite);
             }
             
@@ -1471,9 +1474,33 @@
                 const dirX = dx / distance;
                 const dirZ = dz / distance;
                 
-                // Проверяем, можем ли мы двигаться напрямую к игроку
-                const newX = this.x + dirX * this.speed * deltaTime;
-                const newZ = this.z + dirZ * this.speed * deltaTime;
+                // Проверяем, застрял ли враг
+                const movedDistance = Math.sqrt(
+                    Math.pow(this.x - this.lastX, 2) + Math.pow(this.z - this.lastZ, 2)
+                );
+                
+                if (movedDistance < 0.1) {
+                    this.stuckTimer += deltaTime;
+                } else {
+                    this.stuckTimer = 0;
+                }
+                
+                this.lastX = this.x;
+                this.lastZ = this.z;
+                
+                // Пытаемся двигаться к игроку
+                let newX = this.x;
+                let newZ = this.z;
+                
+                // Если застрял более 2 секунд, пытаемся обойти
+                if (this.stuckTimer > 2.0) {
+                    newX = this.x + (Math.random() - 0.5) * this.speed * deltaTime * 2;
+                    newZ = this.z + (Math.random() - 0.5) * this.speed * deltaTime * 2;
+                } else {
+                    // Нормальное движение к игроку
+                    newX = this.x + dirX * this.speed * deltaTime;
+                    newZ = this.z + dirZ * this.speed * deltaTime;
+                }
                 
                 // Проверяем коллизии со стенами
                 if (!this.checkWallCollision(newX, newZ)) {
@@ -1485,7 +1512,7 @@
                 }
                 
                 // Обновляем позицию спрайта
-                this.sprite.position.set(this.x, 2.5, this.z);
+                this.sprite.position.set(this.x, 1.5, this.z);
                 
                 // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
@@ -1496,7 +1523,7 @@
                 }
                 
                 // Проверяем бросок файрбола
-                if (distance < 15 && this.fireballCooldown <= 0) {
+                if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
                     this.throwFireball(playerX, playerZ);
                 }
             }
@@ -1528,16 +1555,18 @@
             }
             
             avoidWalls(playerX, playerZ, deltaTime) {
-                // Простой алгоритм обхода стен - двигаемся в случайном направлении
-                const angles = [0, Math.PI/2, Math.PI, -Math.PI/2];
-                const randomAngle = angles[Math.floor(Math.random() * angles.length)];
+                // Улучшенный алгоритм обхода стен
+                const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, -3*Math.PI/4, -Math.PI/2, -Math.PI/4];
                 
-                const testX = this.x + Math.cos(randomAngle) * this.speed * deltaTime;
-                const testZ = this.z + Math.sin(randomAngle) * this.speed * deltaTime;
-                
-                if (!this.checkWallCollision(testX, testZ)) {
-                    this.x = testX;
-                    this.z = testZ;
+                for (let angle of angles) {
+                    const testX = this.x + Math.cos(angle) * this.speed * deltaTime;
+                    const testZ = this.z + Math.sin(angle) * this.speed * deltaTime;
+                    
+                    if (!this.checkWallCollision(testX, testZ)) {
+                        this.x = testX;
+                        this.z = testZ;
+                        return;
+                    }
                 }
             }
             
@@ -1585,13 +1614,19 @@
                 };
             }
             
-            takeDamage(amount, isCloseRange) {
-                // Наносим урон врагу
-                if (isCloseRange) {
-                    this.health -= amount; // В близи убиваем с одного выстрела
+            takeDamage(amount, distance) {
+                // Наносим урон врагу в зависимости от дистанции
+                let damage = 0;
+                
+                if (distance < 4) {
+                    damage = 3; // 1 выстрел в упор
+                } else if (distance < 10) {
+                    damage = 1.5; // 2 выстрела
                 } else {
-                    this.health -= amount / 3; // Из далека нужно 3 выстрела
+                    damage = 1; // 3 выстрела
                 }
+                
+                this.health -= damage;
                 
                 // Воспроизводим звук попадания
                 if (enemyHitSound) {
@@ -1638,7 +1673,7 @@
                     fog: true
                 }));
                 
-                this.sprite.position.set(this.x, 2, this.z);
+                this.sprite.position.set(this.x, 1.5, this.z);
                 this.sprite.scale.set(1.5, 1.5, 1);
                 scene.add(this.sprite);
                 
@@ -1677,7 +1712,7 @@
                 this.z += this.dirZ * this.speed * deltaTime;
                 
                 // Обновляем позицию спрайта
-                this.sprite.position.set(this.x, 2, this.z);
+                this.sprite.position.set(this.x, 1.5, this.z);
                 
                 // Вращаем файрбол для 3D эффекта
                 this.rotation += 15 * deltaTime; // Увеличили скорость вращения
@@ -1826,7 +1861,7 @@
                 
                 // Создаем bounding sphere для врага
                 const enemySphere = new THREE.Sphere(
-                    new THREE.Vector3(enemy.x, 2.5, enemy.z),
+                    new THREE.Vector3(enemy.x, 1.5, enemy.z),
                     1.5
                 );
                 
@@ -1837,11 +1872,8 @@
                     const dz = enemy.z - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
-                    // Определяем, является ли выстрел ближним или дальним
-                    const isCloseRange = distance < 5;
-                    
-                    // Наносим урон врагу
-                    enemy.takeDamage(1, isCloseRange);
+                    // Наносим урон врагу в зависимости от дистанции
+                    enemy.takeDamage(1, distance);
                     return true;
                 }
             }
