@@ -962,6 +962,9 @@
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
+            // Проверяем попадание по врагам
+            checkEnemyHit();
+            
             // Второй кадр выстрела
             setTimeout(() => {
                 if (!isShooting) return;
@@ -1079,7 +1082,7 @@
                 
                 const deltaX = touchX - baseCenterX;
                 const deltaY = touchY - baseCenterY;
-                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const distance = Math.sqrt(deltaX * deltaY + deltaY * deltaY);
                 
                 let stickX = deltaX;
                 let stickY = deltaY;
@@ -1412,8 +1415,8 @@
                     fog: true
                 }));
                 
-                this.sprite.position.set(this.x, 2, this.z);
-                this.sprite.scale.set(3, 3, 1);
+                this.sprite.position.set(this.x, 2.5, this.z); // Подняли выше над землей
+                this.sprite.scale.set(4, 4, 1); // Увеличили размер
                 scene.add(this.sprite);
             }
             
@@ -1429,6 +1432,8 @@
                 img.src = 'GameUi/Enemy/Imp/Front/1.png'; // Первый кадр анимации
                 
                 // Рисуем изображение на канвасе
+                context.fillStyle = 'transparent';
+                context.fillRect(0, 0, 64, 64);
                 context.drawImage(img, 0, 0, 64, 64);
                 
                 const texture = new THREE.CanvasTexture(canvas);
@@ -1480,7 +1485,7 @@
                 }
                 
                 // Обновляем позицию спрайта
-                this.sprite.position.set(this.x, 2, this.z);
+                this.sprite.position.set(this.x, 2.5, this.z);
                 
                 // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
@@ -1571,6 +1576,8 @@
                     canvas.width = 64;
                     canvas.height = 64;
                     const context = canvas.getContext('2d');
+                    context.fillStyle = 'transparent';
+                    context.fillRect(0, 0, 64, 64);
                     context.drawImage(img, 0, 0, 64, 64);
                     
                     this.sprite.material.map = new THREE.CanvasTexture(canvas);
@@ -1614,7 +1621,7 @@
             constructor(x, z, targetX, targetZ) {
                 this.x = x;
                 this.z = z;
-                this.speed = 5.0;
+                this.speed = 12.0; // Увеличили скорость файрбола
                 this.isActive = true;
                 
                 // Вычисляем направление к цели
@@ -1632,7 +1639,7 @@
                 }));
                 
                 this.sprite.position.set(this.x, 2, this.z);
-                this.sprite.scale.set(1, 1, 1);
+                this.sprite.scale.set(1.5, 1.5, 1);
                 scene.add(this.sprite);
                 
                 // Вращение файрбола
@@ -1640,22 +1647,23 @@
             }
             
             createFireballTexture() {
-                // Создаем текстуру файрбола
+                // Создаем текстуру файрбола из изображения
+                const img = new Image();
+                img.src = 'GameUi/Enemy/Imp/Fireball.png';
+                
                 const canvas = document.createElement('canvas');
                 canvas.width = 32;
                 canvas.height = 32;
                 const context = canvas.getContext('2d');
                 
-                // Рисуем простой огненный шар
-                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
-                gradient.addColorStop(0, 'yellow');
-                gradient.addColorStop(0.5, 'orange');
-                gradient.addColorStop(1, 'red');
+                // Рисуем прозрачный фон
+                context.fillStyle = 'transparent';
+                context.fillRect(0, 0, 32, 32);
                 
-                context.fillStyle = gradient;
-                context.beginPath();
-                context.arc(16, 16, 16, 0, Math.PI * 2);
-                context.fill();
+                // Рисуем файрбол из изображения
+                img.onload = () => {
+                    context.drawImage(img, 0, 0, 32, 32);
+                };
                 
                 const texture = new THREE.CanvasTexture(canvas);
                 return texture;
@@ -1672,7 +1680,7 @@
                 this.sprite.position.set(this.x, 2, this.z);
                 
                 // Вращаем файрбол для 3D эффекта
-                this.rotation += 10 * deltaTime;
+                this.rotation += 15 * deltaTime; // Увеличили скорость вращения
                 this.sprite.rotation.z = this.rotation;
                 
                 // Проверяем коллизии со стенами
@@ -1818,7 +1826,7 @@
                 
                 // Создаем bounding sphere для врага
                 const enemySphere = new THREE.Sphere(
-                    new THREE.Vector3(enemy.x, 2, enemy.z),
+                    new THREE.Vector3(enemy.x, 2.5, enemy.z),
                     1.5
                 );
                 
@@ -1894,11 +1902,6 @@
             // Обновляем файрболы
             for (let i = fireballs.length - 1; i >= 0; i--) {
                 fireballs[i].update(deltaTime);
-            }
-            
-            // Проверяем попадание при выстреле
-            if (isShooting && !isShooting) {
-                checkEnemyHit();
             }
             
             renderer.render(scene, camera);
