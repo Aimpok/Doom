@@ -405,11 +405,13 @@
         }
 
         .mode-icon {
-            width: 40vmin;
-            height: 30vmin;
-            object-fit: contain;
+            width: 60vmin;
+            height: 25vmin;
+            object-fit: cover;
             margin-bottom: 2vmin;
             pointer-events: none;
+            border-radius: 10px;
+            border: 2px solid #444;
         }
 
         .mode-name {
@@ -423,12 +425,13 @@
             color: white;
             font-size: 2.5vmin;
             text-align: center;
-            margin-top: 2vmin;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 1.5vmin;
-            border-radius: 5px;
-            max-width: 80%;
+            margin-top: 1vmin;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2vmin;
+            border-radius: 10px;
+            width: 60vmin;
             pointer-events: none;
+            border: 1px solid #555;
         }
 
         .carousel-nav {
@@ -530,21 +533,6 @@
             display: none;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
         }
-
-        /* Эффект получения урона врагом */
-        .enemy-damage-effect {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 0, 0, 0.6);
-            opacity: 0;
-            pointer-events: none;
-            z-index: 35;
-            transition: opacity 0.2s;
-            border-radius: 50%;
-        }
     </style>
 </head>
 <body>
@@ -567,19 +555,19 @@
             <div class="mode-slide" data-mode="extermination">
                 <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
                 <img src="MenuUi/ModeTexts/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
-                <div class="mode-description">Уничтожьте 20 врагов, чтобы победить</div>
+                <div class="mode-description">Уничтожьте 20 врагов. Враги постоянно ищут вас и появляются рядом</div>
             </div>
             
             <div class="mode-slide" data-mode="straight">
                 <img src="MenuUi/ModeIcons/StraightThrough.png" alt="Straight Through" class="mode-icon">
                 <img src="MenuUi/ModeTexts/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
-                <div class="mode-description">Доберитесь до выхода, не погибнув</div>
+                <div class="mode-description">Доберитесь до выхода через толпы врагов</div>
             </div>
             
             <div class="mode-slide" data-mode="onslaught">
                 <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
                 <img src="MenuUi/ModeTexts/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
-                <div class="mode-description">Выживайте в бесконечных волнах врагов</div>
+                <div class="mode-description">Выживайте в волнах врагов. Враги телепортируются к вам если далеко</div>
             </div>
         </div>
         
@@ -2169,6 +2157,8 @@
                 this.avoidanceForce = new THREE.Vector2(0, 0);
                 this.damageEffectTimer = 0;
                 this.isTakingDamage = false;
+                this.teleportTimer = 0;
+                this.lastDistanceToPlayer = 0;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -2180,12 +2170,6 @@
                 this.sprite.position.set(this.x, 0.8, this.z);
                 this.sprite.scale.set(4.5, 4.5, 1);
                 scene.add(this.sprite);
-                
-                // Создаем эффект получения урона
-                this.damageEffect = document.createElement('div');
-                this.damageEffect.className = 'enemy-damage-effect';
-                document.body.appendChild(this.damageEffect);
-                this.updateDamageEffectPosition();
             }
             
             createEnemyTexture() {
@@ -2216,9 +2200,12 @@
                 // Обновляем эффект получения урона
                 if (this.isTakingDamage) {
                     this.damageEffectTimer += deltaTime;
-                    if (this.damageEffectTimer > 0.3) {
+                    if (this.damageEffectTimer > 1.0) { // 1 секунда эффекта
                         this.isTakingDamage = false;
-                        this.damageEffect.style.opacity = '0';
+                        this.updateSpriteTexture(); // Возвращаем нормальную текстуру
+                    } else {
+                        // Показываем красную текстуру
+                        this.showRedTexture();
                     }
                 }
                 
@@ -2226,12 +2213,14 @@
                 this.lastX = this.x;
                 this.lastZ = this.z;
                 
-                // Обновляем анимацию
-                this.animationTimer += deltaTime;
-                if (this.animationTimer > 0.3) {
-                    this.animationTimer = 0;
-                    this.spriteFrame = (this.spriteFrame + 1) % 2;
-                    this.updateSpriteTexture();
+                // Обновляем анимацию (только если не получаем урон)
+                if (!this.isTakingDamage) {
+                    this.animationTimer += deltaTime;
+                    if (this.animationTimer > 0.3) {
+                        this.animationTimer = 0;
+                        this.spriteFrame = (this.spriteFrame + 1) % 2;
+                        this.updateSpriteTexture();
+                    }
                 }
                 
                 // Обновляем кулдауны
@@ -2246,6 +2235,18 @@
                 const dx = playerX - this.x;
                 const dz = playerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
+                this.lastDistanceToPlayer = distance;
+                
+                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught)
+                if (currentGameMode === 'onslaught' && distance > 25) {
+                    this.teleportTimer += deltaTime;
+                    if (this.teleportTimer > 3.0) { // Телепортация каждые 3 секунды если далеко
+                        this.teleportToPlayer();
+                        this.teleportTimer = 0;
+                    }
+                } else {
+                    this.teleportTimer = 0;
+                }
                 
                 // ВСЕГДА преследуем игрока, независимо от расстояния
                 // Обновляем путь каждые 2 секунды или если путь пустой
@@ -2327,7 +2328,6 @@
                 
                 // Обновляем позицию спрайта
                 this.sprite.position.set(this.x, 0.8, this.z);
-                this.updateDamageEffectPosition();
                 
                 // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
@@ -2358,6 +2358,43 @@
                 if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
                     this.throwFireball(playerX, playerZ);
                     this.fireballCooldown = 5.0;
+                }
+            }
+            
+            // Телепортация к игроку
+            teleportToPlayer() {
+                // Находим свободную клетку рядом с игроком
+                const playerMazeX = Math.round((camera.position.x / CELL_SIZE) + maze[0].length/2);
+                const playerMazeZ = Math.round((camera.position.z / CELL_SIZE) + maze.length/2);
+                
+                let freeCells = [];
+                const searchRadius = 3;
+                
+                for (let z = playerMazeZ - searchRadius; z <= playerMazeZ + searchRadius; z++) {
+                    for (let x = playerMazeX - searchRadius; x <= playerMazeX + searchRadius; x++) {
+                        if (z >= 0 && z < maze.length && x >= 0 && x < maze[0].length) {
+                            if (maze[z][x] === 0) {
+                                const worldX = (x - maze[0].length/2) * CELL_SIZE;
+                                const worldZ = (z - maze.length/2) * CELL_SIZE;
+                                const distanceToPlayer = Math.sqrt(
+                                    (worldX - camera.position.x) * (worldX - camera.position.x) + 
+                                    (worldZ - camera.position.z) * (worldZ - camera.position.z)
+                                );
+                                
+                                if (distanceToPlayer > 5 && distanceToPlayer < 15) { // Не слишком близко и не слишком далеко
+                                    freeCells.push({x: worldX, z: worldZ});
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (freeCells.length > 0) {
+                    const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
+                    this.x = randomCell.x;
+                    this.z = randomCell.z;
+                    this.sprite.position.set(this.x, 0.8, this.z);
+                    this.path = []; // Сбрасываем путь
                 }
             }
             
@@ -2408,18 +2445,6 @@
             findAlternativePath() {
                 this.path = [];
                 this.pathUpdateTimer = 2.0; // Принудительно обновим путь в следующем кадре
-            }
-            
-            // Обновление позиции эффекта получения урона
-            updateDamageEffectPosition() {
-                const vector = new THREE.Vector3(this.x, 0.8, this.z);
-                vector.project(camera);
-                
-                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-                
-                this.damageEffect.style.left = (x - 50) + 'px';
-                this.damageEffect.style.top = (y - 50) + 'px';
             }
             
             checkWallCollision(x, z) {
@@ -2482,6 +2507,29 @@
                 };
             }
             
+            // Показ красной текстуры при получении урона
+            showRedTexture() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const context = canvas.getContext('2d');
+                
+                // Заливаем красным
+                context.fillStyle = 'rgba(255, 0, 0, 0.7)';
+                context.fillRect(0, 0, 64, 64);
+                
+                // Добавляем оригинальную текстуру поверх
+                const img = new Image();
+                img.src = `GameUi/Enemy/Imp/Front/${this.spriteFrame + 1}.png`;
+                img.onload = () => {
+                    context.globalCompositeOperation = 'multiply';
+                    context.drawImage(img, 0, 0, 64, 64);
+                    
+                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
+                    this.sprite.material.needsUpdate = true;
+                };
+            }
+            
             takeDamage(amount, distance) {
                 // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
                 let damage = 0;
@@ -2497,8 +2545,10 @@
                 // Применяем округленный урон
                 this.health -= damage;
                 
-                // Эффект получения урона
-                this.showDamageEffect();
+                // Эффект получения урона - КРАСНЫЙ на 1 СЕКУНДУ
+                this.isTakingDamage = true;
+                this.damageEffectTimer = 0;
+                this.showRedTexture();
                 
                 // Воспроизводим случайный звук получения урона
                 if (Math.random() > 0.5) {
@@ -2518,20 +2568,10 @@
                 }
             }
             
-            // Показ эффекта получения урона врагом
-            showDamageEffect() {
-                this.isTakingDamage = true;
-                this.damageEffectTimer = 0;
-                this.damageEffect.style.opacity = '0.6';
-            }
-            
             startDeath() {
                 this.isDying = true;
                 this.deathFrame = 1;
                 this.deathTimer = 0;
-                
-                // Убираем эффект урона
-                this.damageEffect.style.opacity = '0';
                 
                 // Воспроизводим случайный звук смерти
                 const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
@@ -2581,11 +2621,6 @@
             finalizeDeath() {
                 this.isAlive = false;
                 scene.remove(this.sprite);
-                
-                // Убираем эффект урона
-                if (this.damageEffect.parentNode) {
-                    this.damageEffect.parentNode.removeChild(this.damageEffect);
-                }
                 
                 const index = enemies.indexOf(this);
                 if (index > -1) {
@@ -2708,7 +2743,7 @@
         let enemies = [];
         let fireballs = [];
 
-        // Функция создания врагов
+        // Функция создания врагов - УЛУЧШЕННАЯ
         function createEnemies(count, mode = 'normal') {
             for (let i = 0; i < count; i++) {
                 let freeCells = [];
@@ -2722,14 +2757,14 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
-                            if (mode === 'onslaught') {
-                                // В режиме Onslaught враги появляются на расстоянии
-                                if (distance > 15 && distance < 25) {
+                            if (mode === 'onslaught' || mode === 'extermination') {
+                                // В режимах Onslaught и Extermination враги появляются НЕДАЛЕКО от игрока
+                                if (distance > 8 && distance < 20) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
-                            } else {
-                                // В других режимах враги появляются на расстоянии
-                                if (distance > 10) {
+                            } else if (mode === 'straight') {
+                                // В режиме Straight Through враги появляются ВЕЗДЕ (много врагов)
+                                if (distance > 5) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
                             }
@@ -2852,13 +2887,22 @@
             return false;
         }
 
-        // Система волн для режима Onslaught
+        // Система волн для режима Onslaught - ИСПРАВЛЕННАЯ
         function startWave(waveNumber) {
             currentWave = waveNumber;
             waveEnemiesKilled = 0;
             
-            // Количество врагов зависит от волны
-            waveEnemiesCount = 5 + waveNumber * 3;
+            // БАЛАНС: меньше врагов на первых волнах
+            if (waveNumber === 1) {
+                waveEnemiesCount = 2;
+            } else if (waveNumber === 2) {
+                waveEnemiesCount = 4;
+            } else if (waveNumber === 3) {
+                waveEnemiesCount = 6;
+            } else {
+                waveEnemiesCount = 5 + waveNumber * 2; // Постепенное увеличение
+            }
+            
             enemiesToSpawn = waveEnemiesCount;
             lastSpawnTime = 0;
             
@@ -2884,8 +2928,8 @@
             if (currentGameMode !== 'onslaught' || enemiesToSpawn <= 0) return;
             
             if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
-                // Спавним по 1-2 врага за раз
-                const spawnCount = Math.min(1 + Math.floor(Math.random() * 2), enemiesToSpawn);
+                // Спавним по 1 врагу за раз
+                const spawnCount = Math.min(1, enemiesToSpawn);
                 
                 let freeCells = [];
                 for (let y = 1; y < maze.length - 1; y++) {
@@ -2897,8 +2941,8 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
-                            // Враги появляются на расстоянии
-                            if (distance > 15 && distance < 25) {
+                            // Враги появляются НЕДАЛЕКО от игрока
+                            if (distance > 8 && distance < 20) {
                                 freeCells.push({x: worldX, z: worldZ});
                             }
                         }
@@ -3028,11 +3072,11 @@
             
             // Создаем врагов в зависимости от режима
             if (currentGameMode === 'extermination') {
-                createEnemies(8);
+                createEnemies(8, 'extermination'); // Враги появляются рядом
             } else if (currentGameMode === 'onslaught') {
                 startWave(1);
             } else if (currentGameMode === 'straight') {
-                createEnemies(5);
+                createEnemies(15, 'straight'); // МНОГО врагов в лабиринте
             }
             
             updateUI();
