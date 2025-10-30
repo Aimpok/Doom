@@ -321,17 +321,18 @@
             color: #44ff44;
         }
 
-        /* Эффект крови при получении урона */
+        /* Эффект получения урона */
         #damageEffect {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 0, 0, 0);
+            background: rgba(255, 0, 0, 0.5);
+            opacity: 0;
             pointer-events: none;
             z-index: 100;
-            transition: background 0.3s ease;
+            transition: opacity 0.3s;
             display: none;
         }
     </style>
@@ -404,7 +405,7 @@
         <div id="ammoDisplay">ПАТРОНЫ: 2/2</div>
     </div>
     
-    <!-- Эффект крови при получении урона -->
+    <!-- Эффект получения урона -->
     <div id="damageEffect"></div>
     
     <!-- FPS счетчик -->
@@ -803,393 +804,7 @@
         let isMouseDown = false;
         let autoShootInterval = null;
         let lastShootTime = 0;
-        const SHOOT_DELAY = 300;
-
-        // Система врагов
-        class Enemy {
-            constructor(x, z) {
-                this.x = x;
-                this.z = z;
-                this.health = 3;
-                this.speed = 0.03;
-                this.attackRange = 2.0;
-                this.fireballRange = 8.0;
-                this.lastAttackTime = 0;
-                this.attackCooldown = 2000;
-                this.fireballCooldown = 10000;
-                this.lastFireballTime = 0;
-                this.isMoving = false;
-                this.currentFrame = 1;
-                this.animationTimer = 0;
-                
-                // Загружаем текстуры для анимации
-                this.textures = [];
-                this.loadTextures();
-                
-                // Создаем материал и спрайт
-                this.spriteMaterial = new THREE.SpriteMaterial({ 
-                    map: null,
-                    transparent: true,
-                    fog: true
-                });
-                this.sprite = new THREE.Sprite(this.spriteMaterial);
-                this.sprite.scale.set(3, 3, 1);
-                this.sprite.position.set(this.x, 1.5, this.z);
-                scene.add(this.sprite);
-                
-                console.log('Создан враг на позиции:', this.x, this.z);
-            }
-            
-            loadTextures() {
-                const loader = new THREE.TextureLoader();
-                
-                // Загружаем оба кадра анимации
-                this.textures[1] = loader.load('GameUi/Enemy/Imp/Front1.png', (texture) => {
-                    texture.minFilter = THREE.LinearFilter;
-                    if (!this.textures[2]) return;
-                    this.startAnimation();
-                });
-                
-                this.textures[2] = loader.load('GameUi/Enemy/Imp/Front2.png', (texture) => {
-                    texture.minFilter = THREE.LinearFilter;
-                    if (!this.textures[1]) return;
-                    this.startAnimation();
-                });
-            }
-            
-            startAnimation() {
-                if (this.textures[1]) {
-                    this.spriteMaterial.map = this.textures[1];
-                    this.spriteMaterial.needsUpdate = true;
-                }
-            }
-            
-            updatePosition() {
-                this.sprite.position.set(this.x, 1.5, this.z);
-                
-                // Анимация ходьбы
-                if (this.isMoving && this.textures[1] && this.textures[2]) {
-                    this.animationTimer++;
-                    if (this.animationTimer >= 15) {
-                        this.animationTimer = 0;
-                        this.currentFrame = this.currentFrame === 1 ? 2 : 1;
-                        this.spriteMaterial.map = this.textures[this.currentFrame];
-                        this.spriteMaterial.needsUpdate = true;
-                    }
-                }
-                
-                // Поворачиваем спрайт к камере
-                this.sprite.lookAt(camera.position);
-            }
-            
-            findPathToPlayer() {
-                const playerX = camera.position.x;
-                const playerZ = camera.position.z;
-                
-                const dx = playerX - this.x;
-                const dz = playerZ - this.z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                
-                if (distance < 0.8) {
-                    this.isMoving = false;
-                    return;
-                }
-                
-                // Нормализуем направление
-                const dirX = dx / distance;
-                const dirZ = dz / distance;
-                
-                // Пробуем двигаться прямо к игроку
-                let newX = this.x + dirX * this.speed;
-                let newZ = this.z + dirZ * this.speed;
-                
-                // Проверяем коллизию
-                if (!checkCollision(newX, newZ)) {
-                    this.x = newX;
-                    this.z = newZ;
-                    this.isMoving = true;
-                    return;
-                }
-                
-                // Если прямой путь заблокирован, пробуем обойти
-                const directions = [
-                    [this.speed, 0], [-this.speed, 0], [0, this.speed], [0, -this.speed],
-                    [this.speed * 0.7, this.speed * 0.7], [this.speed * 0.7, -this.speed * 0.7], 
-                    [-this.speed * 0.7, this.speed * 0.7], [-this.speed * 0.7, -this.speed * 0.7]
-                ];
-                
-                for (let [dx, dz] of directions) {
-                    newX = this.x + dx;
-                    newZ = this.z + dz;
-                    
-                    if (!checkCollision(newX, newZ)) {
-                        this.x = newX;
-                        this.z = newZ;
-                        this.isMoving = true;
-                        return;
-                    }
-                }
-                
-                this.isMoving = false;
-            }
-            
-            attackPlayer() {
-                const currentTime = Date.now();
-                const distance = Math.sqrt(
-                    Math.pow(camera.position.x - this.x, 2) + 
-                    Math.pow(camera.position.z - this.z, 2)
-                );
-                
-                // Ближняя атака
-                if (distance <= this.attackRange && currentTime - this.lastAttackTime > this.attackCooldown) {
-                    takeDamage(10);
-                    this.lastAttackTime = currentTime;
-                    console.log('Враг атаковал в ближнем бою! Дистанция:', distance.toFixed(2));
-                }
-                
-                // Огненный шар
-                if (distance <= this.fireballRange && currentTime - this.lastFireballTime > this.fireballCooldown) {
-                    createFireball(this.x, this.z, camera.position.x, camera.position.z);
-                    this.lastFireballTime = currentTime;
-                    console.log('Враг бросил огненный шар! Дистанция:', distance.toFixed(2));
-                }
-            }
-            
-            takeDamage(damage, isCloseRange) {
-                const actualDamage = isCloseRange ? 3 : 1;
-                this.health -= actualDamage;
-                
-                if (enemyHitSound) {
-                    enemyHitSound.currentTime = 0;
-                    enemyHitSound.play();
-                }
-                
-                console.log(`Враг получил ${actualDamage} урона. Здоровье: ${this.health}`);
-                
-                if (this.health <= 0) {
-                    this.destroy();
-                    return true;
-                }
-                return false;
-            }
-            
-            destroy() {
-                scene.remove(this.sprite);
-                console.log('Враг уничтожен!');
-            }
-            
-            update() {
-                this.findPathToPlayer();
-                this.attackPlayer();
-                this.updatePosition();
-            }
-        }
-
-        // Система огненных шаров
-        class Fireball {
-            constructor(x, z, targetX, targetZ) {
-                this.x = x;
-                this.z = z;
-                this.startX = x;
-                this.startZ = z;
-                this.targetX = targetX;
-                this.targetZ = targetZ;
-                this.speed = 0.1;
-                this.active = true;
-                
-                // Направление движения
-                const dx = targetX - x;
-                const dz = targetZ - z;
-                const distance = Math.sqrt(dx * dx + dz * dz);
-                this.dirX = dx / distance;
-                this.dirZ = dz / distance;
-                
-                // Загружаем текстуру огненного шара
-                const loader = new THREE.TextureLoader();
-                this.spriteMap = loader.load('GameUi/Enemy/Imp/Fireball.png', (texture) => {
-                    texture.minFilter = THREE.LinearFilter;
-                });
-                
-                // Создаем спрайт для огненного шара
-                this.spriteMaterial = new THREE.SpriteMaterial({ 
-                    map: this.spriteMap,
-                    transparent: true,
-                    fog: true
-                });
-                this.sprite = new THREE.Sprite(this.spriteMaterial);
-                this.sprite.scale.set(2, 2, 1);
-                this.sprite.position.set(this.x, 1.5, this.z);
-                scene.add(this.sprite);
-                
-                this.rotation = 0;
-                console.log('Создан огненный шар');
-            }
-            
-            updatePosition() {
-                this.sprite.position.set(this.x, 1.5, this.z);
-                
-                // Вращение шара для 3D эффекта
-                this.rotation += 0.2;
-                this.sprite.rotation.z = this.rotation;
-                
-                // Поворачиваем к камере
-                this.sprite.lookAt(camera.position);
-            }
-            
-            update() {
-                if (!this.active) return;
-                
-                this.x += this.dirX * this.speed;
-                this.z += this.dirZ * this.speed;
-                
-                // Проверяем коллизию со стенами
-                if (checkCollision(this.x, this.z)) {
-                    console.log('Огненный шар столкнулся со стеной');
-                    this.destroy();
-                    return;
-                }
-                
-                // Проверяем попадание в игрока
-                const distanceToPlayer = Math.sqrt(
-                    Math.pow(camera.position.x - this.x, 2) + 
-                    Math.pow(camera.position.z - this.z, 2)
-                );
-                
-                if (distanceToPlayer < 2.0) {
-                    console.log('Огненный шар попал в игрока!');
-                    takeDamage(15);
-                    this.destroy();
-                    return;
-                }
-                
-                // Уничтожаем если улетел слишком далеко
-                const distanceFromStart = Math.sqrt(
-                    Math.pow(this.x - this.startX, 2) + 
-                    Math.pow(this.z - this.startZ, 2)
-                );
-                
-                if (distanceFromStart > 25) {
-                    this.destroy();
-                    return;
-                }
-                
-                this.updatePosition();
-            }
-            
-            destroy() {
-                this.active = false;
-                if (this.sprite && this.sprite.parent) {
-                    scene.remove(this.sprite);
-                }
-            }
-        }
-
-        // Массивы для управления врагами и шарами
-        let enemies = [];
-        let fireballs = [];
-
-        // Функция создания врагов
-        function createEnemies(count) {
-            enemies = [];
-            const freeCells = [];
-            
-            // Собираем все свободные клетки
-            for (let y = 1; y < maze.length - 1; y++) {
-                for (let x = 1; x < maze[y].length - 1; x++) {
-                    if (maze[y][x] === 0) {
-                        freeCells.push({
-                            x: (x - maze[0].length/2) * CELL_SIZE,
-                            z: (y - maze.length/2) * CELL_SIZE
-                        });
-                    }
-                }
-            }
-            
-            // Выбираем случайные позиции подальше от игрока
-            const playerX = camera.position.x;
-            const playerZ = camera.position.z;
-            
-            for (let i = 0; i < count && freeCells.length > 0; i++) {
-                let bestCell = null;
-                let maxDistance = 0;
-                
-                // Ищем клетку максимально удаленную от игрока
-                for (let j = 0; j < Math.min(10, freeCells.length); j++) {
-                    const randomIndex = Math.floor(Math.random() * freeCells.length);
-                    const cell = freeCells[randomIndex];
-                    const distance = Math.sqrt(
-                        Math.pow(cell.x - playerX, 2) + 
-                        Math.pow(cell.z - playerZ, 2)
-                    );
-                    
-                    if (distance > maxDistance) {
-                        maxDistance = distance;
-                        bestCell = cell;
-                    }
-                }
-                
-                if (bestCell) {
-                    const enemy = new Enemy(bestCell.x, bestCell.z);
-                    enemies.push(enemy);
-                    console.log(`Создан враг ${i+1} на позиции: ${bestCell.x.toFixed(2)}, ${bestCell.z.toFixed(2)}`);
-                    
-                    // Удаляем использованную клетку
-                    const index = freeCells.findIndex(cell => 
-                        cell.x === bestCell.x && cell.z === bestCell.z
-                    );
-                    if (index > -1) {
-                        freeCells.splice(index, 1);
-                    }
-                }
-            }
-            console.log(`Всего создано врагов: ${enemies.length}`);
-        }
-
-        // Функция создания огненного шара
-        function createFireball(x, z, targetX, targetZ) {
-            const fireball = new Fireball(x, z, targetX, targetZ);
-            fireballs.push(fireball);
-        }
-
-        // Функция получения урона игроком
-        function takeDamage(amount) {
-            hp -= amount;
-            if (hp < 0) hp = 0;
-            updateUI();
-            
-            if (playerHitSound) {
-                playerHitSound.currentTime = 0;
-                playerHitSound.play();
-            }
-            
-            console.log(`Игрок получил ${amount} урона. HP: ${hp}`);
-            
-            // Эффект крови
-            const damageEffect = document.getElementById('damageEffect');
-            damageEffect.style.display = 'block';
-            damageEffect.style.background = 'rgba(255, 0, 0, 0.6)';
-            
-            setTimeout(() => {
-                damageEffect.style.background = 'rgba(255, 0, 0, 0.3)';
-                setTimeout(() => {
-                    damageEffect.style.background = 'rgba(255, 0, 0, 0)';
-                    setTimeout(() => {
-                        damageEffect.style.display = 'none';
-                    }, 200);
-                }, 200);
-            }, 200);
-            
-            // Проверка смерти игрока
-            if (hp <= 0) {
-                gameOver();
-            }
-        }
-
-        // Функция завершения игры
-        function gameOver() {
-            alert('Игра окончена! Вы погибли.');
-            location.reload();
-        }
+        const SHOOT_DELAY = 300; // Задержка между выстрелами в мс
 
         // Предзагрузка изображений оружия
         const gunImages = {
@@ -1204,18 +819,6 @@
         // Функция предзагрузки изображений
         function preloadWeaponImages() {
             Object.values(gunImages).forEach(src => {
-                const img = new Image();
-                img.src = src;
-            });
-            
-            // Предзагрузка изображений врагов
-            const enemyImages = [
-                'GameUi/Enemy/Imp/Front1.png',
-                'GameUi/Enemy/Imp/Front2.png',
-                'GameUi/Enemy/Imp/Fireball.png'
-            ];
-            
-            enemyImages.forEach(src => {
                 const img = new Image();
                 img.src = src;
             });
@@ -1241,7 +844,7 @@
             enemyHitSound.preload = 'auto';
             playerHitSound.preload = 'auto';
             
-            // Создаем список музыкальных треков
+            // Создаем список музыкальных треков (только 3 трека)
             musicTracks = [
                 'Sounds/MenuMusic.mp3',
                 'Sounds/MenuMusic1.mp3',
@@ -1276,10 +879,12 @@
             // Создаем новый аудио элемент
             currentMusic = new Audio(musicTracks[currentTrackIndex]);
             currentMusic.volume = musicVolume;
-            currentMusic.loop = false;
+            currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
             
+            // Когда трек заканчивается, играем следующий
             currentMusic.addEventListener('ended', playNextTrack);
             
+            // Пытаемся воспроизвести
             const playPromise = currentMusic.play();
             
             if (playPromise !== undefined) {
@@ -1288,6 +893,7 @@
                     musicStarted = true;
                 }).catch(error => {
                     console.log('Автовоспроизведение музыки заблокировано:', error);
+                    // Пытаемся снова при взаимодействии
                     document.addEventListener('click', startMusicOnInteraction, { once: true });
                     document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
                 });
@@ -1335,8 +941,9 @@
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
         }
 
-        // Анимация выстрела
+        // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playShootAnimation() {
+            // Проверяем возможность стрельбы
             if (!canShoot || isReloading || isShooting || ammo <= 0) {
                 return;
             }
@@ -1346,29 +953,32 @@
             ammo--;
             updateUI();
             
+            // Сразу меняем на первый кадр выстрела
             weapon.src = gunImages.shoot1;
             
+            // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
-                shootSound.play();
+                shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
-            // Проверяем попадание во врагов
-            checkEnemyHit();
-            
+            // Второй кадр выстрела
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.shoot2;
             }, 50);
             
+            // Возврат к нормальному состоянию
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.normal;
                 isShooting = false;
                 
+                // Если патроны кончились - перезарядка
                 if (ammo <= 0) {
                     playReloadAnimation();
                 } else {
+                    // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
                     }, 300);
@@ -1376,55 +986,7 @@
             }, 150);
         }
 
-        // Проверка попадания во врагов
-        function checkEnemyHit() {
-            const playerX = camera.position.x;
-            const playerZ = camera.position.z;
-            const playerYaw = yaw;
-            
-            // Направление выстрела (вперед от камеры)
-            const shootDirection = new THREE.Vector3(0, 0, -1);
-            shootDirection.applyEuler(new THREE.Euler(0, playerYaw, 0));
-            
-            let closestEnemy = null;
-            let closestDistance = Infinity;
-            
-            // Ищем ближайшего врага в направлении выстрела
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                const enemyX = enemy.x;
-                const enemyZ = enemy.z;
-                
-                // Вектор от игрока к врагу
-                const toEnemy = new THREE.Vector3(enemyX - playerX, 0, enemyZ - playerZ);
-                const distance = toEnemy.length();
-                
-                // Угол между направлением выстрела и направлением к врагу
-                toEnemy.normalize();
-                const dotProduct = shootDirection.dot(toEnemy);
-                
-                // Если враг в поле зрения (в пределах 60 градусов) и на расстоянии менее 20 единиц
-                if (dotProduct > 0.5 && distance < 20) {
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
-                        closestEnemy = { enemy, index: i, distance, dotProduct };
-                    }
-                }
-            }
-            
-            // Если нашли подходящего врага - наносим урон
-            if (closestEnemy) {
-                const isCloseRange = closestEnemy.distance < 4.0;
-                const killed = closestEnemy.enemy.takeDamage(1, isCloseRange);
-                
-                if (killed) {
-                    enemies.splice(closestEnemy.index, 1);
-                }
-                console.log(`Попадание по врагу! Дистанция: ${closestEnemy.distance.toFixed(2)}, Угол: ${(Math.acos(closestEnemy.dotProduct) * 180/Math.PI).toFixed(1)}°`);
-            }
-        }
-
-        // Анимация перезарядки
+        // Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playReloadAnimation() {
             if (isReloading || ammo >= maxAmmo) {
                 return;
@@ -1433,26 +995,31 @@
             isReloading = true;
             canShoot = false;
             
+            // Звук перезарядки
             if (reloadSound) {
                 reloadSound.currentTime = 0;
-                reloadSound.play();
+                reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
             }
             
+            // Первый кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload1;
             }, 100);
             
+            // Второй кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload2;
             }, 300);
             
+            // Третий кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload3;
             }, 500);
             
+            // Завершение перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.normal;
@@ -1473,7 +1040,7 @@
                     playShootAnimation();
                     lastShootTime = currentTime;
                 }
-            }, 100);
+            }, 100); // Проверяем каждые 100мс
         }
 
         function stopAutoShoot() {
@@ -1822,6 +1389,458 @@
             return false;
         }
 
+        // КЛАСС ВРАГА
+        class Enemy {
+            constructor(x, z) {
+                this.x = x;
+                this.z = z;
+                this.health = 3;
+                this.speed = 2.0;
+                this.attackRange = 2.0;
+                this.attackCooldown = 0;
+                this.fireballCooldown = 0;
+                this.isAlive = true;
+                this.spriteFrame = 0;
+                this.animationTimer = 0;
+                this.lastPlayerX = 0;
+                this.lastPlayerZ = 0;
+                
+                // Создаем спрайт врага
+                this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: this.createEnemyTexture(),
+                    transparent: true,
+                    fog: true
+                }));
+                
+                this.sprite.position.set(this.x, 2, this.z);
+                this.sprite.scale.set(3, 3, 1);
+                scene.add(this.sprite);
+            }
+            
+            createEnemyTexture() {
+                // Создаем канвас для текстуры врага
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 64;
+                const context = canvas.getContext('2d');
+                
+                // Загружаем изображение врага
+                const img = new Image();
+                img.src = 'GameUi/Enemy/Imp/Front/1.png'; // Первый кадр анимации
+                
+                // Рисуем изображение на канвасе
+                context.drawImage(img, 0, 0, 64, 64);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+            
+            update(deltaTime, playerX, playerZ) {
+                if (!this.isAlive) return;
+                
+                // Обновляем анимацию
+                this.animationTimer += deltaTime;
+                if (this.animationTimer > 0.3) {
+                    this.animationTimer = 0;
+                    this.spriteFrame = (this.spriteFrame + 1) % 2;
+                    this.updateSpriteTexture();
+                }
+                
+                // Обновляем кулдауны
+                if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
+                if (this.fireballCooldown > 0) this.fireballCooldown -= deltaTime;
+                
+                // Сохраняем позицию игрока
+                this.lastPlayerX = playerX;
+                this.lastPlayerZ = playerZ;
+                
+                // Вычисляем направление к игроку
+                const dx = playerX - this.x;
+                const dz = playerZ - this.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // Если игрок слишком далеко, не двигаемся
+                if (distance > 20) return;
+                
+                // Нормализуем направление
+                const dirX = dx / distance;
+                const dirZ = dz / distance;
+                
+                // Проверяем, можем ли мы двигаться напрямую к игроку
+                const newX = this.x + dirX * this.speed * deltaTime;
+                const newZ = this.z + dirZ * this.speed * deltaTime;
+                
+                // Проверяем коллизии со стенами
+                if (!this.checkWallCollision(newX, newZ)) {
+                    this.x = newX;
+                    this.z = newZ;
+                } else {
+                    // Если есть стена, пытаемся обойти ее
+                    this.avoidWalls(playerX, playerZ, deltaTime);
+                }
+                
+                // Обновляем позицию спрайта
+                this.sprite.position.set(this.x, 2, this.z);
+                
+                // Поворачиваем спрайт к камере
+                this.sprite.lookAt(camera.position);
+                
+                // Проверяем атаку
+                if (distance < this.attackRange && this.attackCooldown <= 0) {
+                    this.meleeAttack();
+                }
+                
+                // Проверяем бросок файрбола
+                if (distance < 15 && this.fireballCooldown <= 0) {
+                    this.throwFireball(playerX, playerZ);
+                }
+            }
+            
+            checkWallCollision(x, z) {
+                const enemyRadius = 0.5;
+                const points = [
+                    [x - enemyRadius, z],
+                    [x + enemyRadius, z],
+                    [x, z - enemyRadius],
+                    [x, z + enemyRadius]
+                ];
+                
+                for (let [px, pz] of points) {
+                    const mazeX = Math.round((px / CELL_SIZE) + maze[0].length/2);
+                    const mazeZ = Math.round((pz / CELL_SIZE) + maze.length/2);
+                    
+                    if (mazeZ >= 0 && mazeZ < maze.length && 
+                        mazeX >= 0 && mazeX < maze[0].length) {
+                        if (maze[mazeZ][mazeX] === 1) {
+                            return true;
+                        }
+                    } else {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            avoidWalls(playerX, playerZ, deltaTime) {
+                // Простой алгоритм обхода стен - двигаемся в случайном направлении
+                const angles = [0, Math.PI/2, Math.PI, -Math.PI/2];
+                const randomAngle = angles[Math.floor(Math.random() * angles.length)];
+                
+                const testX = this.x + Math.cos(randomAngle) * this.speed * deltaTime;
+                const testZ = this.z + Math.sin(randomAngle) * this.speed * deltaTime;
+                
+                if (!this.checkWallCollision(testX, testZ)) {
+                    this.x = testX;
+                    this.z = testZ;
+                }
+            }
+            
+            meleeAttack() {
+                // Ближняя атака
+                this.attackCooldown = 2.0; // 2 секунды перезарядки
+                
+                // Проверяем, находится ли игрок в зоне атаки
+                const dx = this.lastPlayerX - this.x;
+                const dz = this.lastPlayerZ - this.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < this.attackRange) {
+                    // Наносим урон игроку
+                    takeDamage(10);
+                }
+            }
+            
+            throwFireball(playerX, playerZ) {
+                // Бросок файрбола
+                this.fireballCooldown = 10.0; // 10 секунд перезарядки
+                
+                // Создаем файрбол
+                const fireball = new Fireball(this.x, this.z, playerX, playerZ);
+                fireballs.push(fireball);
+            }
+            
+            updateSpriteTexture() {
+                // Обновляем текстуру спрайта для анимации
+                const frame = this.spriteFrame + 1; // 1 или 2
+                const img = new Image();
+                img.src = `GameUi/Enemy/Imp/Front/${frame}.png`;
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const context = canvas.getContext('2d');
+                    context.drawImage(img, 0, 0, 64, 64);
+                    
+                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
+                    this.sprite.material.needsUpdate = true;
+                };
+            }
+            
+            takeDamage(amount, isCloseRange) {
+                // Наносим урон врагу
+                if (isCloseRange) {
+                    this.health -= amount; // В близи убиваем с одного выстрела
+                } else {
+                    this.health -= amount / 3; // Из далека нужно 3 выстрела
+                }
+                
+                // Воспроизводим звук попадания
+                if (enemyHitSound) {
+                    enemyHitSound.currentTime = 0;
+                    enemyHitSound.play().catch(e => console.log('Не удалось воспроизвести звук попадания по врагу'));
+                }
+                
+                if (this.health <= 0) {
+                    this.die();
+                }
+            }
+            
+            die() {
+                this.isAlive = false;
+                scene.remove(this.sprite);
+                
+                // Удаляем врага из массива
+                const index = enemies.indexOf(this);
+                if (index > -1) {
+                    enemies.splice(index, 1);
+                }
+            }
+        }
+
+        // КЛАСС ФАЙРБОЛА
+        class Fireball {
+            constructor(x, z, targetX, targetZ) {
+                this.x = x;
+                this.z = z;
+                this.speed = 5.0;
+                this.isActive = true;
+                
+                // Вычисляем направление к цели
+                const dx = targetX - x;
+                const dz = targetZ - z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                this.dirX = dx / distance;
+                this.dirZ = dz / distance;
+                
+                // Создаем спрайт файрбола
+                this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+                    map: this.createFireballTexture(),
+                    transparent: true,
+                    fog: true
+                }));
+                
+                this.sprite.position.set(this.x, 2, this.z);
+                this.sprite.scale.set(1, 1, 1);
+                scene.add(this.sprite);
+                
+                // Вращение файрбола
+                this.rotation = 0;
+            }
+            
+            createFireballTexture() {
+                // Создаем текстуру файрбола
+                const canvas = document.createElement('canvas');
+                canvas.width = 32;
+                canvas.height = 32;
+                const context = canvas.getContext('2d');
+                
+                // Рисуем простой огненный шар
+                const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, 'yellow');
+                gradient.addColorStop(0.5, 'orange');
+                gradient.addColorStop(1, 'red');
+                
+                context.fillStyle = gradient;
+                context.beginPath();
+                context.arc(16, 16, 16, 0, Math.PI * 2);
+                context.fill();
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
+            }
+            
+            update(deltaTime) {
+                if (!this.isActive) return;
+                
+                // Двигаем файрбол
+                this.x += this.dirX * this.speed * deltaTime;
+                this.z += this.dirZ * this.speed * deltaTime;
+                
+                // Обновляем позицию спрайта
+                this.sprite.position.set(this.x, 2, this.z);
+                
+                // Вращаем файрбол для 3D эффекта
+                this.rotation += 10 * deltaTime;
+                this.sprite.rotation.z = this.rotation;
+                
+                // Проверяем коллизии со стенами
+                if (this.checkWallCollision()) {
+                    this.destroy();
+                    return;
+                }
+                
+                // Проверяем коллизии с игроком
+                const dx = this.x - camera.position.x;
+                const dz = this.z - camera.position.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                if (distance < 1.5) {
+                    this.destroy();
+                    takeDamage(15); // Урон от файрбола
+                }
+            }
+            
+            checkWallCollision() {
+                const fireballRadius = 0.3;
+                const points = [
+                    [this.x - fireballRadius, this.z],
+                    [this.x + fireballRadius, this.z],
+                    [this.x, this.z - fireballRadius],
+                    [this.x, this.z + fireballRadius]
+                ];
+                
+                for (let [px, pz] of points) {
+                    const mazeX = Math.round((px / CELL_SIZE) + maze[0].length/2);
+                    const mazeZ = Math.round((pz / CELL_SIZE) + maze.length/2);
+                    
+                    if (mazeZ >= 0 && mazeZ < maze.length && 
+                        mazeX >= 0 && mazeX < maze[0].length) {
+                        if (maze[mazeZ][mazeX] === 1) {
+                            return true;
+                        }
+                    } else {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            destroy() {
+                this.isActive = false;
+                scene.remove(this.sprite);
+                
+                // Удаляем файрбол из массива
+                const index = fireballs.indexOf(this);
+                if (index > -1) {
+                    fireballs.splice(index, 1);
+                }
+            }
+        }
+
+        // Массивы для врагов и файрболов
+        let enemies = [];
+        let fireballs = [];
+
+        // Функция создания врагов
+        function createEnemies(count) {
+            for (let i = 0; i < count; i++) {
+                let freeCells = [];
+                for (let y = 1; y < maze.length - 1; y++) {
+                    for (let x = 1; x < maze[y].length - 1; x++) {
+                        if (maze[y][x] === 0) {
+                            // Проверяем, что враг не слишком близко к игроку
+                            const worldX = (x - maze[0].length/2) * CELL_SIZE;
+                            const worldZ = (y - maze.length/2) * CELL_SIZE;
+                            const dx = worldX - camera.position.x;
+                            const dz = worldZ - camera.position.z;
+                            const distance = Math.sqrt(dx * dx + dz * dz);
+                            
+                            if (distance > 10) {
+                                freeCells.push({x: worldX, z: worldZ});
+                            }
+                        }
+                    }
+                }
+                
+                if (freeCells.length > 0) {
+                    const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
+                    enemies.push(new Enemy(randomCell.x, randomCell.z));
+                }
+            }
+        }
+
+        // Функция получения урона игроком
+        function takeDamage(amount) {
+            hp -= amount;
+            if (hp < 0) hp = 0;
+            
+            updateUI();
+            
+            // Воспроизводим звук получения урона
+            if (playerHitSound) {
+                playerHitSound.currentTime = 0;
+                playerHitSound.play().catch(e => console.log('Не удалось воспроизвести звук получения урона'));
+            }
+            
+            // Показываем эффект получения урона
+            showDamageEffect();
+            
+            // Проверяем смерть игрока
+            if (hp <= 0) {
+                gameOver();
+            }
+        }
+
+        // Функция показа эффекта получения урона
+        function showDamageEffect() {
+            const damageEffect = document.getElementById('damageEffect');
+            damageEffect.style.display = 'block';
+            damageEffect.style.opacity = '0.7';
+            
+            // Плавно убираем эффект
+            setTimeout(() => {
+                damageEffect.style.opacity = '0';
+                setTimeout(() => {
+                    damageEffect.style.display = 'none';
+                }, 300);
+            }, 300);
+        }
+
+        // Функция завершения игры
+        function gameOver() {
+            alert('Игра окончена! Вы погибли.');
+            // Перезагружаем страницу для рестарта
+            location.reload();
+        }
+
+        // Функция проверки попадания по врагам
+        function checkEnemyHit() {
+            // Создаем луч из камеры в направлении взгляда
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            
+            // Проверяем попадание по врагам
+            for (let enemy of enemies) {
+                if (!enemy.isAlive) continue;
+                
+                // Создаем bounding sphere для врага
+                const enemySphere = new THREE.Sphere(
+                    new THREE.Vector3(enemy.x, 2, enemy.z),
+                    1.5
+                );
+                
+                // Проверяем пересечение луча со сферой
+                if (raycaster.ray.intersectsSphere(enemySphere)) {
+                    // Определяем дистанцию до врага
+                    const dx = enemy.x - camera.position.x;
+                    const dz = enemy.z - camera.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    // Определяем, является ли выстрел ближним или дальним
+                    const isCloseRange = distance < 5;
+                    
+                    // Наносим урон врагу
+                    enemy.takeDamage(1, isCloseRange);
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+
         // Анимация с delta time для независимой от FPS скорости
         const BASE_MOVE_SPEED = 15.0;
         
@@ -1868,14 +1887,18 @@
             camera.position.z = newZ;
             
             // Обновляем врагов
-            enemies.forEach(enemy => enemy.update());
+            for (let enemy of enemies) {
+                enemy.update(deltaTime, camera.position.x, camera.position.z);
+            }
             
-            // Обновляем огненные шары
+            // Обновляем файрболы
             for (let i = fireballs.length - 1; i >= 0; i--) {
-                fireballs[i].update();
-                if (!fireballs[i].active) {
-                    fireballs.splice(i, 1);
-                }
+                fireballs[i].update(deltaTime);
+            }
+            
+            // Проверяем попадание при выстреле
+            if (isShooting && !isShooting) {
+                checkEnemyHit();
             }
             
             renderer.render(scene, camera);
@@ -1893,6 +1916,7 @@
             document.getElementById('optionsMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
+            document.getElementById('damageEffect').style.display = 'none';
             
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
@@ -1910,7 +1934,7 @@
             stopAutoShoot();
             
             // Создаем врагов
-            createEnemies(5);
+            createEnemies(5); // 5 врагов
             
             updateUI();
             
@@ -1974,7 +1998,7 @@
         loadTextures().then(() => {
             const materials = createMaterials();
             createScene(materials);
-            initAudio();
+            initAudio(); // Инициализируем аудио систему
             initControls();
             initMenu();
             weapon.style.display = 'none';
@@ -1985,7 +2009,7 @@
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
-            initAudio();
+            initAudio(); // Инициализируем аудио систему даже при ошибках
             initControls();
             initMenu();
             weapon.style.display = 'none';
