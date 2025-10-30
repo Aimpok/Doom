@@ -388,12 +388,19 @@
             opacity: 0.5;
             transform: scale(0.8);
             cursor: pointer;
+            background: rgba(60, 60, 60, 0.9);
+            border: 4px solid #444;
+            border-radius: 15px;
+            padding: 2vmin;
+            box-sizing: border-box;
         }
 
         .mode-slide.active {
             opacity: 1;
             transform: scale(1);
             z-index: 10;
+            border-color: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
         }
 
         .mode-slide.left {
@@ -405,8 +412,8 @@
         }
 
         .mode-icon {
-            width: 60vmin;
-            height: 25vmin;
+            width: 40vmin;
+            height: 20vmin;
             object-fit: cover;
             margin-bottom: 2vmin;
             pointer-events: none;
@@ -415,29 +422,34 @@
         }
 
         .mode-name {
-            width: 50vmin;
-            max-width: 500px;
+            width: 40vmin;
+            max-width: 400px;
             object-fit: contain;
             pointer-events: none;
+            margin-bottom: 2vmin;
         }
 
         .mode-description {
             color: white;
-            font-size: 2.5vmin;
+            font-size: 2.2vmin;
             text-align: center;
-            margin-top: 1vmin;
             background: rgba(0, 0, 0, 0.8);
             padding: 2vmin;
             border-radius: 10px;
-            width: 60vmin;
+            width: 90%;
             pointer-events: none;
             border: 1px solid #555;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .carousel-nav {
             display: flex;
             gap: 3vmin;
             margin-top: 3vmin;
+            align-items: center;
         }
 
         .nav-arrow {
@@ -456,8 +468,8 @@
         }
 
         .start-mode-button {
-            width: 50vmin;
-            max-width: 500px;
+            width: 40vmin;
+            max-width: 400px;
             min-width: 200px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -465,7 +477,6 @@
             -webkit-user-drag: none;
             user-drag: none;
             pointer-events: auto;
-            margin-top: 3vmin;
         }
 
         .start-mode-button:hover {
@@ -555,7 +566,7 @@
             <div class="mode-slide" data-mode="extermination">
                 <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
                 <img src="MenuUi/ModeTexts/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
-                <div class="mode-description">Уничтожьте 20 врагов. Враги постоянно ищут вас и появляются рядом</div>
+                <div class="mode-description">Уничтожьте 40 врагов. Враги постоянно ищут вас и появляются рядом</div>
             </div>
             
             <div class="mode-slide" data-mode="straight">
@@ -572,9 +583,9 @@
         </div>
         
         <div class="carousel-nav">
-            <img src="MenuUi/LeftArrow.png" alt="Назад" class="nav-arrow" id="prevMode">
+            <img src="MenuUi/PreviousText.png" alt="Назад" class="nav-arrow" id="prevMode">
             <img src="MenuUi/StartGameText.png" alt="Начать игру" class="start-mode-button" id="startModeButton">
-            <img src="MenuUi/RightArrow.png" alt="Вперед" class="nav-arrow" id="nextMode">
+            <img src="MenuUi/NextText.png" alt="Вперед" class="nav-arrow" id="nextMode">
         </div>
         
         <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainButton">
@@ -638,7 +649,7 @@
     
     <!-- Дополнительная статистика для режимов -->
     <div id="modeStats">
-        <div id="enemiesKilled">Убито: 0/20</div>
+        <div id="enemiesKilled">Убито: 0/40</div>
         <div id="waveCounter">Волна: 1</div>
     </div>
     
@@ -736,7 +747,7 @@
         // Переменные для режимов игры
         let currentGameMode = null;
         let enemiesKilled = 0;
-        let targetEnemies = 20;
+        let targetEnemies = 40; // Увеличил до 40
         let currentWave = 1;
         let exitArea = null;
         let waveSpawnTimer = 0;
@@ -2197,30 +2208,18 @@
                     return;
                 }
                 
-                // Обновляем эффект получения урона
-                if (this.isTakingDamage) {
-                    this.damageEffectTimer += deltaTime;
-                    if (this.damageEffectTimer > 1.0) { // 1 секунда эффекта
-                        this.isTakingDamage = false;
-                        this.updateSpriteTexture(); // Возвращаем нормальную текстуру
-                    } else {
-                        // Показываем красную текстуру
-                        this.showRedTexture();
-                    }
-                }
+                // УБРАЛ эффект получения урона (красный цвет)
                 
                 // Сохраняем предыдущую позицию для обнаружения застреваний
                 this.lastX = this.x;
                 this.lastZ = this.z;
                 
-                // Обновляем анимацию (только если не получаем урон)
-                if (!this.isTakingDamage) {
-                    this.animationTimer += deltaTime;
-                    if (this.animationTimer > 0.3) {
-                        this.animationTimer = 0;
-                        this.spriteFrame = (this.spriteFrame + 1) % 2;
-                        this.updateSpriteTexture();
-                    }
+                // Обновляем анимацию
+                this.animationTimer += deltaTime;
+                if (this.animationTimer > 0.3) {
+                    this.animationTimer = 0;
+                    this.spriteFrame = (this.spriteFrame + 1) % 2;
+                    this.updateSpriteTexture();
                 }
                 
                 // Обновляем кулдауны
@@ -2237,10 +2236,10 @@
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 this.lastDistanceToPlayer = distance;
                 
-                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught)
-                if (currentGameMode === 'onslaught' && distance > 25) {
+                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught) - ИСПРАВЛЕНО
+                if (currentGameMode === 'onslaught' && distance > 70) { // Увеличил дистанцию до 70
                     this.teleportTimer += deltaTime;
-                    if (this.teleportTimer > 3.0) { // Телепортация каждые 3 секунды если далеко
+                    if (this.teleportTimer > 20.0) { // Увеличил интервал до 20 секунд
                         this.teleportToPlayer();
                         this.teleportTimer = 0;
                     }
@@ -2361,14 +2360,14 @@
                 }
             }
             
-            // Телепортация к игроку
+            // Телепортация к игроку - ИСПРАВЛЕНО
             teleportToPlayer() {
-                // Находим свободную клетку рядом с игроком
+                // Находим свободную клетку рядом с игроком на расстоянии 25 единиц
                 const playerMazeX = Math.round((camera.position.x / CELL_SIZE) + maze[0].length/2);
                 const playerMazeZ = Math.round((camera.position.z / CELL_SIZE) + maze.length/2);
                 
                 let freeCells = [];
-                const searchRadius = 3;
+                const searchRadius = 5;
                 
                 for (let z = playerMazeZ - searchRadius; z <= playerMazeZ + searchRadius; z++) {
                     for (let x = playerMazeX - searchRadius; x <= playerMazeX + searchRadius; x++) {
@@ -2381,7 +2380,8 @@
                                     (worldZ - camera.position.z) * (worldZ - camera.position.z)
                                 );
                                 
-                                if (distanceToPlayer > 5 && distanceToPlayer < 15) { // Не слишком близко и не слишком далеко
+                                // Телепортируем на расстоянии 25 единиц от игрока
+                                if (distanceToPlayer > 20 && distanceToPlayer < 30) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
                             }
@@ -2507,29 +2507,6 @@
                 };
             }
             
-            // Показ красной текстуры при получении урона
-            showRedTexture() {
-                const canvas = document.createElement('canvas');
-                canvas.width = 64;
-                canvas.height = 64;
-                const context = canvas.getContext('2d');
-                
-                // Заливаем красным
-                context.fillStyle = 'rgba(255, 0, 0, 0.7)';
-                context.fillRect(0, 0, 64, 64);
-                
-                // Добавляем оригинальную текстуру поверх
-                const img = new Image();
-                img.src = `GameUi/Enemy/Imp/Front/${this.spriteFrame + 1}.png`;
-                img.onload = () => {
-                    context.globalCompositeOperation = 'multiply';
-                    context.drawImage(img, 0, 0, 64, 64);
-                    
-                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
-                    this.sprite.material.needsUpdate = true;
-                };
-            }
-            
             takeDamage(amount, distance) {
                 // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
                 let damage = 0;
@@ -2545,10 +2522,7 @@
                 // Применяем округленный урон
                 this.health -= damage;
                 
-                // Эффект получения урона - КРАСНЫЙ на 1 СЕКУНДУ
-                this.isTakingDamage = true;
-                this.damageEffectTimer = 0;
-                this.showRedTexture();
+                // УБРАЛ эффект получения урона (красный цвет)
                 
                 // Воспроизводим случайный звук получения урона
                 if (Math.random() > 0.5) {
@@ -3072,7 +3046,7 @@
             
             // Создаем врагов в зависимости от режима
             if (currentGameMode === 'extermination') {
-                createEnemies(8, 'extermination'); // Враги появляются рядом
+                createEnemies(40, 'extermination'); // Увеличил до 40 врагов
             } else if (currentGameMode === 'onslaught') {
                 startWave(1);
             } else if (currentGameMode === 'straight') {
