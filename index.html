@@ -3,7 +3,6 @@
 <head>
     <title>3D Лабиринт</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { 
             margin: 0; 
@@ -336,6 +335,187 @@
             transition: opacity 0.3s;
             display: none;
         }
+
+        /* Экран выбора режима игры */
+        #modeSelectMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('MenuUi/MenuBg.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 120;
+        }
+
+        .mode-select-title {
+            width: 60vmin;
+            max-width: 600px;
+            min-width: 250px;
+            margin-bottom: 3vmin;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            user-drag: none;
+            pointer-events: none;
+        }
+
+        .mode-carousel {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90%;
+            max-width: 1200px;
+            height: 60vmin;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-slide {
+            position: absolute;
+            width: 70vmin;
+            height: 50vmin;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s ease;
+            opacity: 0.5;
+            transform: scale(0.8);
+            cursor: pointer;
+        }
+
+        .mode-slide.active {
+            opacity: 1;
+            transform: scale(1);
+            z-index: 10;
+        }
+
+        .mode-slide.left {
+            transform: translateX(-80%) scale(0.7);
+        }
+
+        .mode-slide.right {
+            transform: translateX(80%) scale(0.7);
+        }
+
+        .mode-icon {
+            width: 40vmin;
+            height: 30vmin;
+            object-fit: contain;
+            margin-bottom: 2vmin;
+            pointer-events: none;
+        }
+
+        .mode-name {
+            width: 50vmin;
+            max-width: 500px;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .mode-description {
+            color: white;
+            font-size: 2.5vmin;
+            text-align: center;
+            margin-top: 2vmin;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1.5vmin;
+            border-radius: 5px;
+            max-width: 80%;
+            pointer-events: none;
+        }
+
+        .carousel-nav {
+            display: flex;
+            gap: 3vmin;
+            margin-top: 3vmin;
+        }
+
+        .nav-arrow {
+            width: 15vmin;
+            max-width: 150px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            user-drag: none;
+            pointer-events: auto;
+        }
+
+        .nav-arrow:hover {
+            transform: scale(1.1);
+        }
+
+        .start-mode-button {
+            width: 50vmin;
+            max-width: 500px;
+            min-width: 200px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            user-drag: none;
+            pointer-events: auto;
+            margin-top: 3vmin;
+        }
+
+        .start-mode-button:hover {
+            transform: scale(1.05);
+        }
+
+        /* Дополнительные UI элементы для режимов */
+        #modeStats {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            color: white;
+            font-size: 20px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 45;
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #exitArea {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 255, 0, 0.3);
+            border: 2px dashed rgba(0, 255, 0, 0.7);
+            display: none;
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        #waveInfo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 36px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -348,6 +528,39 @@
             <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
         <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
+    </div>
+    
+    <!-- Меню выбора режима -->
+    <div id="modeSelectMenu">
+        <img src="MenuUi/SelectModeText.png" alt="ВЫБОР РЕЖИМА" class="mode-select-title">
+        
+        <div class="mode-carousel">
+            <div class="mode-slide" data-mode="extermination">
+                <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
+                <img src="MenuUi/ModeTexts/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
+                <div class="mode-description">Уничтожьте 20 врагов, чтобы победить</div>
+            </div>
+            
+            <div class="mode-slide" data-mode="straight">
+                <img src="MenuUi/ModeIcons/StraightThrough.png" alt="Straight Through" class="mode-icon">
+                <img src="MenuUi/ModeTexts/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
+                <div class="mode-description">Доберитесь до выхода, не погибнув</div>
+            </div>
+            
+            <div class="mode-slide" data-mode="onslaught">
+                <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
+                <img src="MenuUi/ModeTexts/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
+                <div class="mode-description">Выживайте в бесконечных волнах врагов</div>
+            </div>
+        </div>
+        
+        <div class="carousel-nav">
+            <img src="MenuUi/LeftArrow.png" alt="Назад" class="nav-arrow" id="prevMode">
+            <img src="MenuUi/StartGameText.png" alt="Начать игру" class="start-mode-button" id="startModeButton">
+            <img src="MenuUi/RightArrow.png" alt="Вперед" class="nav-arrow" id="nextMode">
+        </div>
+        
+        <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainButton">
     </div>
     
     <!-- Панель настроек меню - СКРЫТА -->
@@ -406,6 +619,18 @@
         <div id="ammoDisplay">ПАТРОНЫ: 2/2</div>
     </div>
     
+    <!-- Дополнительная статистика для режимов -->
+    <div id="modeStats">
+        <div id="enemiesKilled">Убито: 0/20</div>
+        <div id="waveCounter">Волна: 1</div>
+    </div>
+    
+    <!-- Область выхода для режима Straight Through -->
+    <div id="exitArea"></div>
+    
+    <!-- Информация о волне -->
+    <div id="waveInfo"></div>
+    
     <!-- Эффект получения урона -->
     <div id="damageEffect"></div>
     
@@ -414,25 +639,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Инициализация Telegram Web App
-        let TelegramWebApp = null;
-        let isTelegramApp = false;
-
-        // Проверяем, запущено ли в Telegram
-        try {
-            if (window.Telegram && window.Telegram.WebApp) {
-                TelegramWebApp = window.Telegram.WebApp;
-                isTelegramApp = true;
-                console.log('Запущено в Telegram Web App');
-                
-                // Инициализируем приложение
-                TelegramWebApp.ready();
-                TelegramWebApp.expand();
-            }
-        } catch (e) {
-            console.log('Не в Telegram Web App, используем localStorage');
-        }
-
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
@@ -449,7 +655,7 @@
             return false;
         });
 
-        // Система сохранения настроек для Telegram и обычного браузера
+        // Система сохранения настроек
         class SettingsManager {
             constructor() {
                 this.defaultSettings = {
@@ -460,102 +666,44 @@
                 this.loadSettings();
             }
 
-            async loadSettings() {
+            loadSettings() {
                 try {
-                    if (isTelegramApp && TelegramWebApp) {
-                        // Используем Cloud Storage Telegram
-                        const settings = await this.loadFromTelegramStorage();
-                        if (settings) {
-                            this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
-                            this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
-                            this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
-                        } else {
-                            this.setDefaultSettings();
-                        }
+                    const saved = localStorage.getItem('doomMazeSettings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+                        this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
+                        this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
+                        this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
                     } else {
-                        // Используем localStorage для обычного браузера
-                        const saved = localStorage.getItem('doomMazeSettings');
-                        if (saved) {
-                            const settings = JSON.parse(saved);
-                            this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
-                            this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
-                            this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
-                        } else {
-                            this.setDefaultSettings();
-                        }
+                        this.musicVolume = this.defaultSettings.musicVolume;
+                        this.soundVolume = this.defaultSettings.soundVolume;
+                        this.sensitivity = this.defaultSettings.sensitivity;
                     }
                 } catch (e) {
                     console.error('Ошибка загрузки настроек:', e);
-                    this.setDefaultSettings();
+                    this.musicVolume = this.defaultSettings.musicVolume;
+                    this.soundVolume = this.defaultSettings.soundVolume;
+                    this.sensitivity = this.defaultSettings.sensitivity;
                 }
             }
 
-            async loadFromTelegramStorage() {
-                return new Promise((resolve) => {
-                    if (TelegramWebApp && TelegramWebApp.CloudStorage) {
-                        TelegramWebApp.CloudStorage.getItem('settings', (err, value) => {
-                            if (err || !value) {
-                                resolve(null);
-                            } else {
-                                try {
-                                    resolve(JSON.parse(value));
-                                } catch (e) {
-                                    resolve(null);
-                                }
-                            }
-                        });
-                    } else {
-                        resolve(null);
-                    }
-                });
-            }
-
-            setDefaultSettings() {
-                this.musicVolume = this.defaultSettings.musicVolume;
-                this.soundVolume = this.defaultSettings.soundVolume;
-                this.sensitivity = this.defaultSettings.sensitivity;
-            }
-
-            async saveSettings() {
+            saveSettings() {
                 try {
                     const settings = {
                         musicVolume: this.musicVolume,
                         soundVolume: this.soundVolume,
                         sensitivity: this.sensitivity
                     };
-
-                    if (isTelegramApp && TelegramWebApp) {
-                        // Сохраняем в Cloud Storage Telegram
-                        await this.saveToTelegramStorage(settings);
-                    } else {
-                        // Сохраняем в localStorage
-                        localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
-                    }
+                    localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
                 } catch (e) {
                     console.error('Ошибка сохранения настроек:', e);
                 }
             }
 
-            async saveToTelegramStorage(settings) {
-                return new Promise((resolve, reject) => {
-                    if (TelegramWebApp && TelegramWebApp.CloudStorage) {
-                        TelegramWebApp.CloudStorage.setItem('settings', JSON.stringify(settings), (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
-                        });
-                    } else {
-                        reject(new Error('Telegram Cloud Storage недоступен'));
-                    }
-                });
-            }
-
-            async updateSetting(key, value) {
+            updateSetting(key, value) {
                 if (this.hasOwnProperty(key)) {
                     this[key] = value;
-                    await this.saveSettings();
+                    this.saveSettings();
                     return true;
                 }
                 return false;
@@ -564,6 +712,16 @@
 
         // Создаем менеджер настроек
         const settingsManager = new SettingsManager();
+
+        // Переменные для режимов игры
+        let currentGameMode = null;
+        let enemiesKilled = 0;
+        let targetEnemies = 20;
+        let currentWave = 1;
+        let exitArea = null;
+        let waveSpawnTimer = 0;
+        let waveEnemiesCount = 0;
+        let waveEnemiesKilled = 0;
 
         // Базовые настройки
         const scene = new THREE.Scene();
@@ -680,12 +838,104 @@
             return { wallMaterial, floorMaterial, roofMaterial };
         }
 
-        // Генератор лабиринта
+        // Генератор лабиринта для разных режимов
         class MazeGenerator {
-            constructor(width, height) {
+            constructor(width, height, mode = 'extermination') {
                 this.width = width;
                 this.height = height;
-                this.maze = this.generateMazeWithMultiplePaths();
+                this.mode = mode;
+                this.maze = this.generateMazeForMode();
+                this.exitPosition = this.findExitPosition();
+            }
+
+            generateMazeForMode() {
+                if (this.mode === 'straight') {
+                    return this.generateStraightMaze();
+                } else {
+                    return this.generateMazeWithMultiplePaths();
+                }
+            }
+
+            generateStraightMaze() {
+                // Создаем более линейный лабиринт с четким началом и концом
+                let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
+                
+                // Начальная позиция в левом верхнем углу
+                const startX = 1;
+                const startY = 1;
+                
+                // Конечная позиция в правом нижнем углу
+                const endX = this.width - 2;
+                const endY = this.height - 2;
+                
+                // Создаем основной путь от начала до конца
+                this.createMainPath(maze, startX, startY, endX, endY);
+                
+                // Добавляем немного ответвлений для сложности
+                this.addSidePaths(maze);
+                
+                return maze;
+            }
+
+            createMainPath(maze, startX, startY, endX, endY) {
+                let x = startX;
+                let y = startY;
+                
+                maze[y][x] = 0;
+                
+                while (x !== endX || y !== endY) {
+                    // Определяем направление к цели
+                    const dirs = [];
+                    if (x < endX) dirs.push([1, 0]);
+                    if (y < endY) dirs.push([0, 1]);
+                    if (x > endX) dirs.push([-1, 0]);
+                    if (y > endY) dirs.push([0, -1]);
+                    
+                    // Иногда добавляем случайность
+                    if (Math.random() < 0.3) {
+                        dirs.push([1, 0], [0, 1], [-1, 0], [0, -1]);
+                    }
+                    
+                    const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+                    const newX = x + dx;
+                    const newY = y + dy;
+                    
+                    if (newX > 0 && newX < this.width - 1 && newY > 0 && newY < this.height - 1) {
+                        x = newX;
+                        y = newY;
+                        maze[y][x] = 0;
+                        
+                        // Случайно расширяем путь
+                        if (Math.random() < 0.2) {
+                            if (x > 0 && maze[y][x-1] === 1) maze[y][x-1] = 0;
+                            if (x < this.width - 1 && maze[y][x+1] === 1) maze[y][x+1] = 0;
+                            if (y > 0 && maze[y-1][x] === 1) maze[y-1][x] = 0;
+                            if (y < this.height - 1 && maze[y+1][x] === 1) maze[y+1][x] = 0;
+                        }
+                    }
+                }
+            }
+
+            addSidePaths(maze) {
+                // Добавляем случайные ответвления
+                const numExtraPaths = Math.floor(this.width * this.height * 0.05);
+                for (let i = 0; i < numExtraPaths; i++) {
+                    const x = 1 + Math.floor(Math.random() * (this.width - 2));
+                    const y = 1 + Math.floor(Math.random() * (this.height - 2));
+                    
+                    if (maze[y][x] === 0) {
+                        const neighbors = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ].filter(([nx, ny]) => 
+                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height && maze[ny][nx] === 1
+                        );
+                        
+                        if (neighbors.length > 0) {
+                            const [nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                            maze[ny][nx] = 0;
+                        }
+                    }
+                }
             }
 
             generateMazeWithMultiplePaths() {
@@ -784,14 +1034,41 @@
                 }
             }
 
+            findExitPosition() {
+                if (this.mode === 'straight') {
+                    // Для режима Straight Through находим самую дальнюю точку от начала
+                    let maxDistance = -1;
+                    let exitPos = null;
+                    
+                    for (let y = 0; y < this.height; y++) {
+                        for (let x = 0; x < this.width; x++) {
+                            if (this.maze[y][x] === 0) {
+                                const distance = Math.sqrt(x*x + y*y);
+                                if (distance > maxDistance) {
+                                    maxDistance = distance;
+                                    exitPos = { x, y };
+                                }
+                            }
+                        }
+                    }
+                    
+                    return exitPos;
+                }
+                return null;
+            }
+
             getMaze() {
                 return this.maze;
             }
+
+            getExitPosition() {
+                return this.exitPosition;
+            }
         }
 
-        // Создаем лабиринт
-        const mazeGen = new MazeGenerator(25, 25);
-        const maze = mazeGen.getMaze();
+        // Создаем лабиринт (будет пересоздан при выборе режима)
+        let mazeGen = null;
+        let maze = null;
 
         // Освещение
         const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
@@ -807,9 +1084,24 @@
 
         // Создание сцены
         function createScene(materials) {
+            // Очищаем сцену от предыдущих объектов
+            while(scene.children.length > 0){ 
+                scene.remove(scene.children[0]); 
+            }
+            
+            // Добавляем освещение обратно
+            scene.add(ambientLight);
+            scene.add(directionalLight1);
+            scene.add(directionalLight2);
+            
             createFloor(materials.floorMaterial);
             createRoof(materials.roofMaterial);
             createMazeWalls(materials.wallMaterial);
+            
+            // Создаем зону выхода для режима Straight Through
+            if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
+                createExitArea(mazeGen.getExitPosition());
+            }
         }
 
         function createFloor(floorMaterial) {
@@ -872,6 +1164,30 @@
             scene.add(wallGroup);
         }
 
+        // Создание зоны выхода для режима Straight Through
+        function createExitArea(exitPos) {
+            if (!exitPos) return;
+            
+            const exitGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.8, 1, CELL_SIZE * 0.8);
+            const exitMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            exitArea = new THREE.Mesh(exitGeometry, exitMaterial);
+            exitArea.position.set(
+                (exitPos.x - maze[0].length/2) * CELL_SIZE,
+                0.5,
+                (exitPos.y - maze.length/2) * CELL_SIZE
+            );
+            
+            scene.add(exitArea);
+            
+            // Показываем UI элемент выхода
+            document.getElementById('exitArea').style.display = 'block';
+        }
+
         // Позиция игрока
         function findRandomStartPosition() {
             let freeCells = [];
@@ -897,9 +1213,17 @@
             };
         }
 
-        const startPos = findRandomStartPosition();
-        camera.position.set(startPos.x, 1.7, startPos.z);
-        
+        // Для режима Straight Through - спавн в углу
+        function findCornerStartPosition() {
+            // Левый верхний угол
+            return {
+                x: (-maze[0].length/2 + 1) * CELL_SIZE,
+                z: (-maze.length/2 + 1) * CELL_SIZE
+            };
+        }
+
+        let startPos = { x: 0, z: 0 };
+
         // Переменные управления
         let moveForward = false;
         let moveBackward = false;
@@ -1105,6 +1429,19 @@
         function updateUI() {
             document.getElementById('hpDisplay').textContent = `HP: ${hp}`;
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
+            
+            // Обновляем статистику режима
+            if (currentGameMode === 'extermination') {
+                document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}/${targetEnemies}`;
+                document.getElementById('waveCounter').style.display = 'none';
+            } else if (currentGameMode === 'onslaught') {
+                document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}`;
+                document.getElementById('waveCounter').textContent = `Волна: ${currentWave}`;
+                document.getElementById('waveCounter').style.display = 'block';
+            } else {
+                document.getElementById('enemiesKilled').style.display = 'none';
+                document.getElementById('waveCounter').style.display = 'none';
+            }
         }
 
         // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
@@ -1448,7 +1785,8 @@
                 // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (e.button === 0 && 
                     document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none') {
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
                     e.preventDefault();
                     isMouseDown = true;
                     playShootAnimation();
@@ -1468,7 +1806,8 @@
                 // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (e.code === 'KeyR' && 
                     document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none') {
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
                     // Если уже перезаряжаемся или патроны полные - игнорируем
                     if (!isReloading && ammo < maxAmmo) {
                         playReloadAnimation();
@@ -1487,7 +1826,8 @@
             window.addEventListener('keydown', (event) => {
                 // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none') {
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
                     switch(event.code) {
                         case 'KeyW': moveForward = true; break;
                         case 'KeyS': moveBackward = true; break;
@@ -1500,7 +1840,8 @@
             window.addEventListener('keyup', (event) => {
                 // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none') {
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
                     switch(event.code) {
                         case 'KeyW': moveForward = false; break;
                         case 'KeyS': moveBackward = false; break;
@@ -1514,7 +1855,8 @@
             document.addEventListener('mousemove', (event) => {
                 // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none' && 
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none' && 
                     document.pointerLockElement === renderer.domElement) {
                     yaw -= event.movementX * mouseSensitivity;
                     pitch -= event.movementY * mouseSensitivity;
@@ -1525,7 +1867,8 @@
             renderer.domElement.addEventListener('click', () => {
                 // Запрос блокировки указателя только в игре
                 if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none') {
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
                     renderer.domElement.requestPointerLock();
                 }
             });
@@ -1556,6 +1899,17 @@
             }
             
             return false;
+        }
+
+        // Проверка достижения выхода (для режима Straight Through)
+        function checkExitReached() {
+            if (currentGameMode !== 'straight' || !exitArea) return false;
+            
+            const dx = camera.position.x - exitArea.position.x;
+            const dz = camera.position.z - exitArea.position.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            
+            return distance < CELL_SIZE;
         }
 
         // СИСТЕМА НАВИГАЦИИ ДЛЯ ВРАГОВ
@@ -1727,7 +2081,7 @@
         }
 
         // Создаем систему навигации
-        const navigationSystem = new NavigationSystem();
+        let navigationSystem = null;
 
         // КЛАСС ВРАГА
         class Enemy {
@@ -1905,6 +2259,23 @@
                 const index = enemies.indexOf(this);
                 if (index > -1) {
                     enemies.splice(index, 1);
+                }
+                
+                // Увеличиваем счет убитых врагов
+                enemiesKilled++;
+                updateUI();
+                
+                // Проверяем победу в режиме Extermination
+                if (currentGameMode === 'extermination' && enemiesKilled >= targetEnemies) {
+                    victory();
+                }
+                
+                // Проверяем завершение волны в режиме Onslaught
+                if (currentGameMode === 'onslaught') {
+                    waveEnemiesKilled++;
+                    if (waveEnemiesKilled >= waveEnemiesCount) {
+                        nextWave();
+                    }
                 }
             }
             
@@ -2124,9 +2495,10 @@
         let fireballs = [];
 
         // Функция создания врагов
-        function createEnemies(count) {
+        function createEnemies(count, mode = 'normal') {
             for (let i = 0; i < count; i++) {
                 let freeCells = [];
+                
                 for (let y = 1; y < maze.length - 1; y++) {
                     for (let x = 1; x < maze[y].length - 1; x++) {
                         if (maze[y][x] === 0) {
@@ -2136,8 +2508,16 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
-                            if (distance > 10) {
-                                freeCells.push({x: worldX, z: worldZ});
+                            if (mode === 'onslaught') {
+                                // В режиме Onslaught враги появляются на расстоянии
+                                if (distance > 15 && distance < 25) {
+                                    freeCells.push({x: worldX, z: worldZ});
+                                }
+                            } else {
+                                // В других режимах враги появляются на расстоянии
+                                if (distance > 10) {
+                                    freeCells.push({x: worldX, z: worldZ});
+                                }
                             }
                         }
                     }
@@ -2187,6 +2567,22 @@
         function gameOver() {
             alert('Игра окончена! Вы погибли.');
             location.reload();
+        }
+
+        // Функция победы
+        function victory() {
+            alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)}!`);
+            location.reload();
+        }
+
+        // Функция получения названия режима
+        function getModeName(mode) {
+            switch(mode) {
+                case 'extermination': return 'Extermination Protocol';
+                case 'straight': return 'Straight Through';
+                case 'onslaught': return 'Onslaught';
+                default: return 'Unknown';
+            }
         }
 
         // Функция проверки попадания по врагам - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР ПУЛИ
@@ -2240,6 +2636,34 @@
             return false;
         }
 
+        // Система волн для режима Onslaught
+        function startWave(waveNumber) {
+            currentWave = waveNumber;
+            waveEnemiesKilled = 0;
+            
+            // Количество врагов зависит от волны
+            waveEnemiesCount = 5 + waveNumber * 3;
+            
+            // Показываем информацию о волне
+            const waveInfo = document.getElementById('waveInfo');
+            waveInfo.textContent = `Волна ${waveNumber}`;
+            waveInfo.style.display = 'block';
+            
+            setTimeout(() => {
+                waveInfo.style.display = 'none';
+            }, 2000);
+            
+            // Создаем врагов
+            createEnemies(waveEnemiesCount, 'onslaught');
+            
+            updateUI();
+        }
+
+        function nextWave() {
+            currentWave++;
+            startWave(currentWave);
+        }
+
         // Анимация с delta time для независимой от FPS скорости
         const BASE_MOVE_SPEED = 15.0;
         
@@ -2285,6 +2709,12 @@
             camera.position.x = newX;
             camera.position.z = newZ;
             
+            // Проверяем достижение выхода в режиме Straight Through
+            if (currentGameMode === 'straight' && checkExitReached()) {
+                victory();
+                return;
+            }
+            
             // Обновляем врагов
             for (let enemy of enemies) {
                 enemy.update(deltaTime, camera.position.x, camera.position.z);
@@ -2308,8 +2738,10 @@
         function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'none';
+            document.getElementById('modeSelectMenu').style.display = 'none';
             fpsCounter.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
+            document.getElementById('modeStats').style.display = 'block';
             document.getElementById('damageEffect').style.display = 'none';
             
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
@@ -2327,8 +2759,18 @@
             isMouseDown = false;
             stopAutoShoot();
             
-            // Создаем врагов
-            createEnemies(8);
+            // Сбрасываем статистику
+            enemiesKilled = 0;
+            currentWave = 1;
+            
+            // Создаем врагов в зависимости от режима
+            if (currentGameMode === 'extermination') {
+                createEnemies(8);
+            } else if (currentGameMode === 'onslaught') {
+                startWave(1);
+            } else if (currentGameMode === 'straight') {
+                createEnemies(5);
+            }
             
             updateUI();
             
@@ -2337,6 +2779,11 @@
         }
 
         // Функции для меню
+        function showModeSelect() {
+            document.getElementById('startMenu').style.display = 'none';
+            document.getElementById('modeSelectMenu').style.display = 'flex';
+        }
+
         function showOptions() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'flex';
@@ -2352,24 +2799,125 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
+        function hideModeSelect() {
+            document.getElementById('modeSelectMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+        }
+
+        // Инициализация карусели режимов
+        function initModeCarousel() {
+            const slides = document.querySelectorAll('.mode-slide');
+            const prevBtn = document.getElementById('prevMode');
+            const nextBtn = document.getElementById('nextMode');
+            const startBtn = document.getElementById('startModeButton');
+            
+            let currentSlide = 0;
+            
+            // Устанавливаем начальный активный слайд
+            updateSlides();
+            
+            // Обработчики для кнопок навигации
+            prevBtn.addEventListener('click', () => {
+                currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                updateSlides();
+            });
+            
+            nextBtn.addEventListener('click', () => {
+                currentSlide = (currentSlide + 1) % slides.length;
+                updateSlides();
+            });
+            
+            // Обработчик для кнопки старта
+            startBtn.addEventListener('click', () => {
+                const activeSlide = document.querySelector('.mode-slide.active');
+                const mode = activeSlide.getAttribute('data-mode');
+                selectGameMode(mode);
+            });
+            
+            // Функция обновления слайдов
+            function updateSlides() {
+                slides.forEach((slide, index) => {
+                    slide.classList.remove('active', 'left', 'right');
+                    
+                    if (index === currentSlide) {
+                        slide.classList.add('active');
+                    } else if (index === (currentSlide - 1 + slides.length) % slides.length) {
+                        slide.classList.add('left');
+                    } else if (index === (currentSlide + 1) % slides.length) {
+                        slide.classList.add('right');
+                    }
+                });
+            }
+            
+            // Добавляем поддержку свайпов
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            const carousel = document.querySelector('.mode-carousel');
+            
+            carousel.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+            
+            carousel.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+            
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                
+                if (touchEndX < touchStartX - swipeThreshold) {
+                    // Свайп влево - следующий слайд
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    updateSlides();
+                } else if (touchEndX > touchStartX + swipeThreshold) {
+                    // Свайп вправо - предыдущий слайд
+                    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                    updateSlides();
+                }
+            }
+        }
+
+        // Функция выбора режима игры
+        function selectGameMode(mode) {
+            currentGameMode = mode;
+            
+            // Создаем лабиринт в зависимости от режима
+            mazeGen = new MazeGenerator(25, 25, mode);
+            maze = mazeGen.getMaze();
+            
+            // Создаем систему навигации
+            navigationSystem = new NavigationSystem();
+            
+            // Устанавливаем стартовую позицию
+            if (mode === 'straight') {
+                startPos = findCornerStartPosition();
+            } else {
+                startPos = findRandomStartPosition();
+            }
+            
+            camera.position.set(startPos.x, 1.7, startPos.z);
+            
+            // Пересоздаем сцену
+            const materials = createMaterials();
+            createScene(materials);
+            
+            // Запускаем игру
+            startGame();
+        }
+
         // Инициализация меню
-        async function initMenu() {
+        function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
-            
-            // Ждем загрузки настроек
-            await settingsManager.loadSettings();
+            const backToMainButton = document.getElementById('backToMainButton');
             
             // Устанавливаем начальные значения слайдеров из сохраненных настроек
             document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
             document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
             document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
-            
-            // Обновляем громкость
-            musicVolume = settingsManager.musicVolume / 100;
-            soundVolume = settingsManager.soundVolume / 100;
-            mouseSensitivity = settingsManager.sensitivity * 0.0004;
             
             // Запускаем музыку при инициализации
             startMusic();
@@ -2379,7 +2927,7 @@
             document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             
             playButton.addEventListener('click', function(e) {
-                startGame();
+                showModeSelect();
             });
             
             optionsButton.addEventListener('click', function(e) {
@@ -2389,6 +2937,13 @@
             backButton.addEventListener('click', function(e) {
                 hideOptions();
             });
+            
+            backToMainButton.addEventListener('click', function(e) {
+                hideModeSelect();
+            });
+            
+            // Инициализируем карусель режимов
+            initModeCarousel();
         }
 
         // Настройки
@@ -2414,6 +2969,11 @@
 
         // Запуск игры
         loadTextures().then(() => {
+            // Создаем начальный лабиринт (будет пересоздан при выборе режима)
+            mazeGen = new MazeGenerator(25, 25);
+            maze = mazeGen.getMaze();
+            navigationSystem = new NavigationSystem();
+            
             const materials = createMaterials();
             createScene(materials);
             initAudio();
@@ -2424,6 +2984,11 @@
             preloadWeaponImages();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
+            // Создаем начальный лабиринт (будет пересоздан при выборе режима)
+            mazeGen = new MazeGenerator(25, 25);
+            maze = mazeGen.getMaze();
+            navigationSystem = new NavigationSystem();
+            
             const materials = createMaterials();
             createScene(materials);
             initAudio();
