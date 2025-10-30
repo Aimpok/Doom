@@ -429,6 +429,64 @@
             return false;
         });
 
+        // Система сохранения настроек
+        class SettingsManager {
+            constructor() {
+                this.defaultSettings = {
+                    musicVolume: 50,
+                    soundVolume: 50,
+                    sensitivity: 5
+                };
+                this.loadSettings();
+            }
+
+            loadSettings() {
+                try {
+                    const saved = localStorage.getItem('doomMazeSettings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+                        this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
+                        this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
+                        this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
+                    } else {
+                        this.musicVolume = this.defaultSettings.musicVolume;
+                        this.soundVolume = this.defaultSettings.soundVolume;
+                        this.sensitivity = this.defaultSettings.sensitivity;
+                    }
+                } catch (e) {
+                    console.error('Ошибка загрузки настроек:', e);
+                    this.musicVolume = this.defaultSettings.musicVolume;
+                    this.soundVolume = this.defaultSettings.soundVolume;
+                    this.sensitivity = this.defaultSettings.sensitivity;
+                }
+            }
+
+            saveSettings() {
+                try {
+                    const settings = {
+                        musicVolume: this.musicVolume,
+                        soundVolume: this.soundVolume,
+                        sensitivity: this.sensitivity
+                    };
+                    localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
+                } catch (e) {
+                    console.error('Ошибка сохранения настроек:', e);
+                }
+            }
+
+            updateSetting(key, value) {
+                if (this.hasOwnProperty(key)) {
+                    this[key] = value;
+                    this.saveSettings();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // Создаем менеджер настроек
+        const settingsManager = new SettingsManager();
+
         // Базовые настройки
         const scene = new THREE.Scene();
         
@@ -774,12 +832,12 @@
         let pitch = 0;
         const PI_2 = Math.PI / 2;
 
-        // Настройки
-        let mouseSensitivity = 0.002;
+        // Настройки чувствительности из сохраненных данных
+        let mouseSensitivity = settingsManager.sensitivity * 0.0004;
 
         // Аудио система
-        let musicVolume = 0.5;
-        let soundVolume = 0.5;
+        let musicVolume = settingsManager.musicVolume / 100;
+        let soundVolume = settingsManager.soundVolume / 100;
         let currentMusic = null;
         let musicTracks = [];
         let currentTrackIndex = 0;
@@ -1891,13 +1949,14 @@
             }
         }
 
-        // КЛАСС ФАЙРБОЛА
+        // КЛАСС ФАЙРБОЛА - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР
         class Fireball {
             constructor(x, z, targetX, targetZ) {
                 this.x = x;
                 this.z = z;
                 this.speed = 12.0;
                 this.isActive = true;
+                this.damage = 20 + Math.random() * 20; // Урон от 20 до 40
                 
                 const dx = targetX - x;
                 const dz = targetZ - z;
@@ -1912,7 +1971,7 @@
                 }));
                 
                 this.sprite.position.set(this.x, 0.8, this.z);
-                this.sprite.scale.set(2.5, 2.5, 1);
+                this.sprite.scale.set(3.5, 3.5, 1); // Увеличил размер спрайта
                 scene.add(this.sprite);
                 
                 this.rotation = 0;
@@ -1938,14 +1997,15 @@
                 const dz = this.z - camera.position.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                if (distance < 1.5) {
+                // УВЕЛИЧИЛ радиус коллайдера фаербола
+                if (distance < 2.0) { // Было 1.5
                     this.destroy();
-                    takeDamage(15);
+                    takeDamage(this.damage);
                 }
             }
             
             checkWallCollision() {
-                const fireballRadius = 0.3;
+                const fireballRadius = 0.8; // УВЕЛИЧИЛ радиус коллайдера (было 0.3)
                 const points = [
                     [this.x - fireballRadius, this.z],
                     [this.x + fireballRadius, this.z],
@@ -2051,20 +2111,45 @@
             location.reload();
         }
 
-        // Функция проверки попадания по врагам
+        // Функция проверки попадания по врагам - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР ПУЛИ
         function checkEnemyHit() {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             
+            // УВЕЛИЧИЛ дальность луча для лучшего обнаружения врагов
+            raycaster.far = 50; // Увеличил дальность луча
+            
             for (let enemy of enemies) {
                 if (!enemy.isAlive) continue;
                 
+                // УВЕЛИЧИЛ радиус сферы для обнаружения
                 const enemySphere = new THREE.Sphere(
                     new THREE.Vector3(enemy.x, 0.8, enemy.z),
-                    1.5
+                    2.0 // УВЕЛИЧИЛ радиус (было 1.5)
                 );
                 
                 if (raycaster.ray.intersectsSphere(enemySphere)) {
+                    const dx = enemy.x - camera.position.x;
+                    const dz = enemy.z - camera.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    enemy.takeDamage(1, distance);
+                    return true;
+                }
+            }
+            
+            // Дополнительная проверка с использованием рейкастинга по всем врагам
+            const intersects = [];
+            for (let enemy of enemies) {
+                if (!enemy.isAlive) continue;
+                
+                // Создаем bounding box для врага
+                const enemyBox = new THREE.Box3().setFromCenterAndSize(
+                    new THREE.Vector3(enemy.x, 0.8, enemy.z),
+                    new THREE.Vector3(2.0, 2.0, 2.0) // Увеличил размер бокса
+                );
+                
+                if (raycaster.ray.intersectsBox(enemyBox)) {
                     const dx = enemy.x - camera.position.x;
                     const dz = enemy.z - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
@@ -2177,6 +2262,11 @@
         function showOptions() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'flex';
+            
+            // Устанавливаем значения слайдеров из сохраненных настроек
+            document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
+            document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
+            document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
         }
 
         function hideOptions() {
@@ -2189,6 +2279,11 @@
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
+            
+            // Устанавливаем начальные значения слайдеров из сохраненных настроек
+            document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
+            document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
+            document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
             
             // Запускаем музыку при инициализации
             startMusic();
@@ -2212,16 +2307,22 @@
 
         // Настройки
         document.getElementById('sensitivitySlider').addEventListener('input', function(e) {
-            mouseSensitivity = e.target.value * 0.0004;
+            const sensitivity = parseInt(e.target.value);
+            mouseSensitivity = sensitivity * 0.0004;
+            settingsManager.updateSetting('sensitivity', sensitivity);
         });
 
         document.getElementById('musicVolumeSlider').addEventListener('input', function(e) {
-            musicVolume = e.target.value / 100;
+            const volume = parseInt(e.target.value);
+            musicVolume = volume / 100;
+            settingsManager.updateSetting('musicVolume', volume);
             updateVolumes();
         });
 
         document.getElementById('soundVolumeSlider').addEventListener('input', function(e) {
-            soundVolume = e.target.value / 100;
+            const volume = parseInt(e.target.value);
+            soundVolume = volume / 100;
+            settingsManager.updateSetting('soundVolume', volume);
             updateVolumes();
         });
 
