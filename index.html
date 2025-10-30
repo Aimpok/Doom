@@ -1392,13 +1392,195 @@
             return false;
         }
 
+        // СИСТЕМА НАВИГАЦИИ ДЛЯ ВРАГОВ
+        class NavigationSystem {
+            constructor() {
+                this.nodes = [];
+                this.edges = [];
+                this.gridSize = 1.0; // Размер сетки в метрах
+                this.generateNavigationGraph();
+            }
+            
+            generateNavigationGraph() {
+                // Создаем узлы навигации в проходимых местах
+                for (let y = 0; y < maze.length; y++) {
+                    for (let x = 0; x < maze[y].length; x++) {
+                        if (maze[y][x] === 0) {
+                            const worldX = (x - maze[0].length/2) * CELL_SIZE;
+                            const worldZ = (y - maze.length/2) * CELL_SIZE;
+                            
+                            // Создаем узел в центре клетки
+                            this.nodes.push({
+                                x: worldX,
+                                z: worldZ,
+                                id: this.nodes.length
+                            });
+                        }
+                    }
+                }
+                
+                // Создаем связи между соседними узлами
+                for (let i = 0; i < this.nodes.length; i++) {
+                    const node = this.nodes[i];
+                    
+                    // Ищем соседние узлы в радиусе 1.5 клетки
+                    for (let j = 0; j < this.nodes.length; j++) {
+                        if (i === j) continue;
+                        
+                        const otherNode = this.nodes[j];
+                        const dx = otherNode.x - node.x;
+                        const dz = otherNode.z - node.z;
+                        const distance = Math.sqrt(dx * dx + dz * dz);
+                        
+                        // Если узлы соседние и нет стены между ними
+                        if (distance <= CELL_SIZE * 1.5) {
+                            // Проверяем, что между узлами нет стены
+                            const midX = (node.x + otherNode.x) / 2;
+                            const midZ = (node.z + otherNode.z) / 2;
+                            
+                            const mazeX = Math.round((midX / CELL_SIZE) + maze[0].length/2);
+                            const mazeZ = Math.round((midZ / CELL_SIZE) + maze.length/2);
+                            
+                            if (mazeZ >= 0 && mazeZ < maze.length && 
+                                mazeX >= 0 && mazeX < maze[0].length &&
+                                maze[mazeZ][mazeX] === 0) {
+                                
+                                this.edges.push({
+                                    from: node.id,
+                                    to: otherNode.id,
+                                    distance: distance
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                console.log(`Создана навигационная сеть: ${this.nodes.length} узлов, ${this.edges.length} связей`);
+            }
+            
+            findPath(startX, startZ, targetX, targetZ) {
+                // Находим ближайшие узлы к началу и цели
+                const startNode = this.findNearestNode(startX, startZ);
+                const targetNode = this.findNearestNode(targetX, targetZ);
+                
+                if (!startNode || !targetNode) return null;
+                
+                // Алгоритм A* для поиска пути
+                const openSet = [startNode];
+                const closedSet = new Set();
+                const cameFrom = new Map();
+                const gScore = new Map();
+                const fScore = new Map();
+                
+                gScore.set(startNode.id, 0);
+                fScore.set(startNode.id, this.heuristic(startNode, targetNode));
+                
+                while (openSet.length > 0) {
+                    // Находим узел с наименьшей fScore
+                    let current = openSet[0];
+                    let currentIndex = 0;
+                    
+                    for (let i = 1; i < openSet.length; i++) {
+                        if (fScore.get(openSet[i].id) < fScore.get(current.id)) {
+                            current = openSet[i];
+                            currentIndex = i;
+                        }
+                    }
+                    
+                    // Если дошли до цели
+                    if (current.id === targetNode.id) {
+                        return this.reconstructPath(cameFrom, current);
+                    }
+                    
+                    openSet.splice(currentIndex, 1);
+                    closedSet.add(current.id);
+                    
+                    // Проверяем соседей
+                    const neighbors = this.getNeighbors(current);
+                    
+                    for (let neighbor of neighbors) {
+                        if (closedSet.has(neighbor.id)) continue;
+                        
+                        const tentativeGScore = gScore.get(current.id) + this.getDistance(current, neighbor);
+                        
+                        if (!openSet.includes(neighbor)) {
+                            openSet.push(neighbor);
+                        } else if (tentativeGScore >= gScore.get(neighbor.id)) {
+                            continue;
+                        }
+                        
+                        cameFrom.set(neighbor.id, current);
+                        gScore.set(neighbor.id, tentativeGScore);
+                        fScore.set(neighbor.id, gScore.get(neighbor.id) + this.heuristic(neighbor, targetNode));
+                    }
+                }
+                
+                return null; // Путь не найден
+            }
+            
+            findNearestNode(x, z) {
+                let nearestNode = null;
+                let minDistance = Infinity;
+                
+                for (let node of this.nodes) {
+                    const dx = node.x - x;
+                    const dz = node.z - z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestNode = node;
+                    }
+                }
+                
+                return nearestNode;
+            }
+            
+            getNeighbors(node) {
+                const neighbors = [];
+                
+                for (let edge of this.edges) {
+                    if (edge.from === node.id) {
+                        const neighbor = this.nodes.find(n => n.id === edge.to);
+                        if (neighbor) neighbors.push(neighbor);
+                    }
+                }
+                
+                return neighbors;
+            }
+            
+            getDistance(nodeA, nodeB) {
+                const dx = nodeA.x - nodeB.x;
+                const dz = nodeA.z - nodeB.z;
+                return Math.sqrt(dx * dx + dz * dz);
+            }
+            
+            heuristic(nodeA, nodeB) {
+                return this.getDistance(nodeA, nodeB);
+            }
+            
+            reconstructPath(cameFrom, current) {
+                const path = [current];
+                
+                while (cameFrom.has(current.id)) {
+                    current = cameFrom.get(current.id);
+                    path.unshift(current);
+                }
+                
+                return path;
+            }
+        }
+
+        // Создаем систему навигации
+        const navigationSystem = new NavigationSystem();
+
         // КЛАСС ВРАГА
         class Enemy {
             constructor(x, z) {
                 this.x = x;
                 this.z = z;
                 this.health = 3;
-                this.speed = 3.0; // Увеличил скорость в 1.5 раза
+                this.speed = 3.0;
                 this.attackRange = 2.0;
                 this.attackCooldown = 0;
                 this.fireballCooldown = 0;
@@ -1407,9 +1589,9 @@
                 this.animationTimer = 0;
                 this.lastPlayerX = 0;
                 this.lastPlayerZ = 0;
-                this.stuckTimer = 0;
-                this.lastX = x;
-                this.lastZ = z;
+                this.path = [];
+                this.currentPathIndex = 0;
+                this.pathUpdateTimer = 0;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -1418,8 +1600,8 @@
                     fog: true
                 }));
                 
-                this.sprite.position.set(this.x, 0.8, this.z); // Опустил ниже до земли
-                this.sprite.scale.set(4.5, 4.5, 1); // Увеличил размер в 1.5 раза
+                this.sprite.position.set(this.x, 0.8, this.z);
+                this.sprite.scale.set(4.5, 4.5, 1);
                 scene.add(this.sprite);
             }
             
@@ -1432,7 +1614,7 @@
                 
                 // Загружаем изображение врага
                 const img = new Image();
-                img.src = 'GameUi/Enemy/Imp/Front/1.png'; // Первый кадр анимации
+                img.src = 'GameUi/Enemy/Imp/Front/1.png';
                 
                 // Рисуем изображение на канвасе
                 context.fillStyle = 'transparent';
@@ -1470,45 +1652,41 @@
                 // Если игрок слишком далеко, не двигаемся
                 if (distance > 20) return;
                 
-                // Нормализуем направление
-                const dirX = dx / distance;
-                const dirZ = dz / distance;
-                
-                // Проверяем, застрял ли враг
-                const movedDistance = Math.sqrt(
-                    Math.pow(this.x - this.lastX, 2) + Math.pow(this.z - this.lastZ, 2)
-                );
-                
-                if (movedDistance < 0.1) {
-                    this.stuckTimer += deltaTime;
-                } else {
-                    this.stuckTimer = 0;
+                // Обновляем путь каждые 2 секунды
+                this.pathUpdateTimer += deltaTime;
+                if (this.pathUpdateTimer > 2.0 || this.path.length === 0) {
+                    this.pathUpdateTimer = 0;
+                    this.path = navigationSystem.findPath(this.x, this.z, playerX, playerZ) || [];
+                    this.currentPathIndex = 0;
                 }
                 
-                this.lastX = this.x;
-                this.lastZ = this.z;
-                
-                // Пытаемся двигаться к игроку
-                let newX = this.x;
-                let newZ = this.z;
-                
-                // Если застрял более 2 секунд, пытаемся обойти
-                if (this.stuckTimer > 2.0) {
-                    newX = this.x + (Math.random() - 0.5) * this.speed * deltaTime * 2;
-                    newZ = this.z + (Math.random() - 0.5) * this.speed * deltaTime * 2;
-                } else {
-                    // Нормальное движение к игроку
-                    newX = this.x + dirX * this.speed * deltaTime;
-                    newZ = this.z + dirZ * this.speed * deltaTime;
-                }
-                
-                // Проверяем коллизии со стенами
-                if (!this.checkWallCollision(newX, newZ)) {
-                    this.x = newX;
-                    this.z = newZ;
-                } else {
-                    // Если есть стена, пытаемся обойти ее
-                    this.avoidWalls(playerX, playerZ, deltaTime);
+                // Двигаемся по пути
+                if (this.path.length > 0 && this.currentPathIndex < this.path.length) {
+                    const targetNode = this.path[this.currentPathIndex];
+                    const targetX = targetNode.x;
+                    const targetZ = targetNode.z;
+                    
+                    const dx = targetX - this.x;
+                    const dz = targetZ - this.z;
+                    const distanceToNode = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distanceToNode < 0.5) {
+                        // Достигли узла, переходим к следующему
+                        this.currentPathIndex++;
+                    } else {
+                        // Двигаемся к узлу
+                        const dirX = dx / distanceToNode;
+                        const dirZ = dz / distanceToNode;
+                        
+                        const newX = this.x + dirX * this.speed * deltaTime;
+                        const newZ = this.z + dirZ * this.speed * deltaTime;
+                        
+                        // Проверяем коллизии
+                        if (!this.checkWallCollision(newX, newZ)) {
+                            this.x = newX;
+                            this.z = newZ;
+                        }
+                    }
                 }
                 
                 // Обновляем позицию спрайта
@@ -1554,49 +1732,26 @@
                 return false;
             }
             
-            avoidWalls(playerX, playerZ, deltaTime) {
-                // Улучшенный алгоритм обхода стен
-                const angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, -3*Math.PI/4, -Math.PI/2, -Math.PI/4];
-                
-                for (let angle of angles) {
-                    const testX = this.x + Math.cos(angle) * this.speed * deltaTime;
-                    const testZ = this.z + Math.sin(angle) * this.speed * deltaTime;
-                    
-                    if (!this.checkWallCollision(testX, testZ)) {
-                        this.x = testX;
-                        this.z = testZ;
-                        return;
-                    }
-                }
-            }
-            
             meleeAttack() {
-                // Ближняя атака
-                this.attackCooldown = 2.0; // 2 секунды перезарядки
+                this.attackCooldown = 2.0;
                 
-                // Проверяем, находится ли игрок в зоне атаки
                 const dx = this.lastPlayerX - this.x;
                 const dz = this.lastPlayerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
                 if (distance < this.attackRange) {
-                    // Наносим урон игроку
                     takeDamage(10);
                 }
             }
             
             throwFireball(playerX, playerZ) {
-                // Бросок файрбола
-                this.fireballCooldown = 10.0; // 10 секунд перезарядки
-                
-                // Создаем файрбол
+                this.fireballCooldown = 10.0;
                 const fireball = new Fireball(this.x, this.z, playerX, playerZ);
                 fireballs.push(fireball);
             }
             
             updateSpriteTexture() {
-                // Обновляем текстуру спрайта для анимации
-                const frame = this.spriteFrame + 1; // 1 или 2
+                const frame = this.spriteFrame + 1;
                 const img = new Image();
                 img.src = `GameUi/Enemy/Imp/Front/${frame}.png`;
                 
@@ -1615,20 +1770,18 @@
             }
             
             takeDamage(amount, distance) {
-                // Наносим урон врагу в зависимости от дистанции
                 let damage = 0;
                 
                 if (distance < 4) {
-                    damage = 3; // 1 выстрел в упор
+                    damage = 3;
                 } else if (distance < 10) {
-                    damage = 1.5; // 2 выстрела
+                    damage = 1.5;
                 } else {
-                    damage = 1; // 3 выстрела
+                    damage = 1;
                 }
                 
                 this.health -= damage;
                 
-                // Воспроизводим звук попадания
                 if (enemyHitSound) {
                     enemyHitSound.currentTime = 0;
                     enemyHitSound.play().catch(e => console.log('Не удалось воспроизвести звук попадания по врагу'));
@@ -1643,7 +1796,6 @@
                 this.isAlive = false;
                 scene.remove(this.sprite);
                 
-                // Удаляем врага из массива
                 const index = enemies.indexOf(this);
                 if (index > -1) {
                     enemies.splice(index, 1);
@@ -1656,64 +1808,51 @@
             constructor(x, z, targetX, targetZ) {
                 this.x = x;
                 this.z = z;
-                this.speed = 12.0; // Увеличили скорость файрбола
+                this.speed = 12.0;
                 this.isActive = true;
                 
-                // Вычисляем направление к цели
                 const dx = targetX - x;
                 const dz = targetZ - z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 this.dirX = dx / distance;
                 this.dirZ = dz / distance;
                 
-                // Создаем спрайт файрбола
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-                    map: this.createFireballTexture(),
+                    map: textureLoader.load('GameUi/Enemy/Imp/Fireball.png'),
                     transparent: true,
                     fog: true
                 }));
                 
-                this.sprite.position.set(this.x, 0.8, this.z); // Опустил до земли
-                this.sprite.scale.set(2.5, 2.5, 1); // Увеличил размер файрбола
+                this.sprite.position.set(this.x, 0.8, this.z);
+                this.sprite.scale.set(2.5, 2.5, 1);
                 scene.add(this.sprite);
                 
-                // Вращение файрбола
                 this.rotation = 0;
-            }
-            
-            createFireballTexture() {
-                // Создаем текстуру файрбола из изображения
-                return textureLoader.load('GameUi/Enemy/Imp/Fireball.png');
             }
             
             update(deltaTime) {
                 if (!this.isActive) return;
                 
-                // Двигаем файрбол
                 this.x += this.dirX * this.speed * deltaTime;
                 this.z += this.dirZ * this.speed * deltaTime;
                 
-                // Обновляем позицию спрайта
                 this.sprite.position.set(this.x, 0.8, this.z);
                 
-                // Вращаем файрбол для 3D эффекта
-                this.rotation += 15 * deltaTime; // Увеличили скорость вращения
+                this.rotation += 15 * deltaTime;
                 this.sprite.rotation.z = this.rotation;
                 
-                // Проверяем коллизии со стенами
                 if (this.checkWallCollision()) {
                     this.destroy();
                     return;
                 }
                 
-                // Проверяем коллизии с игроком
                 const dx = this.x - camera.position.x;
                 const dz = this.z - camera.position.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
                 if (distance < 1.5) {
                     this.destroy();
-                    takeDamage(15); // Урон от файрбола
+                    takeDamage(15);
                 }
             }
             
@@ -1747,7 +1886,6 @@
                 this.isActive = false;
                 scene.remove(this.sprite);
                 
-                // Удаляем файрбол из массива
                 const index = fireballs.indexOf(this);
                 if (index > -1) {
                     fireballs.splice(index, 1);
@@ -1766,7 +1904,6 @@
                 for (let y = 1; y < maze.length - 1; y++) {
                     for (let x = 1; x < maze[y].length - 1; x++) {
                         if (maze[y][x] === 0) {
-                            // Проверяем, что враг не слишком близко к игроку
                             const worldX = (x - maze[0].length/2) * CELL_SIZE;
                             const worldZ = (y - maze.length/2) * CELL_SIZE;
                             const dx = worldX - camera.position.x;
@@ -1794,16 +1931,13 @@
             
             updateUI();
             
-            // Воспроизводим звук получения урона
             if (playerHitSound) {
                 playerHitSound.currentTime = 0;
                 playerHitSound.play().catch(e => console.log('Не удалось воспроизвести звук получения урона'));
             }
             
-            // Показываем эффект получения урона
             showDamageEffect();
             
-            // Проверяем смерть игрока
             if (hp <= 0) {
                 gameOver();
             }
@@ -1815,7 +1949,6 @@
             damageEffect.style.display = 'block';
             damageEffect.style.opacity = '0.7';
             
-            // Плавно убираем эффект
             setTimeout(() => {
                 damageEffect.style.opacity = '0';
                 setTimeout(() => {
@@ -1827,34 +1960,27 @@
         // Функция завершения игры
         function gameOver() {
             alert('Игра окончена! Вы погибли.');
-            // Перезагружаем страницу для рестарта
             location.reload();
         }
 
         // Функция проверки попадания по врагам
         function checkEnemyHit() {
-            // Создаем луч из камеры в направлении взгляда
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             
-            // Проверяем попадание по врагам
             for (let enemy of enemies) {
                 if (!enemy.isAlive) continue;
                 
-                // Создаем bounding sphere для врага
                 const enemySphere = new THREE.Sphere(
                     new THREE.Vector3(enemy.x, 0.8, enemy.z),
                     1.5
                 );
                 
-                // Проверяем пересечение луча со сферой
                 if (raycaster.ray.intersectsSphere(enemySphere)) {
-                    // Определяем дистанцию до врага
                     const dx = enemy.x - camera.position.x;
                     const dz = enemy.z - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
-                    // Наносим урон врагу в зависимости от дистанции
                     enemy.takeDamage(1, distance);
                     return true;
                 }
@@ -1951,7 +2077,7 @@
             stopAutoShoot();
             
             // Создаем врагов
-            createEnemies(8); // Увеличил количество врагов
+            createEnemies(8);
             
             updateUI();
             
@@ -2015,23 +2141,21 @@
         loadTextures().then(() => {
             const materials = createMaterials();
             createScene(materials);
-            initAudio(); // Инициализируем аудио систему
+            initAudio();
             initControls();
             initMenu();
             weapon.style.display = 'none';
             
-            // Предзагружаем изображения оружия
             preloadWeaponImages();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
             const materials = createMaterials();
             createScene(materials);
-            initAudio(); // Инициализируем аудио систему даже при ошибках
+            initAudio();
             initControls();
             initMenu();
             weapon.style.display = 'none';
             
-            // Предзагружаем изображения оружия даже при ошибках
             preloadWeaponImages();
         });
     </script>
