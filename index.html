@@ -516,6 +516,35 @@
             border-radius: 10px;
             text-align: center;
         }
+
+        /* Стрелка для указания направления выхода */
+        #exitArrow {
+            position: absolute;
+            top: 50%;
+            right: 5%;
+            width: 8vmin;
+            height: 8vmin;
+            transform: translateY(-50%);
+            pointer-events: none;
+            z-index: 45;
+            display: none;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
+        }
+
+        /* Эффект получения урона врагом */
+        .enemy-damage-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.6);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 35;
+            transition: opacity 0.2s;
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body>
@@ -631,6 +660,9 @@
     <!-- Информация о волне -->
     <div id="waveInfo"></div>
     
+    <!-- Стрелка для указания выхода -->
+    <img id="exitArrow" src="MenuUi/ArrowIcon.png" alt="→">
+    
     <!-- Эффект получения урона -->
     <div id="damageEffect"></div>
     
@@ -722,6 +754,9 @@
         let waveSpawnTimer = 0;
         let waveEnemiesCount = 0;
         let waveEnemiesKilled = 0;
+        let enemiesToSpawn = 0;
+        let lastSpawnTime = 0;
+        const SPAWN_INTERVAL = 1000; // 1 секунда между спавнами
 
         // Базовые настройки
         const scene = new THREE.Scene();
@@ -838,7 +873,7 @@
             return { wallMaterial, floorMaterial, roofMaterial };
         }
 
-        // Генератор лабиринта для разных режимов
+        // Генератор лабиринта для разных режимов - УЛУЧШЕННАЯ ВЕРСИЯ
         class MazeGenerator {
             constructor(width, height, mode = 'extermination') {
                 this.width = width;
@@ -850,89 +885,82 @@
 
             generateMazeForMode() {
                 if (this.mode === 'straight') {
-                    return this.generateStraightMaze();
+                    return this.generateRealMaze();
                 } else {
                     return this.generateMazeWithMultiplePaths();
                 }
             }
 
-            generateStraightMaze() {
-                // Создаем более линейный лабиринт с четким началом и концом
+            // РЕАЛЬНЫЙ лабиринт для режима Straight Through
+            generateRealMaze() {
                 let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
                 
-                // Начальная позиция в левом верхнем углу
-                const startX = 1;
-                const startY = 1;
+                // Используем алгоритм поиска в глубину для создания настоящего лабиринта
+                this.depthFirstMaze(maze, 1, 1);
                 
-                // Конечная позиция в правом нижнем углу
-                const endX = this.width - 2;
-                const endY = this.height - 2;
+                // Гарантируем, что начальная позиция (1,1) и конечная (width-2, height-2) проходимы
+                maze[1][1] = 0;
+                maze[this.height-2][this.width-2] = 0;
                 
-                // Создаем основной путь от начала до конца
-                this.createMainPath(maze, startX, startY, endX, endY);
-                
-                // Добавляем немного ответвлений для сложности
-                this.addSidePaths(maze);
+                // Добавляем дополнительные проходы для сложности
+                this.addExtraPassages(maze, 0.1); // 10% дополнительных проходов
                 
                 return maze;
             }
 
-            createMainPath(maze, startX, startY, endX, endY) {
-                let x = startX;
-                let y = startY;
+            depthFirstMaze(maze, startX, startY) {
+                let stack = [[startX, startY]];
+                maze[startY][startX] = 0;
                 
-                maze[y][x] = 0;
+                const directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
                 
-                while (x !== endX || y !== endY) {
-                    // Определяем направление к цели
-                    const dirs = [];
-                    if (x < endX) dirs.push([1, 0]);
-                    if (y < endY) dirs.push([0, 1]);
-                    if (x > endX) dirs.push([-1, 0]);
-                    if (y > endY) dirs.push([0, -1]);
+                while (stack.length > 0) {
+                    let [x, y] = stack[stack.length - 1];
                     
-                    // Иногда добавляем случайность
-                    if (Math.random() < 0.3) {
-                        dirs.push([1, 0], [0, 1], [-1, 0], [0, -1]);
+                    let neighbors = [];
+                    for (let [dx, dy] of directions) {
+                        let nx = x + dx, ny = y + dy;
+                        if (nx > 0 && nx < this.width - 1 && ny > 0 && ny < this.height - 1 && maze[ny][nx] === 1) {
+                            // Проверяем, что соседняя клетка не была посещена
+                            let valid = true;
+                            for (let [ddx, ddy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
+                                let nnx = nx + ddx, nny = ny + ddy;
+                                if (nnx !== x && nny !== y && maze[nny] && maze[nny][nnx] === 0) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+                            if (valid) {
+                                neighbors.push([dx, dy, nx, ny]);
+                            }
+                        }
                     }
                     
-                    const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
-                    const newX = x + dx;
-                    const newY = y + dy;
-                    
-                    if (newX > 0 && newX < this.width - 1 && newY > 0 && newY < this.height - 1) {
-                        x = newX;
-                        y = newY;
-                        maze[y][x] = 0;
-                        
-                        // Случайно расширяем путь
-                        if (Math.random() < 0.2) {
-                            if (x > 0 && maze[y][x-1] === 1) maze[y][x-1] = 0;
-                            if (x < this.width - 1 && maze[y][x+1] === 1) maze[y][x+1] = 0;
-                            if (y > 0 && maze[y-1][x] === 1) maze[y-1][x] = 0;
-                            if (y < this.height - 1 && maze[y+1][x] === 1) maze[y+1][x] = 0;
-                        }
+                    if (neighbors.length > 0) {
+                        let [dx, dy, nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        maze[y + dy/2][x + dx/2] = 0; // Убираем стену между клетками
+                        maze[ny][nx] = 0;
+                        stack.push([nx, ny]);
+                    } else {
+                        stack.pop();
                     }
                 }
             }
 
-            addSidePaths(maze) {
-                // Добавляем случайные ответвления
-                const numExtraPaths = Math.floor(this.width * this.height * 0.05);
-                for (let i = 0; i < numExtraPaths; i++) {
-                    const x = 1 + Math.floor(Math.random() * (this.width - 2));
-                    const y = 1 + Math.floor(Math.random() * (this.height - 2));
-                    
-                    if (maze[y][x] === 0) {
-                        const neighbors = [
-                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
-                        ].filter(([nx, ny]) => 
-                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height && maze[ny][nx] === 1
-                        );
-                        
-                        if (neighbors.length > 0) {
-                            const [nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                            maze[ny][nx] = 0;
+            addExtraPassages(maze, probability) {
+                for (let y = 1; y < this.height - 1; y++) {
+                    for (let x = 1; x < this.width - 1; x++) {
+                        if (maze[y][x] === 1 && Math.random() < probability) {
+                            // Проверяем, что убирание этой стены создает проход
+                            let wallCount = 0;
+                            for (let [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
+                                if (maze[y+dy] && maze[y+dy][x+dx] === 1) {
+                                    wallCount++;
+                                }
+                            }
+                            if (wallCount >= 3) {
+                                maze[y][x] = 0;
+                            }
                         }
                     }
                 }
@@ -1043,7 +1071,8 @@
                     for (let y = 0; y < this.height; y++) {
                         for (let x = 0; x < this.width; x++) {
                             if (this.maze[y][x] === 0) {
-                                const distance = Math.sqrt(x*x + y*y);
+                                // Расстояние от стартовой позиции (1,1)
+                                const distance = Math.sqrt((x-1)*(x-1) + (y-1)*(y-1));
                                 if (distance > maxDistance) {
                                     maxDistance = distance;
                                     exitPos = { x, y };
@@ -1101,6 +1130,7 @@
             // Создаем зону выхода для режима Straight Through
             if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
                 createExitArea(mazeGen.getExitPosition());
+                createExitArrow();
             }
         }
 
@@ -1186,6 +1216,35 @@
             
             // Показываем UI элемент выхода
             document.getElementById('exitArea').style.display = 'block';
+        }
+
+        // Создание стрелки для указания выхода
+        function createExitArrow() {
+            document.getElementById('exitArrow').style.display = 'block';
+        }
+
+        // Обновление стрелки выхода
+        function updateExitArrow() {
+            if (currentGameMode !== 'straight' || !exitArea) return;
+            
+            const arrow = document.getElementById('exitArrow');
+            const playerDirection = new THREE.Vector3();
+            camera.getWorldDirection(playerDirection);
+            
+            const toExit = new THREE.Vector3();
+            toExit.subVectors(exitArea.position, camera.position);
+            toExit.y = 0; // Игнорируем вертикальную составляющую
+            toExit.normalize();
+            
+            // Вычисляем угол между направлением игрока и направлением к выходу
+            const angle = Math.atan2(
+                playerDirection.x * toExit.z - playerDirection.z * toExit.x,
+                playerDirection.x * toExit.x + playerDirection.z * toExit.z
+            );
+            
+            // Преобразуем угол в градусы и поворачиваем стрелку
+            const degrees = angle * (180 / Math.PI);
+            arrow.style.transform = `translateY(-50%) rotate(${degrees}deg)`;
         }
 
         // Позиция игрока
@@ -1427,7 +1486,7 @@
 
         // Обновление UI
         function updateUI() {
-            document.getElementById('hpDisplay').textContent = `HP: ${hp}`;
+            document.getElementById('hpDisplay').textContent = `HP: ${Math.round(hp)}`;
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
             
             // Обновляем статистику режима
@@ -2083,13 +2142,13 @@
         // Создаем систему навигации
         let navigationSystem = null;
 
-        // КЛАСС ВРАГА
+        // КЛАСС ВРАГА - УЛУЧШЕННАЯ ВЕРСИЯ
         class Enemy {
             constructor(x, z) {
                 this.x = x;
                 this.z = z;
                 this.health = 3;
-                this.speed = 9.0; // Увеличил скорость в 3 раза
+                this.speed = 9.0;
                 this.attackRange = 2.0;
                 this.attackCooldown = 0;
                 this.fireballCooldown = 0;
@@ -2104,6 +2163,12 @@
                 this.isDying = false;
                 this.deathFrame = 0;
                 this.deathTimer = 0;
+                this.stuckTimer = 0;
+                this.lastX = x;
+                this.lastZ = z;
+                this.avoidanceForce = new THREE.Vector2(0, 0);
+                this.damageEffectTimer = 0;
+                this.isTakingDamage = false;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -2115,6 +2180,12 @@
                 this.sprite.position.set(this.x, 0.8, this.z);
                 this.sprite.scale.set(4.5, 4.5, 1);
                 scene.add(this.sprite);
+                
+                // Создаем эффект получения урона
+                this.damageEffect = document.createElement('div');
+                this.damageEffect.className = 'enemy-damage-effect';
+                document.body.appendChild(this.damageEffect);
+                this.updateDamageEffectPosition();
             }
             
             createEnemyTexture() {
@@ -2142,6 +2213,19 @@
                     return;
                 }
                 
+                // Обновляем эффект получения урона
+                if (this.isTakingDamage) {
+                    this.damageEffectTimer += deltaTime;
+                    if (this.damageEffectTimer > 0.3) {
+                        this.isTakingDamage = false;
+                        this.damageEffect.style.opacity = '0';
+                    }
+                }
+                
+                // Сохраняем предыдущую позицию для обнаружения застреваний
+                this.lastX = this.x;
+                this.lastZ = this.z;
+                
                 // Обновляем анимацию
                 this.animationTimer += deltaTime;
                 if (this.animationTimer > 0.3) {
@@ -2163,32 +2247,71 @@
                 const dz = playerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                // Если игрок слишком далеко, не двигаемся
-                if (distance > 20) return;
-                
-                // Обновляем путь каждые 2 секунды
+                // ВСЕГДА преследуем игрока, независимо от расстояния
+                // Обновляем путь каждые 2 секунды или если путь пустой
                 this.pathUpdateTimer += deltaTime;
-                if (this.pathUpdateTimer > 2.0 || this.path.length === 0) {
+                if (this.pathUpdateTimer > 2.0 || this.path.length === 0 || distance < 5) {
                     this.pathUpdateTimer = 0;
                     this.path = navigationSystem.findPath(this.x, this.z, playerX, playerZ) || [];
                     this.currentPathIndex = 0;
                 }
                 
-                // Двигаемся по пути
+                // Двигаемся по пути с улучшенным избеганием препятствий
                 if (this.path.length > 0 && this.currentPathIndex < this.path.length) {
                     const targetNode = this.path[this.currentPathIndex];
                     const targetX = targetNode.x;
                     const targetZ = targetNode.z;
                     
-                    const dx = targetX - this.x;
-                    const dz = targetZ - this.z;
-                    const distanceToNode = Math.sqrt(dx * dx + dz * dz);
+                    const dxToNode = targetX - this.x;
+                    const dzToNode = targetZ - this.z;
+                    const distanceToNode = Math.sqrt(dxToNode * dxToNode + dzToNode * dzToNode);
                     
-                    if (distanceToNode < 0.5) {
+                    if (distanceToNode < 1.0) { // Увеличил дистанцию достижения узла
                         this.currentPathIndex++;
                     } else {
-                        const dirX = dx / distanceToNode;
-                        const dirZ = dz / distanceToNode;
+                        let dirX = dxToNode / distanceToNode;
+                        let dirZ = dzToNode / distanceToNode;
+                        
+                        // Добавляем силу избегания других врагов
+                        this.calculateAvoidanceForce();
+                        dirX += this.avoidanceForce.x * 0.5;
+                        dirZ += this.avoidanceForce.y * 0.5;
+                        
+                        // Нормализуем результирующее направление
+                        const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                        if (dirLength > 0) {
+                            dirX /= dirLength;
+                            dirZ /= dirLength;
+                        }
+                        
+                        const newX = this.x + dirX * this.speed * deltaTime;
+                        const newZ = this.z + dirZ * this.speed * deltaTime;
+                        
+                        // УЛУЧШЕННАЯ проверка коллизий с плавным обходом препятствий
+                        if (!this.checkWallCollision(newX, newZ)) {
+                            this.x = newX;
+                            this.z = newZ;
+                        } else {
+                            // Если столкнулись со стеной, пытаемся обойти
+                            this.handleWallCollision(dirX, dirZ, deltaTime);
+                        }
+                    }
+                } else {
+                    // Если путь недоступен, двигаемся напрямую к игроку с избеганием препятствий
+                    if (distance > 0) {
+                        let dirX = dx / distance;
+                        let dirZ = dz / distance;
+                        
+                        // Добавляем силу избегания
+                        this.calculateAvoidanceForce();
+                        dirX += this.avoidanceForce.x * 0.3;
+                        dirZ += this.avoidanceForce.y * 0.3;
+                        
+                        const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
+                        if (dirLength > 0) {
+                            dirX /= dirLength;
+                            dirZ /= dirLength;
+                        }
                         
                         const newX = this.x + dirX * this.speed * deltaTime;
                         const newZ = this.z + dirZ * this.speed * deltaTime;
@@ -2196,87 +2319,107 @@
                         if (!this.checkWallCollision(newX, newZ)) {
                             this.x = newX;
                             this.z = newZ;
+                        } else {
+                            this.handleWallCollision(dirX, dirZ, deltaTime);
                         }
                     }
                 }
                 
                 // Обновляем позицию спрайта
                 this.sprite.position.set(this.x, 0.8, this.z);
+                this.updateDamageEffectPosition();
                 
                 // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
                 
+                // Проверяем, не застрял ли враг
+                const movedDistance = Math.sqrt(
+                    (this.x - this.lastX) * (this.x - this.lastX) + 
+                    (this.z - this.lastZ) * (this.z - this.lastZ)
+                );
+                
+                if (movedDistance < 0.1 * deltaTime) {
+                    this.stuckTimer += deltaTime;
+                    if (this.stuckTimer > 2.0) { // Если застрял более 2 секунд
+                        this.findAlternativePath();
+                        this.stuckTimer = 0;
+                    }
+                } else {
+                    this.stuckTimer = 0;
+                }
+                
                 // Ближняя атака - раз в 1 секунду
                 if (distance < this.attackRange && this.attackCooldown <= 0) {
                     this.meleeAttack();
-                    this.attackCooldown = 1.0; // 1 секунда перезарядки
+                    this.attackCooldown = 1.0;
                 }
                 
                 // Бросок файрбола - раз в 5 секунд
                 if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
                     this.throwFireball(playerX, playerZ);
-                    this.fireballCooldown = 5.0; // 5 секунд перезарядки
+                    this.fireballCooldown = 5.0;
                 }
             }
             
-            updateDeathAnimation(deltaTime) {
-                this.deathTimer += deltaTime;
+            // Расчет силы избегания других врагов
+            calculateAvoidanceForce() {
+                this.avoidanceForce.set(0, 0);
+                const avoidanceRadius = 3.0;
                 
-                if (this.deathTimer > 0.2) {
-                    this.deathTimer = 0;
-                    this.deathFrame++;
+                for (let enemy of enemies) {
+                    if (enemy === this || !enemy.isAlive) continue;
                     
-                    if (this.deathFrame <= 3) {
-                        this.updateDeathTexture();
-                    } else {
-                        this.finalizeDeath();
+                    const dx = enemy.x - this.x;
+                    const dz = enemy.z - this.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distance < avoidanceRadius && distance > 0) {
+                        // Сила отталкивания обратно пропорциональна расстоянию
+                        const force = (avoidanceRadius - distance) / avoidanceRadius;
+                        this.avoidanceForce.x -= (dx / distance) * force;
+                        this.avoidanceForce.y -= (dz / distance) * force;
                     }
                 }
             }
             
-            updateDeathTexture() {
-                const img = new Image();
-                img.src = `GameUi/Enemy/Imp/Front/Die${this.deathFrame}.png`;
+            // Обработка столкновений со стенами
+            handleWallCollision(dirX, dirZ, deltaTime) {
+                // Пробуем разные направления для обхода препятствия
+                const directions = [
+                    [dirZ, -dirX],  // Перпендикулярно влево
+                    [-dirZ, dirX],  // Перпендикулярно вправо
+                    [dirX * 0.7, dirZ * 0.7],  // Под углом
+                    [-dirX * 0.5, -dirZ * 0.5] // Назад
+                ];
                 
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 64;
-                    canvas.height = 64;
-                    const context = canvas.getContext('2d');
-                    context.fillStyle = 'transparent';
-                    context.fillRect(0, 0, 64, 64);
-                    context.drawImage(img, 0, 0, 64, 64);
+                for (let [testX, testZ] of directions) {
+                    const newX = this.x + testX * this.speed * deltaTime;
+                    const newZ = this.z + testZ * this.speed * deltaTime;
                     
-                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
-                    this.sprite.material.needsUpdate = true;
-                };
-            }
-            
-            finalizeDeath() {
-                this.isAlive = false;
-                scene.remove(this.sprite);
-                
-                const index = enemies.indexOf(this);
-                if (index > -1) {
-                    enemies.splice(index, 1);
-                }
-                
-                // Увеличиваем счет убитых врагов
-                enemiesKilled++;
-                updateUI();
-                
-                // Проверяем победу в режиме Extermination
-                if (currentGameMode === 'extermination' && enemiesKilled >= targetEnemies) {
-                    victory();
-                }
-                
-                // Проверяем завершение волны в режиме Onslaught
-                if (currentGameMode === 'onslaught') {
-                    waveEnemiesKilled++;
-                    if (waveEnemiesKilled >= waveEnemiesCount) {
-                        nextWave();
+                    if (!this.checkWallCollision(newX, newZ)) {
+                        this.x = newX;
+                        this.z = newZ;
+                        return;
                     }
                 }
+            }
+            
+            // Поиск альтернативного пути при застревании
+            findAlternativePath() {
+                this.path = [];
+                this.pathUpdateTimer = 2.0; // Принудительно обновим путь в следующем кадре
+            }
+            
+            // Обновление позиции эффекта получения урона
+            updateDamageEffectPosition() {
+                const vector = new THREE.Vector3(this.x, 0.8, this.z);
+                vector.project(camera);
+                
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+                
+                this.damageEffect.style.left = (x - 50) + 'px';
+                this.damageEffect.style.top = (y - 50) + 'px';
             }
             
             checkWallCollision(x, z) {
@@ -2340,17 +2483,22 @@
             }
             
             takeDamage(amount, distance) {
+                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
                 let damage = 0;
                 
                 if (distance < 4) {
                     damage = 3;
                 } else if (distance < 10) {
-                    damage = 1.5;
+                    damage = 2;
                 } else {
                     damage = 1;
                 }
                 
+                // Применяем округленный урон
                 this.health -= damage;
+                
+                // Эффект получения урона
+                this.showDamageEffect();
                 
                 // Воспроизводим случайный звук получения урона
                 if (Math.random() > 0.5) {
@@ -2370,10 +2518,20 @@
                 }
             }
             
+            // Показ эффекта получения урона врагом
+            showDamageEffect() {
+                this.isTakingDamage = true;
+                this.damageEffectTimer = 0;
+                this.damageEffect.style.opacity = '0.6';
+            }
+            
             startDeath() {
                 this.isDying = true;
                 this.deathFrame = 1;
                 this.deathTimer = 0;
+                
+                // Убираем эффект урона
+                this.damageEffect.style.opacity = '0';
                 
                 // Воспроизводим случайный звук смерти
                 const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
@@ -2387,13 +2545,68 @@
                 this.updateDeathTexture();
             }
             
-            die() {
+            updateDeathAnimation(deltaTime) {
+                this.deathTimer += deltaTime;
+                
+                if (this.deathTimer > 0.2) {
+                    this.deathTimer = 0;
+                    this.deathFrame++;
+                    
+                    if (this.deathFrame <= 3) {
+                        this.updateDeathTexture();
+                    } else {
+                        this.finalizeDeath();
+                    }
+                }
+            }
+            
+            updateDeathTexture() {
+                const img = new Image();
+                img.src = `GameUi/Enemy/Imp/Front/Die${this.deathFrame}.png`;
+                
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64;
+                    canvas.height = 64;
+                    const context = canvas.getContext('2d');
+                    context.fillStyle = 'transparent';
+                    context.fillRect(0, 0, 64, 64);
+                    context.drawImage(img, 0, 0, 64, 64);
+                    
+                    this.sprite.material.map = new THREE.CanvasTexture(canvas);
+                    this.sprite.material.needsUpdate = true;
+                };
+            }
+            
+            finalizeDeath() {
                 this.isAlive = false;
                 scene.remove(this.sprite);
+                
+                // Убираем эффект урона
+                if (this.damageEffect.parentNode) {
+                    this.damageEffect.parentNode.removeChild(this.damageEffect);
+                }
                 
                 const index = enemies.indexOf(this);
                 if (index > -1) {
                     enemies.splice(index, 1);
+                }
+                
+                // Увеличиваем счет убитых врагов
+                enemiesKilled++;
+                updateUI();
+                
+                // Проверяем победу в режиме Extermination
+                if (currentGameMode === 'extermination' && enemiesKilled >= targetEnemies) {
+                    victory();
+                }
+                
+                // Проверяем завершение волны в режиме Onslaught
+                if (currentGameMode === 'onslaught') {
+                    waveEnemiesKilled++;
+                    if (waveEnemiesKilled >= waveEnemiesCount && enemies.length === 0) {
+                        nextWave();
+                    }
                 }
             }
         }
@@ -2405,7 +2618,8 @@
                 this.z = z;
                 this.speed = 12.0;
                 this.isActive = true;
-                this.damage = 20 + Math.random() * 20; // Урон от 20 до 40
+                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
+                this.damage = Math.round((20 + Math.random() * 20) / 5) * 5; // Урон от 20 до 40, округленный до шага 5
                 
                 const dx = targetX - x;
                 const dz = targetZ - z;
@@ -2530,9 +2744,11 @@
             }
         }
 
-        // Функция получения урона игроком
+        // Функция получения урона игроком - ИСПРАВЛЕННАЯ
         function takeDamage(amount) {
-            hp -= amount;
+            // ОКРУГЛЯЕМ урон до целых чисел
+            const roundedDamage = Math.round(amount);
+            hp -= roundedDamage;
             if (hp < 0) hp = 0;
             
             updateUI();
@@ -2643,6 +2859,8 @@
             
             // Количество врагов зависит от волны
             waveEnemiesCount = 5 + waveNumber * 3;
+            enemiesToSpawn = waveEnemiesCount;
+            lastSpawnTime = 0;
             
             // Показываем информацию о волне
             const waveInfo = document.getElementById('waveInfo');
@@ -2653,15 +2871,50 @@
                 waveInfo.style.display = 'none';
             }, 2000);
             
-            // Создаем врагов
-            createEnemies(waveEnemiesCount, 'onslaught');
-            
             updateUI();
         }
 
         function nextWave() {
             currentWave++;
             startWave(currentWave);
+        }
+
+        // Функция постепенного спавна врагов в режиме Onslaught
+        function spawnEnemiesOverTime(currentTime) {
+            if (currentGameMode !== 'onslaught' || enemiesToSpawn <= 0) return;
+            
+            if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                // Спавним по 1-2 врага за раз
+                const spawnCount = Math.min(1 + Math.floor(Math.random() * 2), enemiesToSpawn);
+                
+                let freeCells = [];
+                for (let y = 1; y < maze.length - 1; y++) {
+                    for (let x = 1; x < maze[y].length - 1; x++) {
+                        if (maze[y][x] === 0) {
+                            const worldX = (x - maze[0].length/2) * CELL_SIZE;
+                            const worldZ = (y - maze.length/2) * CELL_SIZE;
+                            const dx = worldX - camera.position.x;
+                            const dz = worldZ - camera.position.z;
+                            const distance = Math.sqrt(dx * dx + dz * dz);
+                            
+                            // Враги появляются на расстоянии
+                            if (distance > 15 && distance < 25) {
+                                freeCells.push({x: worldX, z: worldZ});
+                            }
+                        }
+                    }
+                }
+                
+                if (freeCells.length > 0) {
+                    for (let i = 0; i < spawnCount; i++) {
+                        const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
+                        enemies.push(new Enemy(randomCell.x, randomCell.z));
+                        enemiesToSpawn--;
+                    }
+                }
+                
+                lastSpawnTime = currentTime;
+            }
         }
 
         // Анимация с delta time для независимой от FPS скорости
@@ -2713,6 +2966,16 @@
             if (currentGameMode === 'straight' && checkExitReached()) {
                 victory();
                 return;
+            }
+            
+            // Обновляем стрелку выхода
+            if (currentGameMode === 'straight') {
+                updateExitArrow();
+            }
+            
+            // Постепенный спавн врагов в режиме Onslaught
+            if (currentGameMode === 'onslaught') {
+                spawnEnemiesOverTime(currentTime);
             }
             
             // Обновляем врагов
