@@ -3,7 +3,6 @@
 <head>
     <title>3D Лабиринт</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { 
             margin: 0; 
@@ -414,25 +413,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Инициализация Telegram Web App
-        let TelegramWebApp = null;
-        let isTelegramApp = false;
-
-        // Проверяем, запущено ли в Telegram
-        try {
-            if (window.Telegram && window.Telegram.WebApp) {
-                TelegramWebApp = window.Telegram.WebApp;
-                isTelegramApp = true;
-                console.log('Запущено в Telegram Web App');
-                
-                // Инициализируем приложение
-                TelegramWebApp.ready();
-                TelegramWebApp.expand();
-            }
-        } catch (e) {
-            console.log('Не в Telegram Web App, используем localStorage');
-        }
-
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
@@ -449,7 +429,7 @@
             return false;
         });
 
-        // Система сохранения настроек для Telegram и обычного браузера
+        // Система сохранения настроек
         class SettingsManager {
             constructor() {
                 this.defaultSettings = {
@@ -460,102 +440,44 @@
                 this.loadSettings();
             }
 
-            async loadSettings() {
+            loadSettings() {
                 try {
-                    if (isTelegramApp && TelegramWebApp) {
-                        // Используем Cloud Storage Telegram
-                        const settings = await this.loadFromTelegramStorage();
-                        if (settings) {
-                            this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
-                            this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
-                            this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
-                        } else {
-                            this.setDefaultSettings();
-                        }
+                    const saved = localStorage.getItem('doomMazeSettings');
+                    if (saved) {
+                        const settings = JSON.parse(saved);
+                        this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
+                        this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
+                        this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
                     } else {
-                        // Используем localStorage для обычного браузера
-                        const saved = localStorage.getItem('doomMazeSettings');
-                        if (saved) {
-                            const settings = JSON.parse(saved);
-                            this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
-                            this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
-                            this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
-                        } else {
-                            this.setDefaultSettings();
-                        }
+                        this.musicVolume = this.defaultSettings.musicVolume;
+                        this.soundVolume = this.defaultSettings.soundVolume;
+                        this.sensitivity = this.defaultSettings.sensitivity;
                     }
                 } catch (e) {
                     console.error('Ошибка загрузки настроек:', e);
-                    this.setDefaultSettings();
+                    this.musicVolume = this.defaultSettings.musicVolume;
+                    this.soundVolume = this.defaultSettings.soundVolume;
+                    this.sensitivity = this.defaultSettings.sensitivity;
                 }
             }
 
-            async loadFromTelegramStorage() {
-                return new Promise((resolve) => {
-                    if (TelegramWebApp && TelegramWebApp.CloudStorage) {
-                        TelegramWebApp.CloudStorage.getItem('settings', (err, value) => {
-                            if (err || !value) {
-                                resolve(null);
-                            } else {
-                                try {
-                                    resolve(JSON.parse(value));
-                                } catch (e) {
-                                    resolve(null);
-                                }
-                            }
-                        });
-                    } else {
-                        resolve(null);
-                    }
-                });
-            }
-
-            setDefaultSettings() {
-                this.musicVolume = this.defaultSettings.musicVolume;
-                this.soundVolume = this.defaultSettings.soundVolume;
-                this.sensitivity = this.defaultSettings.sensitivity;
-            }
-
-            async saveSettings() {
+            saveSettings() {
                 try {
                     const settings = {
                         musicVolume: this.musicVolume,
                         soundVolume: this.soundVolume,
                         sensitivity: this.sensitivity
                     };
-
-                    if (isTelegramApp && TelegramWebApp) {
-                        // Сохраняем в Cloud Storage Telegram
-                        await this.saveToTelegramStorage(settings);
-                    } else {
-                        // Сохраняем в localStorage
-                        localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
-                    }
+                    localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
                 } catch (e) {
                     console.error('Ошибка сохранения настроек:', e);
                 }
             }
 
-            async saveToTelegramStorage(settings) {
-                return new Promise((resolve, reject) => {
-                    if (TelegramWebApp && TelegramWebApp.CloudStorage) {
-                        TelegramWebApp.CloudStorage.setItem('settings', JSON.stringify(settings), (err) => {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve();
-                            }
-                        });
-                    } else {
-                        reject(new Error('Telegram Cloud Storage недоступен'));
-                    }
-                });
-            }
-
-            async updateSetting(key, value) {
+            updateSetting(key, value) {
                 if (this.hasOwnProperty(key)) {
                     this[key] = value;
-                    await this.saveSettings();
+                    this.saveSettings();
                     return true;
                 }
                 return false;
@@ -2353,23 +2275,15 @@
         }
 
         // Инициализация меню
-        async function initMenu() {
+        function initMenu() {
             const playButton = document.getElementById('playButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
-            
-            // Ждем загрузки настроек
-            await settingsManager.loadSettings();
             
             // Устанавливаем начальные значения слайдеров из сохраненных настроек
             document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
             document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
             document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
-            
-            // Обновляем громкость
-            musicVolume = settingsManager.musicVolume / 100;
-            soundVolume = settingsManager.soundVolume / 100;
-            mouseSensitivity = settingsManager.sensitivity * 0.0004;
             
             // Запускаем музыку при инициализации
             startMusic();
@@ -2436,3 +2350,5 @@
     </script>
 </body>
 </html>
+
+пусть будут выбор режима - нажимаешь играть и  там еще выбор - первое (сабый деф режим) ту нам надо убить опред кол-во
