@@ -405,10 +405,12 @@
 
         .mode-slide.left {
             transform: translateX(-80%) scale(0.7);
+            cursor: pointer;
         }
 
         .mode-slide.right {
             transform: translateX(80%) scale(0.7);
+            cursor: pointer;
         }
 
         .mode-icon {
@@ -426,14 +428,26 @@
             object-fit: contain;
             pointer-events: none;
             margin: 1vmin 0; /* Уменьшил отступы */
-            height: 20%; /* Фиксируем высоту для названия */
+            height: 15%; /* Фиксируем высоту для названия */
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .mode-description {
-            display: none; /* Скрываем описание */
+            color: white;
+            font-size: 1.8vmin;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1vmin;
+            border-radius: 5px;
+            width: 90%;
+            pointer-events: none;
+            margin-bottom: 1vmin;
+            height: 15%; /* Фиксируем высоту для описания */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .carousel-nav {
@@ -444,18 +458,7 @@
         }
 
         .nav-arrow {
-            width: 15vmin;
-            max-width: 150px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            object-fit: contain;
-            -webkit-user-drag: none;
-            user-drag: none;
-            pointer-events: auto;
-        }
-
-        .nav-arrow:hover {
-            transform: scale(1.1);
+            display: none; /* Скрываем стрелки навигации */
         }
 
         .start-mode-button {
@@ -557,26 +560,24 @@
             <div class="mode-slide" data-mode="extermination">
                 <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
                 <img src="MenuUi/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
-                <div class="mode-description">Уничтожьте 40 врагов. Враги постоянно ищут вас и появляются рядом</div>
+                <div class="mode-description">Убей 20 врагов</div>
             </div>
             
             <div class="mode-slide" data-mode="straight">
                 <img src="MenuUi/ModeIcons/StraightThrough.png" alt="Straight Through" class="mode-icon">
                 <img src="MenuUi/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
-                <div class="mode-description">Доберитесь до выхода через толпы врагов</div>
+                <div class="mode-description">Найди выход</div>
             </div>
             
             <div class="mode-slide" data-mode="onslaught">
                 <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
                 <img src="MenuUi/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
-                <div class="mode-description">Выживайте в волнах врагов. Враги телепортируются к вам если далеко</div>
+                <div class="mode-description">Выживи как можно дольше</div>
             </div>
         </div>
         
         <div class="carousel-nav">
-            <img src="MenuUi/PreviousText.png" alt="Назад" class="nav-arrow" id="prevMode">
-            <img src="MenuUi/StartGameText.png" alt="Начать игру" class="start-mode-button" id="startModeButton">
-            <img src="MenuUi/NextText.png" alt="Вперед" class="nav-arrow" id="nextMode">
+            <img src="MenuUi/PlayText.png" alt="Играть" class="start-mode-button" id="startModeButton">
         </div>
         
         <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainButton">
@@ -640,7 +641,7 @@
     
     <!-- Дополнительная статистика для режимов -->
     <div id="modeStats">
-        <div id="enemiesKilled">Убито: 0/40</div>
+        <div id="enemiesKilled">Убито: 0/20</div>
         <div id="waveCounter">Волна: 1</div>
     </div>
     
@@ -738,7 +739,7 @@
         // Переменные для режимов игры
         let currentGameMode = null;
         let enemiesKilled = 0;
-        let targetEnemies = 40; // Увеличил до 40
+        let targetEnemies = 20; // Изменил на 20
         let currentWave = 1;
         let exitArea = null;
         let waveSpawnTimer = 0;
@@ -2138,7 +2139,7 @@
                 this.x = x;
                 this.z = z;
                 this.health = 3;
-                this.speed = 9.0;
+                this.speed = currentGameMode === 'onslaught' ? 4.5 : 9.0; // В 2 раза медленнее в Onslaught
                 this.attackRange = 2.0;
                 this.attackCooldown = 0;
                 this.fireballCooldown = 0;
@@ -2723,8 +2724,8 @@
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
                             if (mode === 'onslaught' || mode === 'extermination') {
-                                // В режимах Onslaught и Extermination враги появляются НЕДАЛЕКО от игрока
-                                if (distance > 8 && distance < 20) {
+                                // В режиме Extermination враги появляются в случайных местах
+                                if (mode === 'extermination' || (distance > 8 && distance < 20)) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
                             } else if (mode === 'straight') {
@@ -2857,15 +2858,19 @@
             currentWave = waveNumber;
             waveEnemiesKilled = 0;
             
-            // БАЛАНС: меньше врагов на первых волнах
+            // НОВАЯ СИСТЕМА ВОЛН: 1, 2, 4, 6, 9 врагов
             if (waveNumber === 1) {
-                waveEnemiesCount = 2;
+                waveEnemiesCount = 1;
             } else if (waveNumber === 2) {
-                waveEnemiesCount = 4;
+                waveEnemiesCount = 2;
             } else if (waveNumber === 3) {
+                waveEnemiesCount = 4;
+            } else if (waveNumber === 4) {
                 waveEnemiesCount = 6;
+            } else if (waveNumber === 5) {
+                waveEnemiesCount = 9;
             } else {
-                waveEnemiesCount = 5 + waveNumber * 2; // Постепенное увеличение
+                waveEnemiesCount = 9 + (waveNumber - 5) * 2; // Постепенное увеличение после 5 волны
             }
             
             enemiesToSpawn = waveEnemiesCount;
@@ -2923,6 +2928,17 @@
                 }
                 
                 lastSpawnTime = currentTime;
+            }
+        }
+
+        // Функция респавна врагов в Straight Through
+        function respawnEnemiesInStraightThrough() {
+            if (currentGameMode !== 'straight') return;
+            
+            // Респавним врагов если их меньше 5
+            if (enemies.length < 5) {
+                const enemiesToRespawn = 5 - enemies.length;
+                createEnemies(enemiesToRespawn, 'straight');
             }
         }
 
@@ -2987,6 +3003,11 @@
                 spawnEnemiesOverTime(currentTime);
             }
             
+            // Респавн врагов в Straight Through
+            if (currentGameMode === 'straight') {
+                respawnEnemiesInStraightThrough();
+            }
+            
             // Обновляем врагов
             for (let enemy of enemies) {
                 enemy.update(deltaTime, camera.position.x, camera.position.z);
@@ -3035,9 +3056,16 @@
             enemiesKilled = 0;
             currentWave = 1;
             
+            // Устанавливаем HP в зависимости от режима
+            if (currentGameMode === 'straight') {
+                hp = 35; // 35 HP для Straight Through
+            } else {
+                hp = 100;
+            }
+            
             // Создаем врагов в зависимости от режима
             if (currentGameMode === 'extermination') {
-                createEnemies(40, 'extermination'); // Увеличил до 40 врагов
+                createEnemies(40, 'extermination'); // 40 врагов спавнится, но нужно убить только 20
             } else if (currentGameMode === 'onslaught') {
                 startWave(1);
             } else if (currentGameMode === 'straight') {
@@ -3079,8 +3107,6 @@
         // Инициализация карусели режимов
         function initModeCarousel() {
             const slides = document.querySelectorAll('.mode-slide');
-            const prevBtn = document.getElementById('prevMode');
-            const nextBtn = document.getElementById('nextMode');
             const startBtn = document.getElementById('startModeButton');
             
             let currentSlide = 0;
@@ -3088,15 +3114,21 @@
             // Устанавливаем начальный активный слайд
             updateSlides();
             
-            // Обработчики для кнопок навигации
-            prevBtn.addEventListener('click', () => {
-                currentSlide = (currentSlide - 1 + slides.length) % slides.length;
-                updateSlides();
-            });
-            
-            nextBtn.addEventListener('click', () => {
-                currentSlide = (currentSlide + 1) % slides.length;
-                updateSlides();
+            // Обработчики для кликов по слайдам
+            slides.forEach((slide, index) => {
+                slide.addEventListener('click', (e) => {
+                    // Если клик по левому слайду - перейти к предыдущему
+                    if (slide.classList.contains('left')) {
+                        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                        updateSlides();
+                    }
+                    // Если клик по правому слайду - перейти к следующему
+                    else if (slide.classList.contains('right')) {
+                        currentSlide = (currentSlide + 1) % slides.length;
+                        updateSlides();
+                    }
+                    // Если клик по активному слайду - ничего не делаем (можно выбрать режим)
+                });
             });
             
             // Обработчик для кнопки старта
