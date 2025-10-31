@@ -88,9 +88,9 @@ const SPAWN_INTERVAL = 1000;
 // Базовые настройки
 const scene = new THREE.Scene();
 
-// ТУМАН и цвет неба - ИСПРАВЛЕНО
+// ТУМАН и цвет неба
 scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
-scene.background = new THREE.Color(0x87CEEB); // Цвет неба такой же как у тумана
+scene.background = new THREE.Color(0x87CEEB);
 
 // Камера с МЕНЬШЕЙ дальностью прорисовки
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -100,7 +100,7 @@ const renderer = new THREE.WebGLRenderer({
     powerPreference: "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x87CEEB); // Цвет фона такой же как у тумана и неба
+renderer.setClearColor(0x87CEEB);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
@@ -455,13 +455,6 @@ function createScene(materials) {
     if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
         createExitArea(mazeGen.getExitPosition());
         createExitArrow();
-    }
-    
-    // Создаем монеты в зависимости от режима
-    if (currentGameMode === 'extermination') {
-        createCoins(10); // 10 монет в режиме уничтожения
-    } else if (currentGameMode === 'straight') {
-        createCoins(15); // 15 монет в режиме гонки
     }
 }
 
@@ -1553,36 +1546,6 @@ class Coin {
 // Массив монет
 let coins = [];
 
-// Создание монет
-function createCoins(count) {
-    coins = [];
-    
-    for (let i = 0; i < count; i++) {
-        let freeCells = [];
-        
-        for (let y = 1; y < maze.length - 1; y++) {
-            for (let x = 1; x < maze[y].length - 1; x++) {
-                if (maze[y][x] === 0) {
-                    const worldX = (x - maze[0].length/2) * CELL_SIZE;
-                    const worldZ = (y - maze.length/2) * CELL_SIZE;
-                    const dx = worldX - camera.position.x;
-                    const dz = worldZ - camera.position.z;
-                    const distance = Math.sqrt(dx * dx + dz * dz);
-                    
-                    if (distance > 3) {
-                        freeCells.push({x: worldX, z: worldZ});
-                    }
-                }
-            }
-        }
-        
-        if (freeCells.length > 0) {
-            const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
-            coins.push(new Coin(randomCell.x, randomCell.z));
-        }
-    }
-}
-
 // КЛАСС ВРАГА
 class Enemy {
     constructor(x, z) {
@@ -1950,10 +1913,8 @@ class Enemy {
         this.deathFrame = 1;
         this.deathTimer = 0;
         
-        // В режиме Onslaught за каждого убитого врага даем монету
-        if (currentGameMode === 'onslaught') {
-            settingsManager.addCoins(1);
-        }
+        // Создаем монету при смерти врага
+        createCoinFromEnemy(this.x, this.z);
         
         const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
         const randomSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
@@ -2017,9 +1978,17 @@ class Enemy {
         
         if (currentGameMode === 'onslaught') {
             waveEnemiesKilled++;
-            // В Onslaught враги спавнятся бесконечно, не проверяем завершение волны
+            // В Onslaught проверяем завершение волны
+            if (waveEnemiesKilled >= waveEnemiesCount && enemies.length === 0) {
+                nextWave();
+            }
         }
     }
+}
+
+// Создание монеты при смерти врага
+function createCoinFromEnemy(x, z) {
+    coins.push(new Coin(x, z));
 }
 
 // КЛАСС ФАЙРБОЛА
@@ -2117,7 +2086,7 @@ class Fireball {
 let enemies = [];
 let fireballs = [];
 
-// Функция создания врагов
+// Функция создания врагов - ИСПРАВЛЕННАЯ
 function createEnemies(count, mode = 'normal') {
     for (let i = 0; i < count; i++) {
         let freeCells = [];
@@ -2131,14 +2100,9 @@ function createEnemies(count, mode = 'normal') {
                     const dz = worldZ - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
-                    if (mode === 'onslaught' || mode === 'extermination') {
-                        if (mode === 'extermination' || (distance > 8 && distance < 20)) {
-                            freeCells.push({x: worldX, z: worldZ});
-                        }
-                    } else if (mode === 'straight') {
-                        if (distance > 5) {
-                            freeCells.push({x: worldX, z: worldZ});
-                        }
+                    // Враги появляются ДАЛЕКО от игрока
+                    if (distance > 10) {
+                        freeCells.push({x: worldX, z: worldZ});
                     }
                 }
             }
@@ -2196,16 +2160,15 @@ function victory() {
     let coinsEarned = 0;
     
     if (currentGameMode === 'extermination') {
-        coinsEarned = enemiesKilled; // 1 монета за каждого убитого врага
+        coinsEarned = 0; // В этом режиме монеты собираются с убитых врагов
     } else if (currentGameMode === 'straight') {
         coinsEarned = 20; // 20 монет за победу в гонке
+        settingsManager.addCoins(coinsEarned);
     } else if (currentGameMode === 'onslaught') {
-        coinsEarned = enemiesKilled; // 1 монета за каждого убитого врага
+        coinsEarned = 0; // В этом режиме монеты собираются с убитых врагов
     }
     
-    settingsManager.addCoins(coinsEarned);
-    
-    alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)} и заработали ${coinsEarned} монет!`);
+    alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)}!${coinsEarned > 0 ? ` Заработано монет: ${coinsEarned}` : ''}`);
     location.reload();
 }
 
@@ -2271,9 +2234,9 @@ function startWave(waveNumber) {
     currentWave = waveNumber;
     waveEnemiesKilled = 0;
     
-    // В Onslaught враги спавнятся бесконечно, без фиксированного количества
-    waveEnemiesCount = Infinity;
-    enemiesToSpawn = 5 + (waveNumber - 1) * 2; // Начинаем с 5 врагов, +2 с каждой волной
+    // В Onslaught: 1 волна - 1 враг, 2 волна - 2 врага и т.д.
+    waveEnemiesCount = waveNumber;
+    enemiesToSpawn = waveEnemiesCount;
     lastSpawnTime = 0;
     
     const waveInfo = document.getElementById('waveInfo');
@@ -2292,7 +2255,7 @@ function nextWave() {
     startWave(currentWave);
 }
 
-// Функция постепенного спавна врагов в режиме Onslaught - ИСПРАВЛЕННАЯ
+// Функция постепенного спавна врагов в режиме Onslaught
 function spawnEnemiesOverTime(currentTime) {
     if (currentGameMode !== 'onslaught' || enemiesToSpawn <= 0) return;
     
@@ -2309,7 +2272,8 @@ function spawnEnemiesOverTime(currentTime) {
                     const dz = worldZ - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
-                    if (distance > 8 && distance < 20) {
+                    // Враги появляются ДАЛЕКО от игрока
+                    if (distance > 10) {
                         freeCells.push({x: worldX, z: worldZ});
                     }
                 }
@@ -2325,11 +2289,17 @@ function spawnEnemiesOverTime(currentTime) {
         }
         
         lastSpawnTime = currentTime;
-        
-        // Если все враги заспавнены, но их мало - добавляем еще
-        if (enemiesToSpawn <= 0 && enemies.length < 3) {
-            enemiesToSpawn = 3;
-        }
+    }
+}
+
+// Функция респавна врагов в Extermination - ИСПРАВЛЕННАЯ
+function respawnEnemiesInExtermination() {
+    if (currentGameMode !== 'extermination') return;
+    
+    // Всегда поддерживаем 5 врагов на карте
+    if (enemies.length < 5) {
+        const enemiesToRespawn = 5 - enemies.length;
+        createEnemies(enemiesToRespawn, 'extermination');
     }
 }
 
@@ -2410,6 +2380,11 @@ function animate(currentTime) {
         spawnEnemiesOverTime(currentTime);
     }
     
+    // Респавн врагов в Extermination
+    if (currentGameMode === 'extermination') {
+        respawnEnemiesInExtermination();
+    }
+    
     // Респавн врагов в Straight Through
     if (currentGameMode === 'straight') {
         respawnEnemiesInStraightThrough();
@@ -2475,11 +2450,11 @@ function startGame() {
     
     // Создаем врагов в зависимости от режима
     if (currentGameMode === 'extermination') {
-        createEnemies(40, 'extermination');
+        createEnemies(5, 'extermination'); // Начинаем с 5 врагов
     } else if (currentGameMode === 'onslaught') {
-        startWave(1);
+        startWave(1); // 1 волна = 1 враг
     } else if (currentGameMode === 'straight') {
-        createEnemies(15, 'straight');
+        createEnemies(5, 'straight');
     }
     
     updateUI();
