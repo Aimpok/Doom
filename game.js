@@ -4,7 +4,8 @@ class SettingsManager {
         this.defaultSettings = {
             musicVolume: 50,
             soundVolume: 50,
-            sensitivity: 5
+            sensitivity: 5,
+            coins: 0
         };
         this.loadSettings();
     }
@@ -17,16 +18,19 @@ class SettingsManager {
                 this.musicVolume = settings.musicVolume || this.defaultSettings.musicVolume;
                 this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
                 this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
+                this.coins = settings.coins || this.defaultSettings.coins;
             } else {
                 this.musicVolume = this.defaultSettings.musicVolume;
                 this.soundVolume = this.defaultSettings.soundVolume;
                 this.sensitivity = this.defaultSettings.sensitivity;
+                this.coins = this.defaultSettings.coins;
             }
         } catch (e) {
             console.error('Ошибка загрузки настроек:', e);
             this.musicVolume = this.defaultSettings.musicVolume;
             this.soundVolume = this.defaultSettings.soundVolume;
             this.sensitivity = this.defaultSettings.sensitivity;
+            this.coins = this.defaultSettings.coins;
         }
     }
 
@@ -35,7 +39,8 @@ class SettingsManager {
             const settings = {
                 musicVolume: this.musicVolume,
                 soundVolume: this.soundVolume,
-                sensitivity: this.sensitivity
+                sensitivity: this.sensitivity,
+                coins: this.coins
             };
             localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
         } catch (e) {
@@ -51,6 +56,17 @@ class SettingsManager {
         }
         return false;
     }
+
+    addCoins(amount) {
+        this.coins += amount;
+        this.saveSettings();
+        updateCoinCounter();
+        return this.coins;
+    }
+
+    getCoins() {
+        return this.coins;
+    }
 }
 
 // Создаем менеджер настроек
@@ -59,7 +75,7 @@ const settingsManager = new SettingsManager();
 // Переменные для режимов игры
 let currentGameMode = null;
 let enemiesKilled = 0;
-let targetEnemies = 20; // Изменил на 20
+let targetEnemies = 20;
 let currentWave = 1;
 let exitArea = null;
 let waveSpawnTimer = 0;
@@ -67,13 +83,14 @@ let waveEnemiesCount = 0;
 let waveEnemiesKilled = 0;
 let enemiesToSpawn = 0;
 let lastSpawnTime = 0;
-const SPAWN_INTERVAL = 1000; // 1 секунда между спавнами
+const SPAWN_INTERVAL = 1000;
 
 // Базовые настройки
 const scene = new THREE.Scene();
 
-// ТУМАН - добавляем в сцену (теперь нельзя отключить)
+// ТУМАН и цвет неба - ИСПРАВЛЕНО
 scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+scene.background = new THREE.Color(0x87CEEB); // Цвет неба такой же как у тумана
 
 // Камера с МЕНЬШЕЙ дальностью прорисовки
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -83,7 +100,7 @@ const renderer = new THREE.WebGLRenderer({
     powerPreference: "high-performance"
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x87CEEB);
+renderer.setClearColor(0x87CEEB); // Цвет фона такой же как у тумана и неба
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
@@ -184,7 +201,7 @@ function createMaterials() {
     return { wallMaterial, floorMaterial, roofMaterial };
 }
 
-// Генератор лабиринта для разных режимов - УЛУЧШЕННАЯ ВЕРСИЯ
+// Генератор лабиринта для разных режимов
 class MazeGenerator {
     constructor(width, height, mode = 'extermination') {
         this.width = width;
@@ -214,7 +231,7 @@ class MazeGenerator {
         maze[this.height-2][this.width-2] = 0;
         
         // Добавляем дополнительные проходы для сложности
-        this.addExtraPassages(maze, 0.1); // 10% дополнительных проходов
+        this.addExtraPassages(maze, 0.1);
         
         return maze;
     }
@@ -232,7 +249,6 @@ class MazeGenerator {
             for (let [dx, dy] of directions) {
                 let nx = x + dx, ny = y + dy;
                 if (nx > 0 && nx < this.width - 1 && ny > 0 && ny < this.height - 1 && maze[ny][nx] === 1) {
-                    // Проверяем, что соседняя клетка не была посещена
                     let valid = true;
                     for (let [ddx, ddy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
                         let nnx = nx + ddx, nny = ny + ddy;
@@ -249,7 +265,7 @@ class MazeGenerator {
             
             if (neighbors.length > 0) {
                 let [dx, dy, nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                maze[y + dy/2][x + dx/2] = 0; // Убираем стену между клетками
+                maze[y + dy/2][x + dx/2] = 0;
                 maze[ny][nx] = 0;
                 stack.push([nx, ny]);
             } else {
@@ -262,7 +278,6 @@ class MazeGenerator {
         for (let y = 1; y < this.height - 1; y++) {
             for (let x = 1; x < this.width - 1; x++) {
                 if (maze[y][x] === 1 && Math.random() < probability) {
-                    // Проверяем, что убирание этой стены создает проход
                     let wallCount = 0;
                     for (let [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
                         if (maze[y+dy] && maze[y+dy][x+dx] === 1) {
@@ -375,14 +390,12 @@ class MazeGenerator {
 
     findExitPosition() {
         if (this.mode === 'straight') {
-            // Для режима Straight Through находим самую дальнюю точку от начала
             let maxDistance = -1;
             let exitPos = null;
             
             for (let y = 0; y < this.height; y++) {
                 for (let x = 0; x < this.width; x++) {
                     if (this.maze[y][x] === 0) {
-                        // Расстояние от стартовой позиции (1,1)
                         const distance = Math.sqrt((x-1)*(x-1) + (y-1)*(y-1));
                         if (distance > maxDistance) {
                             maxDistance = distance;
@@ -406,7 +419,7 @@ class MazeGenerator {
     }
 }
 
-// Создаем лабиринт (будет пересоздан при выборе режима)
+// Создаем лабиринт
 let mazeGen = null;
 let maze = null;
 
@@ -442,6 +455,13 @@ function createScene(materials) {
     if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
         createExitArea(mazeGen.getExitPosition());
         createExitArrow();
+    }
+    
+    // Создаем монеты в зависимости от режима
+    if (currentGameMode === 'extermination') {
+        createCoins(10); // 10 монет в режиме уничтожения
+    } else if (currentGameMode === 'straight') {
+        createCoins(15); // 15 монет в режиме гонки
     }
 }
 
@@ -525,7 +545,6 @@ function createExitArea(exitPos) {
     
     scene.add(exitArea);
     
-    // Показываем UI элемент выхода
     document.getElementById('exitArea').style.display = 'block';
 }
 
@@ -544,16 +563,14 @@ function updateExitArrow() {
     
     const toExit = new THREE.Vector3();
     toExit.subVectors(exitArea.position, camera.position);
-    toExit.y = 0; // Игнорируем вертикальную составляющую
+    toExit.y = 0;
     toExit.normalize();
     
-    // Вычисляем угол между направлением игрока и направлением к выходу
     const angle = Math.atan2(
         playerDirection.x * toExit.z - playerDirection.z * toExit.x,
         playerDirection.x * toExit.x + playerDirection.z * toExit.z
     );
     
-    // Преобразуем угол в градусы и поворачиваем стрелку
     const degrees = angle * (180 / Math.PI);
     arrow.style.transform = `translateY(-50%) rotate(${degrees}deg)`;
 }
@@ -585,7 +602,6 @@ function findRandomStartPosition() {
 
 // Для режима Straight Through - спавн в углу
 function findCornerStartPosition() {
-    // Левый верхний угол
     return {
         x: (-maze[0].length/2 + 1) * CELL_SIZE,
         z: (-maze.length/2 + 1) * CELL_SIZE
@@ -624,6 +640,7 @@ let impDamageSound2 = null;
 let impDeathSound1 = null;
 let impDeathSound2 = null;
 let impDeathSound3 = null;
+let coinSound = null;
 
 // Оружие
 const weapon = document.getElementById('weapon');
@@ -638,7 +655,7 @@ let hp = 100;
 let isMouseDown = false;
 let autoShootInterval = null;
 let lastShootTime = 0;
-const SHOOT_DELAY = 300; // Задержка между выстрелами в мс
+const SHOOT_DELAY = 300;
 
 // Предзагрузка изображений оружия
 const gunImages = {
@@ -664,6 +681,7 @@ function initAudio() {
     shootSound = new Audio('Sounds/Shoot.mp3');
     reloadSound = new Audio('Sounds/Reload.mp3');
     playerHitSound = new Audio('Sounds/PlayerHit.mp3');
+    coinSound = new Audio('Sounds/Coin.mp3');
     
     // Звуки врагов
     impDamageSound1 = new Audio('Sounds/Imp/ImpDamage.mp3');
@@ -676,6 +694,7 @@ function initAudio() {
     shootSound.volume = soundVolume;
     reloadSound.volume = soundVolume;
     playerHitSound.volume = soundVolume;
+    coinSound.volume = soundVolume;
     impDamageSound1.volume = soundVolume;
     impDamageSound2.volume = soundVolume;
     impDeathSound1.volume = soundVolume;
@@ -686,13 +705,14 @@ function initAudio() {
     shootSound.preload = 'auto';
     reloadSound.preload = 'auto';
     playerHitSound.preload = 'auto';
+    coinSound.preload = 'auto';
     impDamageSound1.preload = 'auto';
     impDamageSound2.preload = 'auto';
     impDeathSound1.preload = 'auto';
     impDeathSound2.preload = 'auto';
     impDeathSound3.preload = 'auto';
     
-    // Создаем список музыкальных треков (только 3 трека)
+    // Создаем список музыкальных треков
     musicTracks = [
         'Sounds/MenuMusic.mp3',
         'Sounds/MenuMusic1.mp3',
@@ -701,7 +721,6 @@ function initAudio() {
     
     console.log('Загружено музыкальных треков:', musicTracks.length);
     
-    // Случайный выбор первого трека
     currentTrackIndex = Math.floor(Math.random() * musicTracks.length);
 }
 
@@ -712,27 +731,22 @@ function playNextTrack() {
         return;
     }
     
-    // Останавливаем текущую музыку
     if (currentMusic) {
         currentMusic.pause();
         currentMusic.currentTime = 0;
         currentMusic.removeEventListener('ended', playNextTrack);
     }
     
-    // Переходим к следующему треку
     currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
     
     console.log('Воспроизведение трека:', musicTracks[currentTrackIndex]);
     
-    // Создаем новый аудио элемент
     currentMusic = new Audio(musicTracks[currentTrackIndex]);
     currentMusic.volume = musicVolume;
-    currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
+    currentMusic.loop = false;
     
-    // Когда трек заканчивается, играем следующий
     currentMusic.addEventListener('ended', playNextTrack);
     
-    // Пытаемся воспроизвести
     const playPromise = currentMusic.play();
     
     if (playPromise !== undefined) {
@@ -741,7 +755,6 @@ function playNextTrack() {
             musicStarted = true;
         }).catch(error => {
             console.log('Автовоспроизведение музыки заблокировано:', error);
-            // Пытаемся снова при взаимодействии
             document.addEventListener('click', startMusicOnInteraction, { once: true });
             document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
         });
@@ -778,6 +791,9 @@ function updateVolumes() {
     if (playerHitSound) {
         playerHitSound.volume = soundVolume;
     }
+    if (coinSound) {
+        coinSound.volume = soundVolume;
+    }
     if (impDamageSound1) {
         impDamageSound1.volume = soundVolume;
     }
@@ -800,7 +816,6 @@ function updateUI() {
     document.getElementById('hpDisplay').textContent = `HP: ${Math.round(hp)}`;
     document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
     
-    // Обновляем статистику режима
     if (currentGameMode === 'extermination') {
         document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}/${targetEnemies}`;
         document.getElementById('waveCounter').style.display = 'none';
@@ -814,9 +829,13 @@ function updateUI() {
     }
 }
 
-// Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Обновление счетчика монет
+function updateCoinCounter() {
+    document.getElementById('coinsCount').textContent = settingsManager.getCoins();
+}
+
+// Анимация выстрела
 function playShootAnimation() {
-    // Проверяем возможность стрельбы
     if (!canShoot || isReloading || isShooting || ammo <= 0) {
         return;
     }
@@ -826,35 +845,28 @@ function playShootAnimation() {
     ammo--;
     updateUI();
     
-    // Сразу меняем на первый кадр выстрела
     weapon.src = gunImages.shoot1;
     
-    // Звук выстрела
     if (shootSound) {
         shootSound.currentTime = 0;
         shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
     }
     
-    // Проверяем попадание по врагам
     checkEnemyHit();
     
-    // Второй кадр выстрела
     setTimeout(() => {
         if (!isShooting) return;
         weapon.src = gunImages.shoot2;
     }, 50);
     
-    // Возврат к нормальному состоянию
     setTimeout(() => {
         if (!isShooting) return;
         weapon.src = gunImages.normal;
         isShooting = false;
         
-        // Если патроны кончились - перезарядка
         if (ammo <= 0) {
             playReloadAnimation();
         } else {
-            // Задержка между выстрелами
             setTimeout(() => {
                 canShoot = true;
             }, 300);
@@ -862,7 +874,7 @@ function playShootAnimation() {
     }, 150);
 }
 
-// Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Анимация перезарядки
 function playReloadAnimation() {
     if (isReloading || ammo >= maxAmmo) {
         return;
@@ -871,31 +883,26 @@ function playReloadAnimation() {
     isReloading = true;
     canShoot = false;
     
-    // Звук перезарядки
     if (reloadSound) {
         reloadSound.currentTime = 0;
         reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
     }
     
-    // Первый кадр перезарядки
     setTimeout(() => {
         if (!isReloading) return;
         weapon.src = gunImages.reload1;
     }, 100);
     
-    // Второй кадр перезарядки
     setTimeout(() => {
         if (!isReloading) return;
         weapon.src = gunImages.reload2;
     }, 300);
     
-    // Третий кадр перезарядки
     setTimeout(() => {
         if (!isReloading) return;
         weapon.src = gunImages.reload3;
     }, 500);
     
-    // Завершение перезарядки
     setTimeout(() => {
         if (!isReloading) return;
         weapon.src = gunImages.normal;
@@ -916,7 +923,7 @@ function startAutoShoot() {
             playShootAnimation();
             lastShootTime = currentTime;
         }
-    }, 100); // Проверяем каждые 100мс
+    }, 100);
 }
 
 function stopAutoShoot() {
@@ -982,7 +989,6 @@ function initJoystick() {
         moveForward = moveBackward = moveLeft = moveRight = false;
     }
 
-    // Обработка событий джойстика
     joystickBase.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const touch = e.changedTouches[0];
@@ -1027,7 +1033,6 @@ function initCameraControls() {
         }
     });
 
-    // Кнопка стрельбы
     shootButton.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const touch = e.changedTouches[0];
@@ -1150,9 +1155,7 @@ function initGlobalHandlers() {
         isMouseDown = false;
     });
 
-    // Управление стрельбой для ПК - ЛКМ (только в игре)
     document.addEventListener('mousedown', (e) => {
-        // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
         if (e.button === 0 && 
             document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
@@ -1171,14 +1174,11 @@ function initGlobalHandlers() {
         }
     });
 
-    // Перезарядка по кнопке R (только в игре)
     document.addEventListener('keydown', (e) => {
-        // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
         if (e.code === 'KeyR' && 
             document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none') {
-            // Если уже перезаряжаемся или патроны полные - игнорируем
             if (!isReloading && ammo < maxAmmo) {
                 playReloadAnimation();
             }
@@ -1192,9 +1192,7 @@ function initControls() {
     initCameraControls();
     initGlobalHandlers();
 
-    // Клавиатура для десктопа (только в игре)
     window.addEventListener('keydown', (event) => {
-        // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none') {
@@ -1208,7 +1206,6 @@ function initControls() {
     });
     
     window.addEventListener('keyup', (event) => {
-        // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none') {
@@ -1221,9 +1218,7 @@ function initControls() {
         }
     });
 
-    // Мышь для десктопа (только в игре)
     document.addEventListener('mousemove', (event) => {
-        // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none' && 
@@ -1235,7 +1230,6 @@ function initControls() {
     });
 
     renderer.domElement.addEventListener('click', () => {
-        // Запрос блокировки указателя только в игре
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none') {
@@ -1453,13 +1447,149 @@ class NavigationSystem {
 // Создаем систему навигации
 let navigationSystem = null;
 
-// КЛАСС ВРАГА - УЛУЧШЕННАЯ ВЕРСИЯ
+// КЛАСС МОНЕТЫ
+class Coin {
+    constructor(x, z) {
+        this.x = x;
+        this.z = z;
+        this.isCollected = false;
+        this.animationFrame = 1;
+        this.animationTimer = 0;
+        
+        this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: this.createCoinTexture(),
+            transparent: true,
+            fog: true
+        }));
+        
+        this.sprite.position.set(this.x, 0.5, this.z);
+        this.sprite.scale.set(2, 2, 1);
+        scene.add(this.sprite);
+    }
+    
+    createCoinTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const context = canvas.getContext('2d');
+        
+        const img = new Image();
+        img.src = 'GameUi/Coin/1.png';
+        
+        context.fillStyle = 'transparent';
+        context.fillRect(0, 0, 64, 64);
+        context.drawImage(img, 0, 0, 64, 64);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        return texture;
+    }
+    
+    update(deltaTime) {
+        if (this.isCollected) return;
+        
+        this.animationTimer += deltaTime;
+        if (this.animationTimer > 0.15) {
+            this.animationTimer = 0;
+            this.animationFrame = this.animationFrame % 4 + 1;
+            this.updateCoinTexture();
+        }
+        
+        this.sprite.rotation.y += deltaTime * 2;
+    }
+    
+    updateCoinTexture() {
+        const img = new Image();
+        img.src = `GameUi/Coin/${this.animationFrame}.png`;
+        
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            context.fillStyle = 'transparent';
+            context.fillRect(0, 0, 64, 64);
+            context.drawImage(img, 0, 0, 64, 64);
+            
+            this.sprite.material.map = new THREE.CanvasTexture(canvas);
+            this.sprite.material.needsUpdate = true;
+        };
+    }
+    
+    checkCollection(playerX, playerZ) {
+        if (this.isCollected) return false;
+        
+        const dx = playerX - this.x;
+        const dz = playerZ - this.z;
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        
+        if (distance < 1.5) {
+            this.collect();
+            return true;
+        }
+        
+        return false;
+    }
+    
+    collect() {
+        this.isCollected = true;
+        scene.remove(this.sprite);
+        
+        // Добавляем монету
+        settingsManager.addCoins(1);
+        
+        // Воспроизводим звук
+        if (coinSound) {
+            coinSound.currentTime = 0;
+            coinSound.play().catch(e => console.log('Не удалось воспроизвести звук монеты'));
+        }
+        
+        const index = coins.indexOf(this);
+        if (index > -1) {
+            coins.splice(index, 1);
+        }
+    }
+}
+
+// Массив монет
+let coins = [];
+
+// Создание монет
+function createCoins(count) {
+    coins = [];
+    
+    for (let i = 0; i < count; i++) {
+        let freeCells = [];
+        
+        for (let y = 1; y < maze.length - 1; y++) {
+            for (let x = 1; x < maze[y].length - 1; x++) {
+                if (maze[y][x] === 0) {
+                    const worldX = (x - maze[0].length/2) * CELL_SIZE;
+                    const worldZ = (y - maze.length/2) * CELL_SIZE;
+                    const dx = worldX - camera.position.x;
+                    const dz = worldZ - camera.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    if (distance > 3) {
+                        freeCells.push({x: worldX, z: worldZ});
+                    }
+                }
+            }
+        }
+        
+        if (freeCells.length > 0) {
+            const randomCell = freeCells[Math.floor(Math.random() * freeCells.length)];
+            coins.push(new Coin(randomCell.x, randomCell.z));
+        }
+    }
+}
+
+// КЛАСС ВРАГА
 class Enemy {
     constructor(x, z) {
         this.x = x;
         this.z = z;
         this.health = 3;
-        this.speed = currentGameMode === 'onslaught' ? 4.5 : 9.0; // В 2 раза медленнее в Onslaught
+        this.speed = currentGameMode === 'onslaught' ? 4.5 : 9.0;
         this.attackRange = 2.0;
         this.attackCooldown = 0;
         this.fireballCooldown = 0;
@@ -1478,12 +1608,9 @@ class Enemy {
         this.lastX = x;
         this.lastZ = z;
         this.avoidanceForce = new THREE.Vector2(0, 0);
-        this.damageEffectTimer = 0;
-        this.isTakingDamage = false;
         this.teleportTimer = 0;
         this.lastDistanceToPlayer = 0;
         
-        // Создаем спрайт врага
         this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
             map: this.createEnemyTexture(),
             transparent: true,
@@ -1520,13 +1647,9 @@ class Enemy {
             return;
         }
         
-        // УБРАЛ эффект получения урона (красный цвет)
-        
-        // Сохраняем предыдущую позицию для обнаружения застреваний
         this.lastX = this.x;
         this.lastZ = this.z;
         
-        // Обновляем анимацию
         this.animationTimer += deltaTime;
         if (this.animationTimer > 0.3) {
             this.animationTimer = 0;
@@ -1534,24 +1657,20 @@ class Enemy {
             this.updateSpriteTexture();
         }
         
-        // Обновляем кулдауны
         if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
         if (this.fireballCooldown > 0) this.fireballCooldown -= deltaTime;
         
-        // Сохраняем позицию игрока
         this.lastPlayerX = playerX;
         this.lastPlayerZ = playerZ;
         
-        // Вычисляем направление к игроку
         const dx = playerX - this.x;
         const dz = playerZ - this.z;
         const distance = Math.sqrt(dx * dx + dz * dz);
         this.lastDistanceToPlayer = distance;
         
-        // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught) - ИСПРАВЛЕНО
-        if (currentGameMode === 'onslaught' && distance > 70) { // Увеличил дистанцию до 70
+        if (currentGameMode === 'onslaught' && distance > 70) {
             this.teleportTimer += deltaTime;
-            if (this.teleportTimer > 20.0) { // Увеличил интервал до 20 секунд
+            if (this.teleportTimer > 20.0) {
                 this.teleportToPlayer();
                 this.teleportTimer = 0;
             }
@@ -1559,8 +1678,6 @@ class Enemy {
             this.teleportTimer = 0;
         }
         
-        // ВСЕГДА преследуем игрока, независимо от расстояния
-        // Обновляем путь каждые 2 секунды или если путь пустой
         this.pathUpdateTimer += deltaTime;
         if (this.pathUpdateTimer > 2.0 || this.path.length === 0 || distance < 5) {
             this.pathUpdateTimer = 0;
@@ -1568,7 +1685,6 @@ class Enemy {
             this.currentPathIndex = 0;
         }
         
-        // Двигаемся по пути с улучшенным избеганием препятствий
         if (this.path.length > 0 && this.currentPathIndex < this.path.length) {
             const targetNode = this.path[this.currentPathIndex];
             const targetX = targetNode.x;
@@ -1578,18 +1694,16 @@ class Enemy {
             const dzToNode = targetZ - this.z;
             const distanceToNode = Math.sqrt(dxToNode * dxToNode + dzToNode * dzToNode);
             
-            if (distanceToNode < 1.0) { // Увеличил дистанцию достижения узла
+            if (distanceToNode < 1.0) {
                 this.currentPathIndex++;
             } else {
                 let dirX = dxToNode / distanceToNode;
                 let dirZ = dzToNode / distanceToNode;
                 
-                // Добавляем силу избегания других врагов
                 this.calculateAvoidanceForce();
                 dirX += this.avoidanceForce.x * 0.5;
                 dirZ += this.avoidanceForce.y * 0.5;
                 
-                // Нормализуем результирующее направление
                 const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
                 if (dirLength > 0) {
                     dirX /= dirLength;
@@ -1599,22 +1713,18 @@ class Enemy {
                 const newX = this.x + dirX * this.speed * deltaTime;
                 const newZ = this.z + dirZ * this.speed * deltaTime;
                 
-                // УЛУЧШЕННАЯ проверка коллизий с плавным обходом препятствий
                 if (!this.checkWallCollision(newX, newZ)) {
                     this.x = newX;
                     this.z = newZ;
                 } else {
-                    // Если столкнулись со стеной, пытаемся обойти
                     this.handleWallCollision(dirX, dirZ, deltaTime);
                 }
             }
         } else {
-            // Если путь недоступен, двигаемся напрямую к игроку с избеганием препятствий
             if (distance > 0) {
                 let dirX = dx / distance;
                 let dirZ = dz / distance;
                 
-                // Добавляем силу избегания
                 this.calculateAvoidanceForce();
                 dirX += this.avoidanceForce.x * 0.3;
                 dirZ += this.avoidanceForce.y * 0.3;
@@ -1637,13 +1747,9 @@ class Enemy {
             }
         }
         
-        // Обновляем позицию спрайта
         this.sprite.position.set(this.x, 0.8, this.z);
-        
-        // Поворачиваем спрайт к камере
         this.sprite.lookAt(camera.position);
         
-        // Проверяем, не застрял ли враг
         const movedDistance = Math.sqrt(
             (this.x - this.lastX) * (this.x - this.lastX) + 
             (this.z - this.lastZ) * (this.z - this.lastZ)
@@ -1651,7 +1757,7 @@ class Enemy {
         
         if (movedDistance < 0.1 * deltaTime) {
             this.stuckTimer += deltaTime;
-            if (this.stuckTimer > 2.0) { // Если застрял более 2 секунд
+            if (this.stuckTimer > 2.0) {
                 this.findAlternativePath();
                 this.stuckTimer = 0;
             }
@@ -1659,22 +1765,18 @@ class Enemy {
             this.stuckTimer = 0;
         }
         
-        // Ближняя атака - раз в 1 секунду
         if (distance < this.attackRange && this.attackCooldown <= 0) {
             this.meleeAttack();
             this.attackCooldown = 1.0;
         }
         
-        // Бросок файрбола - раз в 5 секунд
         if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
             this.throwFireball(playerX, playerZ);
             this.fireballCooldown = 5.0;
         }
     }
     
-    // Телепортация к игроку - ИСПРАВЛЕНО
     teleportToPlayer() {
-        // Находим свободную клетку рядом с игроком на расстоянии 25 единиц
         const playerMazeX = Math.round((camera.position.x / CELL_SIZE) + maze[0].length/2);
         const playerMazeZ = Math.round((camera.position.z / CELL_SIZE) + maze.length/2);
         
@@ -1692,7 +1794,6 @@ class Enemy {
                             (worldZ - camera.position.z) * (worldZ - camera.position.z)
                         );
                         
-                        // Телепортируем на расстоянии 25 единиц от игрока
                         if (distanceToPlayer > 20 && distanceToPlayer < 30) {
                             freeCells.push({x: worldX, z: worldZ});
                         }
@@ -1706,11 +1807,10 @@ class Enemy {
             this.x = randomCell.x;
             this.z = randomCell.z;
             this.sprite.position.set(this.x, 0.8, this.z);
-            this.path = []; // Сбрасываем путь
+            this.path = [];
         }
     }
     
-    // Расчет силы избегания других врагов
     calculateAvoidanceForce() {
         this.avoidanceForce.set(0, 0);
         const avoidanceRadius = 3.0;
@@ -1723,7 +1823,6 @@ class Enemy {
             const distance = Math.sqrt(dx * dx + dz * dz);
             
             if (distance < avoidanceRadius && distance > 0) {
-                // Сила отталкивания обратно пропорциональна расстоянию
                 const force = (avoidanceRadius - distance) / avoidanceRadius;
                 this.avoidanceForce.x -= (dx / distance) * force;
                 this.avoidanceForce.y -= (dz / distance) * force;
@@ -1731,14 +1830,12 @@ class Enemy {
         }
     }
     
-    // Обработка столкновений со стенами
     handleWallCollision(dirX, dirZ, deltaTime) {
-        // Пробуем разные направления для обхода препятствия
         const directions = [
-            [dirZ, -dirX],  // Перпендикулярно влево
-            [-dirZ, dirX],  // Перпендикулярно вправо
-            [dirX * 0.7, dirZ * 0.7],  // Под углом
-            [-dirX * 0.5, -dirZ * 0.5] // Назад
+            [dirZ, -dirX],
+            [-dirZ, dirX],
+            [dirX * 0.7, dirZ * 0.7],
+            [-dirX * 0.5, -dirZ * 0.5]
         ];
         
         for (let [testX, testZ] of directions) {
@@ -1753,10 +1850,9 @@ class Enemy {
         }
     }
     
-    // Поиск альтернативного пути при застревании
     findAlternativePath() {
         this.path = [];
-        this.pathUpdateTimer = 2.0; // Принудительно обновим путь в следующем кадре
+        this.pathUpdateTimer = 2.0;
     }
     
     checkWallCollision(x, z) {
@@ -1820,7 +1916,6 @@ class Enemy {
     }
     
     takeDamage(amount, distance) {
-        // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
         let damage = 0;
         
         if (distance < 4) {
@@ -1831,12 +1926,8 @@ class Enemy {
             damage = 1;
         }
         
-        // Применяем округленный урон
         this.health -= damage;
         
-        // УБРАЛ эффект получения урона (красный цвет)
-        
-        // Воспроизводим случайный звук получения урона
         if (Math.random() > 0.5) {
             if (impDamageSound1) {
                 impDamageSound1.currentTime = 0;
@@ -1859,7 +1950,11 @@ class Enemy {
         this.deathFrame = 1;
         this.deathTimer = 0;
         
-        // Воспроизводим случайный звук смерти
+        // В режиме Onslaught за каждого убитого врага даем монету
+        if (currentGameMode === 'onslaught') {
+            settingsManager.addCoins(1);
+        }
+        
         const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
         const randomSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
         
@@ -1913,34 +2008,28 @@ class Enemy {
             enemies.splice(index, 1);
         }
         
-        // Увеличиваем счет убитых врагов
         enemiesKilled++;
         updateUI();
         
-        // Проверяем победу в режиме Extermination
         if (currentGameMode === 'extermination' && enemiesKilled >= targetEnemies) {
             victory();
         }
         
-        // Проверяем завершение волны в режиме Onslaught
         if (currentGameMode === 'onslaught') {
             waveEnemiesKilled++;
-            if (waveEnemiesKilled >= waveEnemiesCount && enemies.length === 0) {
-                nextWave();
-            }
+            // В Onslaught враги спавнятся бесконечно, не проверяем завершение волны
         }
     }
 }
 
-// КЛАСС ФАЙРБОЛА - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР
+// КЛАСС ФАЙРБОЛА
 class Fireball {
     constructor(x, z, targetX, targetZ) {
         this.x = x;
         this.z = z;
         this.speed = 12.0;
         this.isActive = true;
-        // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
-        this.damage = Math.round((20 + Math.random() * 20) / 5) * 5; // Урон от 20 до 40, округленный до шага 5
+        this.damage = Math.round((20 + Math.random() * 20) / 5) * 5;
         
         const dx = targetX - x;
         const dz = targetZ - z;
@@ -1955,7 +2044,7 @@ class Fireball {
         }));
         
         this.sprite.position.set(this.x, 0.8, this.z);
-        this.sprite.scale.set(3.5, 3.5, 1); // Увеличил размер спрайта
+        this.sprite.scale.set(3.5, 3.5, 1);
         scene.add(this.sprite);
         
         this.rotation = 0;
@@ -1981,15 +2070,14 @@ class Fireball {
         const dz = this.z - camera.position.z;
         const distance = Math.sqrt(dx * dx + dz * dz);
         
-        // УВЕЛИЧИЛ радиус коллайдера фаербола
-        if (distance < 2.0) { // Было 1.5
+        if (distance < 2.0) {
             this.destroy();
             takeDamage(this.damage);
         }
     }
     
     checkWallCollision() {
-        const fireballRadius = 0.8; // УВЕЛИЧИЛ радиус коллайдера (было 0.3)
+        const fireballRadius = 0.8;
         const points = [
             [this.x - fireballRadius, this.z],
             [this.x + fireballRadius, this.z],
@@ -2029,7 +2117,7 @@ class Fireball {
 let enemies = [];
 let fireballs = [];
 
-// Функция создания врагов - УЛУЧШЕННАЯ
+// Функция создания врагов
 function createEnemies(count, mode = 'normal') {
     for (let i = 0; i < count; i++) {
         let freeCells = [];
@@ -2044,12 +2132,10 @@ function createEnemies(count, mode = 'normal') {
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
                     if (mode === 'onslaught' || mode === 'extermination') {
-                        // В режиме Extermination враги появляются в случайных местах
                         if (mode === 'extermination' || (distance > 8 && distance < 20)) {
                             freeCells.push({x: worldX, z: worldZ});
                         }
                     } else if (mode === 'straight') {
-                        // В режиме Straight Through враги появляются ВЕЗДЕ (много врагов)
                         if (distance > 5) {
                             freeCells.push({x: worldX, z: worldZ});
                         }
@@ -2065,9 +2151,8 @@ function createEnemies(count, mode = 'normal') {
     }
 }
 
-// Функция получения урона игроком - ИСПРАВЛЕННАЯ
+// Функция получения урона игроком
 function takeDamage(amount) {
-    // ОКРУГЛЯЕМ урон до целых чисел
     const roundedDamage = Math.round(amount);
     hp -= roundedDamage;
     if (hp < 0) hp = 0;
@@ -2108,7 +2193,19 @@ function gameOver() {
 
 // Функция победы
 function victory() {
-    alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)}!`);
+    let coinsEarned = 0;
+    
+    if (currentGameMode === 'extermination') {
+        coinsEarned = enemiesKilled; // 1 монета за каждого убитого врага
+    } else if (currentGameMode === 'straight') {
+        coinsEarned = 20; // 20 монет за победу в гонке
+    } else if (currentGameMode === 'onslaught') {
+        coinsEarned = enemiesKilled; // 1 монета за каждого убитого врага
+    }
+    
+    settingsManager.addCoins(coinsEarned);
+    
+    alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)} и заработали ${coinsEarned} монет!`);
     location.reload();
 }
 
@@ -2122,21 +2219,19 @@ function getModeName(mode) {
     }
 }
 
-// Функция проверки попадания по врагам - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР ПУЛИ
+// Функция проверки попадания по врагам
 function checkEnemyHit() {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
     
-    // УВЕЛИЧИЛ дальность луча для лучшего обнаружения врагов
-    raycaster.far = 50; // Увеличил дальность луча
+    raycaster.far = 50;
     
     for (let enemy of enemies) {
         if (!enemy.isAlive) continue;
         
-        // УВЕЛИЧИЛ радиус сферы для обнаружения
         const enemySphere = new THREE.Sphere(
             new THREE.Vector3(enemy.x, 0.8, enemy.z),
-            2.0 // УВЕЛИЧИЛ радиус (было 1.5)
+            2.0
         );
         
         if (raycaster.ray.intersectsSphere(enemySphere)) {
@@ -2149,15 +2244,13 @@ function checkEnemyHit() {
         }
     }
     
-    // Дополнительная проверка с использованием рейкастинга по всем врагам
     const intersects = [];
     for (let enemy of enemies) {
         if (!enemy.isAlive) continue;
         
-        // Создаем bounding box для врага
         const enemyBox = new THREE.Box3().setFromCenterAndSize(
             new THREE.Vector3(enemy.x, 0.8, enemy.z),
-            new THREE.Vector3(2.0, 2.0, 2.0) // Увеличил размер бокса
+            new THREE.Vector3(2.0, 2.0, 2.0)
         );
         
         if (raycaster.ray.intersectsBox(enemyBox)) {
@@ -2178,25 +2271,11 @@ function startWave(waveNumber) {
     currentWave = waveNumber;
     waveEnemiesKilled = 0;
     
-    // НОВАЯ СИСТЕМА ВОЛН: 1, 2, 4, 6, 9 врагов
-    if (waveNumber === 1) {
-        waveEnemiesCount = 1;
-    } else if (waveNumber === 2) {
-        waveEnemiesCount = 2;
-    } else if (waveNumber === 3) {
-        waveEnemiesCount = 4;
-    } else if (waveNumber === 4) {
-        waveEnemiesCount = 6;
-    } else if (waveNumber === 5) {
-        waveEnemiesCount = 9;
-    } else {
-        waveEnemiesCount = 9 + (waveNumber - 5) * 2; // Постепенное увеличение после 5 волны
-    }
-    
-    enemiesToSpawn = waveEnemiesCount;
+    // В Onslaught враги спавнятся бесконечно, без фиксированного количества
+    waveEnemiesCount = Infinity;
+    enemiesToSpawn = 5 + (waveNumber - 1) * 2; // Начинаем с 5 врагов, +2 с каждой волной
     lastSpawnTime = 0;
     
-    // Показываем информацию о волне
     const waveInfo = document.getElementById('waveInfo');
     waveInfo.textContent = `Волна ${waveNumber}`;
     waveInfo.style.display = 'block';
@@ -2213,12 +2292,11 @@ function nextWave() {
     startWave(currentWave);
 }
 
-// Функция постепенного спавна врагов в режиме Onslaught
+// Функция постепенного спавна врагов в режиме Onslaught - ИСПРАВЛЕННАЯ
 function spawnEnemiesOverTime(currentTime) {
     if (currentGameMode !== 'onslaught' || enemiesToSpawn <= 0) return;
     
     if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
-        // Спавним по 1 врагу за раз
         const spawnCount = Math.min(1, enemiesToSpawn);
         
         let freeCells = [];
@@ -2231,7 +2309,6 @@ function spawnEnemiesOverTime(currentTime) {
                     const dz = worldZ - camera.position.z;
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
-                    // Враги появляются НЕДАЛЕКО от игрока
                     if (distance > 8 && distance < 20) {
                         freeCells.push({x: worldX, z: worldZ});
                     }
@@ -2248,6 +2325,11 @@ function spawnEnemiesOverTime(currentTime) {
         }
         
         lastSpawnTime = currentTime;
+        
+        // Если все враги заспавнены, но их мало - добавляем еще
+        if (enemiesToSpawn <= 0 && enemies.length < 3) {
+            enemiesToSpawn = 3;
+        }
     }
 }
 
@@ -2255,7 +2337,6 @@ function spawnEnemiesOverTime(currentTime) {
 function respawnEnemiesInStraightThrough() {
     if (currentGameMode !== 'straight') return;
     
-    // Респавним врагов если их меньше 5
     if (enemies.length < 5) {
         const enemiesToRespawn = 5 - enemies.length;
         createEnemies(enemiesToRespawn, 'straight');
@@ -2307,6 +2388,12 @@ function animate(currentTime) {
     camera.position.x = newX;
     camera.position.z = newZ;
     
+    // Проверяем сбор монет
+    for (let i = coins.length - 1; i >= 0; i--) {
+        coins[i].update(deltaTime);
+        coins[i].checkCollection(camera.position.x, camera.position.z);
+    }
+    
     // Проверяем достижение выхода в режиме Straight Through
     if (currentGameMode === 'straight' && checkExitReached()) {
         victory();
@@ -2356,6 +2443,9 @@ function startGame() {
     document.getElementById('uiPanel').style.display = 'block';
     document.getElementById('modeStats').style.display = 'block';
     document.getElementById('damageEffect').style.display = 'none';
+    document.getElementById('coinCounter').style.display = 'flex';
+    
+    updateCoinCounter();
     
     if ('ontouchstart' in window || navigator.maxTouchPoints) {
         document.getElementById('mobileControls').style.display = 'block';
@@ -2378,18 +2468,18 @@ function startGame() {
     
     // Устанавливаем HP в зависимости от режима
     if (currentGameMode === 'straight') {
-        hp = 35; // 35 HP для Straight Through
+        hp = 35;
     } else {
         hp = 100;
     }
     
     // Создаем врагов в зависимости от режима
     if (currentGameMode === 'extermination') {
-        createEnemies(40, 'extermination'); // 40 врагов спавнится, но нужно убить только 20
+        createEnemies(40, 'extermination');
     } else if (currentGameMode === 'onslaught') {
         startWave(1);
     } else if (currentGameMode === 'straight') {
-        createEnemies(15, 'straight'); // МНОГО врагов в лабиринте
+        createEnemies(15, 'straight');
     }
     
     updateUI();
