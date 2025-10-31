@@ -538,6 +538,34 @@
             display: none;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
         }
+
+        /* Счетчик монет */
+        #coinCounter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: gold;
+            font-size: 24px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 45;
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .coin-icon {
+            width: 24px;
+            height: 24px;
+            background-image: url('GameUi/Coin/1.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
     </style>
 </head>
 <body>
@@ -643,6 +671,12 @@
     <div id="modeStats">
         <div id="enemiesKilled">Убито: 0/20</div>
         <div id="waveCounter">Волна: 1</div>
+    </div>
+    
+    <!-- Счетчик монет -->
+    <div id="coinCounter">
+        <div class="coin-icon"></div>
+        <span id="coinsCount">0</span>
     </div>
     
     <!-- Область выхода для режима Straight Through -->
