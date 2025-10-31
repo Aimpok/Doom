@@ -378,20 +378,20 @@
 
         .mode-slide {
             position: absolute;
-            width: 50vmin; /* Уменьшил ширину рамки */
+            width: 50vmin;
             height: 50vmin;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Изменил на flex-start */
+            justify-content: flex-start;
             transition: all 0.5s ease;
             opacity: 0.5;
             transform: scale(0.8);
             cursor: pointer;
-            background: rgba(40, 40, 40, 0.95); /* Убрал прозрачность, сделал нормальный цвет */
-            border: none; /* Убрал обводку */
+            background: rgba(40, 40, 40, 0.95);
+            border: none;
             border-radius: 10px;
-            padding: 0; /* Убрал внутренние отступы */
+            padding: 0;
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -414,21 +414,21 @@
         }
 
         .mode-icon {
-            width: 100%; /* Растягиваем на всю ширину рамки */
-            height: 70%; /* Занимает 70% высоты */
-            object-fit: cover; /* Растягиваем изображение чтобы заполнить всю область */
+            width: 100%;
+            height: 70%;
+            object-fit: cover;
             margin-bottom: 0;
             pointer-events: none;
-            border-radius: 10px 10px 0 0; /* Закругляем только верхние углы */
+            border-radius: 10px 10px 0 0;
         }
 
         .mode-name {
-            width: 90%; /* Уменьшил ширину чтобы было поуже */
+            width: 90%;
             max-width: 350px;
             object-fit: contain;
             pointer-events: none;
-            margin: 1vmin 0; /* Уменьшил отступы */
-            height: 15%; /* Фиксируем высоту для названия */
+            margin: 1vmin 0;
+            height: 15%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -444,7 +444,7 @@
             width: 90%;
             pointer-events: none;
             margin-bottom: 1vmin;
-            height: 15%; /* Фиксируем высоту для описания */
+            height: 15%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -458,7 +458,7 @@
         }
 
         .nav-arrow {
-            display: none; /* Скрываем стрелки навигации */
+            display: none;
         }
 
         .start-mode-button {
@@ -567,7 +567,7 @@
             background-repeat: no-repeat;
         }
 
-        /* Магазин оружия */
+        /* Меню оружия */
         #weaponsMenu {
             position: absolute;
             top: 0;
@@ -596,112 +596,122 @@
             pointer-events: none;
         }
 
-        .weapons-list {
+        .weapons-carousel {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 2vmin;
+            justify-content: center;
             width: 90%;
-            max-width: 800px;
+            max-width: 1200px;
             height: 60vmin;
-            overflow-y: auto;
-            padding: 2vmin;
+            position: relative;
+            overflow: hidden;
         }
 
-        .weapon-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            background: rgba(40, 40, 40, 0.9);
-            padding: 2vmin;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-height: 15vmin;
-        }
-
-        .weapon-item:hover {
-            background: rgba(60, 60, 60, 0.9);
-            transform: scale(1.02);
-        }
-
-        .weapon-info {
-            display: flex;
-            align-items: center;
-            gap: 2vmin;
-            flex: 1;
-        }
-
-        .weapon-image {
-            width: 12vmin;
-            height: 12vmin;
-            object-fit: contain;
-            -webkit-user-drag: none;
-            user-drag: none;
-        }
-
-        .weapon-details {
+        .weapon-slide {
+            position: absolute;
+            width: 50vmin;
+            height: 50vmin;
             display: flex;
             flex-direction: column;
-            gap: 0.5vmin;
+            align-items: center;
+            justify-content: flex-start;
+            transition: all 0.5s ease;
+            opacity: 0.5;
+            transform: scale(0.8);
+            cursor: pointer;
+            background: rgba(40, 40, 40, 0.95);
+            border: none;
+            border-radius: 10px;
+            padding: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .weapon-slide.active {
+            opacity: 1;
+            transform: scale(1);
+            z-index: 10;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+        }
+
+        .weapon-slide.left {
+            transform: translateX(-80%) scale(0.7);
+            cursor: pointer;
+        }
+
+        .weapon-slide.right {
+            transform: translateX(80%) scale(0.7);
+            cursor: pointer;
+        }
+
+        .weapon-icon {
+            width: 80%;
+            height: 60%;
+            object-fit: contain;
+            margin-bottom: 0;
+            pointer-events: none;
         }
 
         .weapon-name {
-            color: white;
-            font-size: 3vmin;
-            font-weight: bold;
+            width: 90%;
+            max-width: 350px;
+            object-fit: contain;
+            pointer-events: none;
+            margin: 1vmin 0;
+            height: 10%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .weapon-description {
-            color: #ccc;
-            font-size: 2vmin;
+            color: white;
+            font-size: 1.8vmin;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1vmin;
+            border-radius: 5px;
+            width: 90%;
+            pointer-events: none;
+            margin-bottom: 1vmin;
+            height: 10%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .weapon-price {
             color: gold;
             font-size: 2.5vmin;
             font-weight: bold;
+            margin: 1vmin 0;
         }
 
-        .weapon-actions {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1vmin;
-        }
-
-        .weapon-action-button {
-            width: 20vmin;
-            max-width: 200px;
-            min-width: 100px;
+        .weapon-button {
+            width: 30vmin;
+            max-width: 300px;
+            min-width: 150px;
             cursor: pointer;
             transition: all 0.3s ease;
             object-fit: contain;
             -webkit-user-drag: none;
             user-drag: none;
             pointer-events: auto;
+            margin-top: 1vmin;
         }
 
-        .weapon-action-button:hover {
+        .weapon-button:hover {
             transform: scale(1.05);
         }
 
         .back-icon {
             position: absolute;
-            top: 2vmin;
-            left: 2vmin;
+            top: 3vmin;
+            left: 3vmin;
             width: 8vmin;
             height: 8vmin;
             cursor: pointer;
-            transition: all 0.3s ease;
-            -webkit-user-drag: none;
-            user-drag: none;
-            pointer-events: auto;
-        }
-
-        .back-icon:hover {
-            transform: scale(1.1);
+            z-index: 140;
         }
     </style>
 </head>
@@ -712,7 +722,7 @@
         <img src="MenuUi/Logo.png" alt="DOOM" class="logo">
         <div class="menu-buttons">
             <img src="MenuUi/PlayText.png" alt="Играть" class="menu-button" id="playButton">
-            <img src="MenuUi/WeaponsText.png" alt="Оружия" class="menu-button" id="weaponsButton">
+            <img src="MenuUi/GunsText.png" alt="Оружия" class="menu-button" id="weaponsButton">
             <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
         <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
@@ -749,47 +759,31 @@
         <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainButton">
     </div>
 
-    <!-- Магазин оружия -->
+    <!-- Меню оружия -->
     <div id="weaponsMenu">
-        <img src="MenuUi/WeaponsText.png" alt="ОРУЖИЯ" class="weapons-title">
+        <img src="MenuUi/BackIcon.png" alt="НАЗАД" class="back-icon" id="backFromWeapons">
+        <img src="MenuUi/GunsText.png" alt="ОРУЖИЯ" class="weapons-title">
         
-        <div class="weapons-list">
-            <!-- Оружие 1: Стандартное (уже куплено) -->
-            <div class="weapon-item" data-weapon="default">
-                <div class="weapon-info">
-                    <img src="Guns/DefaultShootGun/Gun.png" alt="Дробовик" class="weapon-image">
-                    <div class="weapon-details">
-                        <div class="weapon-name">ДРОБОВИК</div>
-                        <div class="weapon-description">2 патрона, средняя перезарядка</div>
-                        <div class="weapon-price">БЕСПЛАТНО</div>
-                    </div>
-                </div>
-                <div class="weapon-actions">
-                    <img src="MenuUi/SelectedText.png" alt="ВЫБРАНО" class="weapon-action-button selected-button" style="display: none;">
-                    <img src="MenuUi/SelectText.png" alt="ВЫБРАТЬ" class="weapon-action-button select-button">
-                </div>
+        <div class="weapons-carousel">
+            <div class="weapon-slide" data-weapon="default">
+                <img src="Guns/DefaultShootGun/Gun.png" alt="Одностволка" class="weapon-icon">
+                <img src="MenuUi/SingleShootgunText.png" alt="ОДНОСТВОЛКА" class="weapon-name">
+                <div class="weapon-description">Стандартное оружие</div>
+                <div class="weapon-price">БЕСПЛАТНО</div>
+                <img src="MenuUi/SelectedText.png" alt="ВЫБРАНО" class="weapon-button" id="selectDefaultWeapon">
             </div>
             
-            <!-- Оружие 2: Одноствольное (покупается) -->
-            <div class="weapon-item" data-weapon="single">
-                <div class="weapon-info">
-                    <img src="Guns/SingleShootGun/Gun.png" alt="Одностволка" class="weapon-image">
-                    <div class="weapon-details">
-                        <div class="weapon-name">ОДНОСТВОЛКА</div>
-                        <div class="weapon-description">1 патрон, быстрая перезарядка</div>
-                        <div class="weapon-price">100 МОНЕТ</div>
-                    </div>
-                </div>
-                <div class="weapon-actions">
-                    <img src="MenuUi/SelectedText.png" alt="ВЫБРАНО" class="weapon-action-button selected-button" style="display: none;">
-                    <img src="MenuUi/BuyText.png" alt="КУПИТЬ" class="weapon-action-button buy-button">
-                    <img src="MenuUi/SelectText.png" alt="ВЫБРАТЬ" class="weapon-action-button select-button" style="display: none;">
-                </div>
+            <div class="weapon-slide" data-weapon="double">
+                <img src="Guns/DoubleShootGun/Gun.png" alt="Двухстволка" class="weapon-icon">
+                <img src="MenuUi/DoubleShootgunText.png" alt="ДВУХСТВОЛКА" class="weapon-name">
+                <div class="weapon-description">Мощное оружие с 2 патронами</div>
+                <div class="weapon-price" id="doubleGunPrice">100 МОНЕТ</div>
+                <img src="MenuUi/BuyText.png" alt="КУПИТЬ" class="weapon-button" id="buyDoubleWeapon" style="display: none;">
+                <img src="MenuUi/SelectText.png" alt="ВЫБРАТЬ" class="weapon-button" id="selectDoubleWeapon" style="display: none;">
             </div>
         </div>
         
-        <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backFromWeaponsButton">
-        <img src="MenuUi/BackIcon.png" alt="←" class="back-icon" id="backIconWeapons">
+        <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainFromWeapons">
     </div>
     
     <!-- Панель настроек меню - СКРЫТА -->
@@ -866,7 +860,7 @@
     <!-- Информация о волне -->
     <div id="waveInfo"></div>
     
-    <!-- Стрелка для указания выхода -->
+    <!-- Стрелка для указания направления выхода -->
     <img id="exitArrow" src="MenuUi/ArrowIcon.png" alt="→">
     
     <!-- Эффект получения урона -->
@@ -885,13 +879,16 @@
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             const backToMainButton = document.getElementById('backToMainButton');
-            const backFromWeaponsButton = document.getElementById('backFromWeaponsButton');
-            const backIconWeapons = document.getElementById('backIconWeapons');
+            const backFromWeapons = document.getElementById('backFromWeapons');
+            const backToMainFromWeapons = document.getElementById('backToMainFromWeapons');
             
             // Устанавливаем начальные значения слайдеров из сохраненных настроек
             document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
             document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
             document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
+            
+            // Инициализируем меню оружия
+            initWeaponsMenu();
             
             // Запускаем музыку при инициализации
             startMusic();
@@ -920,19 +917,16 @@
                 hideModeSelect();
             });
             
-            backFromWeaponsButton.addEventListener('click', function(e) {
+            backFromWeapons.addEventListener('click', function(e) {
                 hideWeaponsMenu();
             });
             
-            backIconWeapons.addEventListener('click', function(e) {
+            backToMainFromWeapons.addEventListener('click', function(e) {
                 hideWeaponsMenu();
             });
             
             // Инициализируем карусель режимов
             initModeCarousel();
-            
-            // Инициализируем магазин оружия
-            initWeaponsMenu();
         }
 
         // Функции для меню
@@ -945,11 +939,6 @@
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('weaponsMenu').style.display = 'flex';
             updateWeaponsMenu();
-        }
-
-        function hideWeaponsMenu() {
-            document.getElementById('weaponsMenu').style.display = 'none';
-            document.getElementById('startMenu').style.display = 'flex';
         }
 
         function showOptions() {
@@ -969,6 +958,11 @@
 
         function hideModeSelect() {
             document.getElementById('modeSelectMenu').style.display = 'none';
+            document.getElementById('startMenu').style.display = 'flex';
+        }
+
+        function hideWeaponsMenu() {
+            document.getElementById('weaponsMenu').style.display = 'none';
             document.getElementById('startMenu').style.display = 'flex';
         }
 
@@ -1051,138 +1045,180 @@
             }
         }
 
-        // Инициализация магазина оружия
+        // Инициализация меню оружия
         function initWeaponsMenu() {
-            const weaponItems = document.querySelectorAll('.weapon-item');
+            const slides = document.querySelectorAll('.weapon-slide');
+            let currentSlide = 0;
             
-            weaponItems.forEach(item => {
-                const weaponType = item.getAttribute('data-weapon');
-                const buyButton = item.querySelector('.buy-button');
-                const selectButton = item.querySelector('.select-button');
-                const selectedButton = item.querySelector('.selected-button');
-                
-                // Обработчик кнопки покупки
-                if (buyButton) {
-                    buyButton.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        buyWeapon(weaponType, item);
-                    });
-                }
-                
-                // Обработчик кнопки выбора
-                if (selectButton) {
-                    selectButton.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        selectWeapon(weaponType, item);
-                    });
-                }
-                
-                // Обработчик клика по всему предмету
-                item.addEventListener('click', () => {
-                    if (selectButton && selectButton.style.display !== 'none') {
-                        selectWeapon(weaponType, item);
-                    } else if (buyButton && buyButton.style.display !== 'none') {
-                        buyWeapon(weaponType, item);
+            // Устанавливаем начальный активный слайд
+            updateWeaponSlides();
+            
+            // Обработчики для кликов по слайдам
+            slides.forEach((slide, index) => {
+                slide.addEventListener('click', (e) => {
+                    // Если клик по левому слайду - перейти к предыдущему
+                    if (slide.classList.contains('left')) {
+                        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                        updateWeaponSlides();
+                    }
+                    // Если клик по правому слайду - перейти к следующему
+                    else if (slide.classList.contains('right')) {
+                        currentSlide = (currentSlide + 1) % slides.length;
+                        updateWeaponSlides();
                     }
                 });
             });
-        }
-
-        // Обновление магазина оружия
-        function updateWeaponsMenu() {
-            const weaponItems = document.querySelectorAll('.weapon-item');
-            const playerCoins = settingsManager.getCoins();
             
-            weaponItems.forEach(item => {
-                const weaponType = item.getAttribute('data-weapon');
-                const buyButton = item.querySelector('.buy-button');
-                const selectButton = item.querySelector('.select-button');
-                const selectedButton = item.querySelector('.selected-button');
-                const priceElement = item.querySelector('.weapon-price');
-                
-                // Проверяем, куплено ли оружие
-                const isOwned = settingsManager.isWeaponOwned(weaponType);
-                const isSelected = settingsManager.getSelectedWeapon() === weaponType;
-                
-                if (isOwned) {
-                    // Оружие куплено
-                    if (buyButton) buyButton.style.display = 'none';
-                    if (selectButton) selectButton.style.display = isSelected ? 'none' : 'block';
-                    if (selectedButton) selectedButton.style.display = isSelected ? 'block' : 'none';
-                    
-                    if (priceElement) {
-                        priceElement.textContent = 'КУПЛЕНО';
-                        priceElement.style.color = '#44ff44';
-                    }
-                } else {
-                    // Оружие не куплено
-                    if (buyButton) buyButton.style.display = 'block';
-                    if (selectButton) selectButton.style.display = 'none';
-                    if (selectedButton) selectedButton.style.display = 'none';
-                    
-                    // Проверяем, хватает ли монет
-                    const weaponPrice = getWeaponPrice(weaponType);
-                    const canAfford = playerCoins >= weaponPrice;
-                    
-                    if (buyButton) {
-                        buyButton.style.opacity = canAfford ? '1' : '0.5';
-                        buyButton.style.cursor = canAfford ? 'pointer' : 'not-allowed';
-                    }
-                    
-                    if (priceElement) {
-                        priceElement.textContent = weaponPrice + ' МОНЕТ';
-                        priceElement.style.color = canAfford ? 'gold' : '#ff4444';
-                    }
-                }
+            // Обработчики для кнопок оружия
+            document.getElementById('selectDefaultWeapon').addEventListener('click', function() {
+                selectWeapon('default');
             });
+            
+            document.getElementById('buyDoubleWeapon').addEventListener('click', function() {
+                buyWeapon('double');
+            });
+            
+            document.getElementById('selectDoubleWeapon').addEventListener('click', function() {
+                selectWeapon('double');
+            });
+            
+            // Функция обновления слайдов оружия
+            function updateWeaponSlides() {
+                slides.forEach((slide, index) => {
+                    slide.classList.remove('active', 'left', 'right');
+                    
+                    if (index === currentSlide) {
+                        slide.classList.add('active');
+                    } else if (index === (currentSlide - 1 + slides.length) % slides.length) {
+                        slide.classList.add('left');
+                    } else if (index === (currentSlide + 1) % slides.length) {
+                        slide.classList.add('right');
+                    }
+                });
+            }
+            
+            // Добавляем поддержку свайпов
+            let touchStartX = 0;
+            let touchEndX = 0;
+            
+            const carousel = document.querySelector('.weapons-carousel');
+            
+            carousel.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+            
+            carousel.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+            
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                
+                if (touchEndX < touchStartX - swipeThreshold) {
+                    // Свайп влево - следующий слайд
+                    currentSlide = (currentSlide + 1) % slides.length;
+                    updateWeaponSlides();
+                } else if (touchEndX > touchStartX + swipeThreshold) {
+                    // Свайп вправо - предыдущий слайд
+                    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+                    updateWeaponSlides();
+                }
+            }
         }
 
-        // Функция покупки оружия
-        function buyWeapon(weaponType, item) {
-            const weaponPrice = getWeaponPrice(weaponType);
-            const playerCoins = settingsManager.getCoins();
+        // Обновление меню оружия
+        function updateWeaponsMenu() {
+            const doubleWeaponPurchased = settingsManager.getSetting('doubleWeaponPurchased') || false;
+            const currentWeapon = settingsManager.getSetting('currentWeapon') || 'default';
             
-            if (playerCoins >= weaponPrice) {
-                if (settingsManager.buyWeapon(weaponType, weaponPrice)) {
+            const buyButton = document.getElementById('buyDoubleWeapon');
+            const selectButton = document.getElementById('selectDoubleWeapon');
+            const priceElement = document.getElementById('doubleGunPrice');
+            
+            if (doubleWeaponPurchased) {
+                buyButton.style.display = 'none';
+                selectButton.style.display = 'block';
+                priceElement.textContent = 'КУПЛЕНО';
+                priceElement.style.color = '#00ff00';
+            } else {
+                buyButton.style.display = 'block';
+                selectButton.style.display = 'none';
+                priceElement.textContent = '100 МОНЕТ';
+                priceElement.style.color = 'gold';
+            }
+            
+            // Обновляем кнопки выбора
+            document.getElementById('selectDefaultWeapon').src = currentWeapon === 'default' ? 
+                'MenuUi/SelectedText.png' : 'MenuUi/SelectText.png';
+                
+            if (doubleWeaponPurchased) {
+                document.getElementById('selectDoubleWeapon').src = currentWeapon === 'double' ? 
+                    'MenuUi/SelectedText.png' : 'MenuUi/SelectText.png';
+            }
+        }
+
+        // Покупка оружия
+        function buyWeapon(weaponType) {
+            if (weaponType === 'double') {
+                const coins = settingsManager.getCoins();
+                if (coins >= 100) {
+                    settingsManager.addCoins(-100);
+                    settingsManager.updateSetting('doubleWeaponPurchased', true);
+                    settingsManager.updateSetting('currentWeapon', 'double');
                     updateWeaponsMenu();
                     updateCoinCounter();
-                    // Автоматически выбираем купленное оружие
-                    selectWeapon(weaponType, item);
+                    applyWeaponSettings('double');
+                } else {
+                    alert('Недостаточно монет! Нужно 100 монет.');
                 }
-            } else {
-                alert('Недостаточно монет!');
             }
         }
 
-        // Функция выбора оружия
-        function selectWeapon(weaponType, item) {
-            if (settingsManager.isWeaponOwned(weaponType)) {
-                settingsManager.selectWeapon(weaponType);
-                updateWeaponsMenu();
-                
-                // Обновляем изображение оружия в игре
-                updateWeaponImage();
+        // Выбор оружия
+        function selectWeapon(weaponType) {
+            if (weaponType === 'double') {
+                const doubleWeaponPurchased = settingsManager.getSetting('doubleWeaponPurchased') || false;
+                if (!doubleWeaponPurchased) {
+                    alert('Сначала купите это оружие!');
+                    return;
+                }
             }
-        }
-
-        // Получение цены оружия
-        function getWeaponPrice(weaponType) {
-            const prices = {
-                'default': 0,
-                'single': 100
-            };
-            return prices[weaponType] || 0;
-        }
-
-        // Обновление изображения оружия в игре
-        function updateWeaponImage() {
-            const selectedWeapon = settingsManager.getSelectedWeapon();
-            const weaponElement = document.getElementById('weapon');
             
-            if (selectedWeapon === 'single') {
-                weaponElement.src = 'Guns/SingleShootGun/Gun.png';
-            } else {
-                weaponElement.src = 'Guns/DefaultShootGun/Gun.png';
+            settingsManager.updateSetting('currentWeapon', weaponType);
+            updateWeaponsMenu();
+            applyWeaponSettings(weaponType);
+        }
+
+        // Применение настроек оружия
+        function applyWeaponSettings(weaponType) {
+            if (weaponType === 'default') {
+                maxAmmo = 2;
+                gunImages = {
+                    normal: 'Guns/DefaultShootGun/Gun.png',
+                    shoot1: 'Guns/DefaultShootGun/GunSh1.png',
+                    shoot2: 'Guns/DefaultShootGun/GunSh2.png',
+                    reload1: 'Guns/DefaultShootGun/GunKD1.png',
+                    reload2: 'Guns/DefaultShootGun/GunKD2.png',
+                    reload3: 'Guns/DefaultShootGun/GunKD3.png'
+                };
+            } else if (weaponType === 'double') {
+                maxAmmo = 2;
+                gunImages = {
+                    normal: 'Guns/DoubleShootGun/Gun.png',
+                    shoot1: 'Guns/DoubleShootGun/GunSh1.png',
+                    shoot2: 'Guns/DoubleShootGun/GunSh2.png',
+                    reload1: 'Guns/DoubleShootGun/GunKD1.png',
+                    reload2: 'Guns/DoubleShootGun/GunKD2.png',
+                    reload3: 'Guns/DoubleShootGun/GunKD3.png'
+                };
+            }
+            
+            ammo = maxAmmo;
+            updateUI();
+            
+            if (weapon.style.display !== 'none') {
+                weapon.src = gunImages.normal;
             }
         }
 
@@ -1266,8 +1302,9 @@
                 initMenu();
                 weapon.style.display = 'none';
                 
-                // Обновляем изображение оружия согласно сохраненным настройкам
-                updateWeaponImage();
+                // Применяем сохраненное оружие
+                const savedWeapon = settingsManager.getSetting('currentWeapon') || 'default';
+                applyWeaponSettings(savedWeapon);
                 
                 preloadWeaponImages();
             }).catch((error) => {
@@ -1284,8 +1321,9 @@
                 initMenu();
                 weapon.style.display = 'none';
                 
-                // Обновляем изображение оружия согласно сохраненным настройкам
-                updateWeaponImage();
+                // Применяем сохраненное оружие
+                const savedWeapon = settingsManager.getSetting('currentWeapon') || 'default';
+                applyWeaponSettings(savedWeapon);
                 
                 preloadWeaponImages();
             });
