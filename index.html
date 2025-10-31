@@ -538,6 +538,23 @@
             display: none;
             filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
         }
+
+        /* Таймер для Lava Chaos */
+        #waveTimer {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            color: #ff4444;
+            font-size: 20px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 45;
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -573,6 +590,12 @@
                 <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
                 <img src="MenuUi/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
                 <div class="mode-description">Выживи как можно дольше</div>
+            </div>
+            
+            <div class="mode-slide" data-mode="lava">
+                <img src="MenuUi/ModeIcons/LavaChaos.png" alt="Lava Chaos" class="mode-icon">
+                <img src="MenuUi/LavaChaosText.png" alt="LAVA CHAOS" class="mode-name">
+                <div class="mode-description">Избегай лавы и выживай</div>
             </div>
         </div>
         
@@ -644,6 +667,9 @@
         <div id="enemiesKilled">Убито: 0/20</div>
         <div id="waveCounter">Волна: 1</div>
     </div>
+    
+    <!-- Таймер волны для Lava Chaos -->
+    <div id="waveTimer">Волна через: 30</div>
     
     <!-- Область выхода для режима Straight Through -->
     <div id="exitArea"></div>
@@ -749,11 +775,21 @@
         let lastSpawnTime = 0;
         const SPAWN_INTERVAL = 1000; // 1 секунда между спавнами
 
+        // Переменные для Lava Chaos
+        let lavaFloors = [];
+        let fallingFloors = [];
+        let floorFallTimer = 0;
+        let floorsToFall = 1;
+        let floorFallInterval = 3.0;
+        let waveTimer = 30;
+        let waveTimerActive = false;
+        let lavaTexture = null;
+
         // Базовые настройки
         const scene = new THREE.Scene();
         
-        // ТУМАН - добавляем в сцену (теперь нельзя отключить)
-        scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+        // ТУМАН - будет установлен в зависимости от режима
+        let sceneFog = null;
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -780,7 +816,7 @@
         function loadTextures() {
             return new Promise((resolve) => {
                 let texturesLoaded = 0;
-                const totalTextures = 3;
+                const totalTextures = 4;
 
                 function onTextureLoad() {
                     texturesLoaded++;
@@ -807,6 +843,12 @@
                     onTextureLoad();
                 });
 
+                lavaTexture = textureLoader.load('Textures/LavaTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры лавы:', error);
+                    lavaTexture = null;
+                    onTextureLoad();
+                });
+
                 // НАСТРОЙКИ ТЕКСТУР
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
@@ -825,6 +867,12 @@
                     roofTexture.repeat.set(20, 20);
                     roofTexture.minFilter = THREE.LinearFilter;
                     roofTexture.magFilter = THREE.LinearFilter;
+                }
+                if (lavaTexture) {
+                    lavaTexture.wrapS = lavaTexture.wrapT = THREE.RepeatWrapping;
+                    lavaTexture.repeat.set(5, 5);
+                    lavaTexture.minFilter = THREE.LinearFilter;
+                    lavaTexture.magFilter = THREE.LinearFilter;
                 }
             });
         }
@@ -860,8 +908,22 @@
                     color: 0xCCCCCC,
                     fog: true
                 });
+
+            const lavaMaterial = lavaTexture ?
+                new THREE.MeshLambertMaterial({
+                    map: lavaTexture,
+                    fog: true,
+                    emissive: 0xff4500,
+                    emissiveIntensity: 0.5
+                }) :
+                new THREE.MeshLambertMaterial({
+                    color: 0xff4500,
+                    fog: true,
+                    emissive: 0xff4500,
+                    emissiveIntensity: 0.3
+                });
             
-            return { wallMaterial, floorMaterial, roofMaterial };
+            return { wallMaterial, floorMaterial, roofMaterial, lavaMaterial };
         }
 
         // Генератор лабиринта для разных режимов - УЛУЧШЕННАЯ ВЕРСИЯ
@@ -877,6 +939,8 @@
             generateMazeForMode() {
                 if (this.mode === 'straight') {
                     return this.generateRealMaze();
+                } else if (this.mode === 'lava') {
+                    return this.generateLavaChaosMaze();
                 } else {
                     return this.generateMazeWithMultiplePaths();
                 }
@@ -897,6 +961,36 @@
                 this.addExtraPassages(maze, 0.1); // 10% дополнительных проходов
                 
                 return maze;
+            }
+
+            // Лабиринт для Lava Chaos - простой с квадратными стенами
+            generateLavaChaosMaze() {
+                // Создаем меньшую карту для Lava Chaos
+                const lavaWidth = Math.floor(this.width / 2);
+                const lavaHeight = Math.floor(this.height / 2);
+                let maze = Array(lavaHeight).fill().map(() => Array(lavaWidth).fill(0));
+                
+                // Добавляем несколько квадратных стен
+                this.addSquareWalls(maze, 3); // 3 квадратные стены
+                
+                return maze;
+            }
+
+            addSquareWalls(maze, numWalls) {
+                const wallSize = 3;
+                
+                for (let i = 0; i < numWalls; i++) {
+                    const x = Math.floor(Math.random() * (maze[0].length - wallSize - 2)) + 1;
+                    const y = Math.floor(Math.random() * (maze.length - wallSize - 2)) + 1;
+                    
+                    for (let wy = y; wy < y + wallSize; wy++) {
+                        for (let wx = x; wx < x + wallSize; wx++) {
+                            if (wy >= 0 && wy < maze.length && wx >= 0 && wx < maze[0].length) {
+                                maze[wy][wx] = 1;
+                            }
+                        }
+                    }
+                }
             }
 
             depthFirstMaze(maze, startX, startY) {
@@ -929,7 +1023,7 @@
                     
                     if (neighbors.length > 0) {
                         let [dx, dy, nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                        maze[y + dy/2][x + dx/2] = 0; // Убираем стену между клетками
+                        maze[y + dy/2][x + dx/2] = 0;
                         maze[ny][nx] = 0;
                         stack.push([nx, ny]);
                     } else {
@@ -1114,6 +1208,21 @@
             scene.add(directionalLight1);
             scene.add(directionalLight2);
             
+            // Устанавливаем туман в зависимости от режима
+            if (scene.fog) {
+                scene.fog = null;
+            }
+            
+            if (currentGameMode === 'lava') {
+                // Темно-красный туман для Lava Chaos
+                scene.fog = new THREE.Fog(0x8B0000, 15, 35);
+                renderer.setClearColor(0x2F0000);
+            } else {
+                // Темно-синий туман для обычных режимов
+                scene.fog = new THREE.Fog(0x191970, 20, 50);
+                renderer.setClearColor(0x87CEEB);
+            }
+            
             createFloor(materials.floorMaterial);
             createRoof(materials.roofMaterial);
             createMazeWalls(materials.wallMaterial);
@@ -1122,6 +1231,12 @@
             if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
                 createExitArea(mazeGen.getExitPosition());
                 createExitArrow();
+            }
+            
+            // Для Lava Chaos создаем лаву и систему падающих полов
+            if (currentGameMode === 'lava') {
+                createLava(materials.lavaMaterial);
+                initializeLavaFloors();
             }
         }
 
@@ -1132,6 +1247,12 @@
             const floor = new THREE.Mesh(floorGeometry, floorMaterial);
             floor.rotation.x = -Math.PI / 2;
             floor.position.y = -1;
+            
+            // Для Lava Chaos делаем пол выше
+            if (currentGameMode === 'lava') {
+                floor.position.y = 0;
+            }
+            
             scene.add(floor);
         }
 
@@ -1183,6 +1304,161 @@
             }
 
             scene.add(wallGroup);
+        }
+
+        // Создание лавы для Lava Chaos
+        function createLava(lavaMaterial) {
+            const lavaWidth = maze[0].length * CELL_SIZE;
+            const lavaHeight = maze.length * CELL_SIZE;
+            const lavaGeometry = new THREE.PlaneGeometry(lavaWidth, lavaHeight);
+            const lava = new THREE.Mesh(lavaGeometry, lavaMaterial);
+            lava.rotation.x = -Math.PI / 2;
+            lava.position.y = -5; // Лава ниже уровня пола
+            scene.add(lava);
+        }
+
+        // Инициализация системы падающих полов для Lava Chaos
+        function initializeLavaFloors() {
+            lavaFloors = [];
+            fallingFloors = [];
+            
+            // Создаем отдельные плитки пола для Lava Chaos
+            for (let y = 0; y < maze.length; y++) {
+                for (let x = 0; x < maze[y].length; x++) {
+                    if (maze[y][x] === 0) { // Только проходимые клетки
+                        const floorGeometry = new THREE.PlaneGeometry(CELL_SIZE * 0.9, CELL_SIZE * 0.9);
+                        const floorMaterial = new THREE.MeshLambertMaterial({ 
+                            map: floorTexture,
+                            fog: true
+                        });
+                        
+                        const floorTile = new THREE.Mesh(floorGeometry, floorMaterial);
+                        floorTile.rotation.x = -Math.PI / 2;
+                        floorTile.position.set(
+                            (x - maze[0].length/2) * CELL_SIZE,
+                            0.1, // Немного выше чтобы не было z-fighting
+                            (y - maze.length/2) * CELL_SIZE
+                        );
+                        
+                        floorTile.userData = {
+                            x: x,
+                            y: y,
+                            isFalling: false,
+                            fallTimer: 0,
+                            warningTime: 5.0,
+                            originalY: 0.1
+                        };
+                        
+                        scene.add(floorTile);
+                        lavaFloors.push(floorTile);
+                    }
+                }
+            }
+        }
+
+        // Обновление системы падающих полов
+        function updateLavaFloors(deltaTime) {
+            floorFallTimer += deltaTime;
+            
+            // Проверяем, нужно ли начать падение нового пола
+            if (floorFallTimer >= floorFallInterval && fallingFloors.length < floorsToFall) {
+                startFloorFall();
+                floorFallTimer = 0;
+            }
+            
+            // Обновляем падающие полы
+            for (let i = fallingFloors.length - 1; i >= 0; i--) {
+                const floorTile = fallingFloors[i];
+                
+                if (floorTile.userData.isFalling) {
+                    // Фаза предупреждения (мигание)
+                    if (floorTile.userData.fallTimer < floorTile.userData.warningTime) {
+                        floorTile.userData.fallTimer += deltaTime;
+                        
+                        // Мигание красным цветом
+                        const blinkSpeed = currentWave > 1 ? 2.0 : 1.0; // Быстрее на высоких волнах
+                        const blink = Math.sin(floorTile.userData.fallTimer * blinkSpeed * Math.PI * 2) > 0;
+                        floorTile.material.emissive.setHex(blink ? 0xff0000 : 0x000000);
+                        floorTile.material.emissiveIntensity = blink ? 0.5 : 0;
+                        
+                    } else {
+                        // Фаза падения
+                        floorTile.position.y -= deltaTime * 5; // Скорость падения
+                        
+                        // Проверяем столкновение игрока с падающим полом
+                        const dx = floorTile.position.x - camera.position.x;
+                        const dz = floorTile.position.z - camera.position.z;
+                        const distance = Math.sqrt(dx * dx + dz * dz);
+                        
+                        if (distance < CELL_SIZE * 0.8 && floorTile.position.y < -1) {
+                            // Игрок упал в лаву
+                            gameOver();
+                            return;
+                        }
+                        
+                        // Удаляем пол если упал слишком низко
+                        if (floorTile.position.y < -10) {
+                            scene.remove(floorTile);
+                            fallingFloors.splice(i, 1);
+                            
+                            // Проверяем, стоит ли игрок на этом полу
+                            const playerDx = floorTile.position.x - camera.position.x;
+                            const playerDz = floorTile.position.z - camera.position.z;
+                            const playerDistance = Math.sqrt(playerDx * playerDx + playerDz * playerDz);
+                            
+                            if (playerDistance < CELL_SIZE * 0.8) {
+                                // Игрок падает вместе с полом
+                                gameOver();
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Начать падение пола
+        function startFloorFall() {
+            // Находим доступные полы (те, что еще не падают)
+            const availableFloors = lavaFloors.filter(floor => 
+                !floor.userData.isFalling && 
+                floor.position.y > -5
+            );
+            
+            if (availableFloors.length > 0) {
+                // Выбираем случайный пол
+                const randomFloor = availableFloors[Math.floor(Math.random() * availableFloors.length)];
+                
+                // Начинаем процесс падения
+                randomFloor.userData.isFalling = true;
+                randomFloor.userData.fallTimer = 0;
+                fallingFloors.push(randomFloor);
+                
+                // Убираем из доступных
+                const index = lavaFloors.indexOf(randomFloor);
+                if (index > -1) {
+                    lavaFloors.splice(index, 1);
+                }
+            }
+        }
+
+        // Восстановление полов для новой волны в Lava Chaos
+        function restoreFloorsForNewWave() {
+            // Восстанавливаем все упавшие полы
+            for (let floorTile of fallingFloors) {
+                if (floorTile.parent) {
+                    scene.remove(floorTile);
+                }
+            }
+            
+            fallingFloors = [];
+            
+            // Переинициализируем полы
+            initializeLavaFloors();
+            
+            // Обновляем параметры падения для новой волны
+            floorsToFall = Math.min(1 + currentWave, 8); // Максимум 8 полов за раз
+            floorFallInterval = Math.max(0.5, 3.0 - currentWave * 0.3); // Минимум 0.5 секунды
         }
 
         // Создание зоны выхода для режима Straight Through
@@ -1484,7 +1760,7 @@
             if (currentGameMode === 'extermination') {
                 document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}/${targetEnemies}`;
                 document.getElementById('waveCounter').style.display = 'none';
-            } else if (currentGameMode === 'onslaught') {
+            } else if (currentGameMode === 'onslaught' || currentGameMode === 'lava') {
                 document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}`;
                 document.getElementById('waveCounter').textContent = `Волна: ${currentWave}`;
                 document.getElementById('waveCounter').style.display = 'block';
@@ -1888,7 +2164,7 @@
             });
             
             window.addEventListener('keyup', (event) => {
-                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройки
                 if (document.getElementById('startMenu').style.display === 'none' &&
                     document.getElementById('optionsMenu').style.display === 'none' &&
                     document.getElementById('modeSelectMenu').style.display === 'none') {
@@ -2162,6 +2438,7 @@
                 this.isTakingDamage = false;
                 this.teleportTimer = 0;
                 this.lastDistanceToPlayer = 0;
+                this.floorUnderEnemy = null;
                 
                 // Создаем спрайт врага
                 this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -2227,6 +2504,11 @@
                 const dz = playerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 this.lastDistanceToPlayer = distance;
+                
+                // Для Lava Chaos - проверяем пол под врагом
+                if (currentGameMode === 'lava') {
+                    this.checkFloorUnderEnemy();
+                }
                 
                 // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught) - ИСПРАВЛЕНО
                 if (currentGameMode === 'onslaught' && distance > 70) { // Увеличил дистанцию до 70
@@ -2350,6 +2632,28 @@
                     this.throwFireball(playerX, playerZ);
                     this.fireballCooldown = 5.0;
                 }
+            }
+            
+            // Проверка пола под врагом для Lava Chaos
+            checkFloorUnderEnemy() {
+                // Находим пол под врагом
+                let closestFloor = null;
+                let minDistance = Infinity;
+                
+                for (let floorTile of lavaFloors.concat(fallingFloors)) {
+                    if (!floorTile.userData.isFalling || floorTile.userData.fallTimer < floorTile.userData.warningTime) {
+                        const dx = floorTile.position.x - this.x;
+                        const dz = floorTile.position.z - this.z;
+                        const distance = Math.sqrt(dx * dx + dz * dz);
+                        
+                        if (distance < minDistance && distance < CELL_SIZE * 0.8) {
+                            minDistance = distance;
+                            closestFloor = floorTile;
+                        }
+                    }
+                }
+                
+                this.floorUnderEnemy = closestFloor;
             }
             
             // Телепортация к игроку - ИСПРАВЛЕНО
@@ -2609,6 +2913,11 @@
                         nextWave();
                     }
                 }
+                
+                // Для Lava Chaos - убийство врага запускает новую волну
+                if (currentGameMode === 'lava') {
+                    startNextWaveLava();
+                }
             }
         }
 
@@ -2723,9 +3032,9 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
-                            if (mode === 'onslaught' || mode === 'extermination') {
-                                // В режиме Extermination враги появляются в случайных местах
-                                if (mode === 'extermination' || (distance > 8 && distance < 20)) {
+                            if (mode === 'onslaught' || mode === 'extermination' || mode === 'lava') {
+                                // В режиме Extermination и Lava Chaos враги появляются в случайных местах
+                                if (mode === 'extermination' || mode === 'lava' || (distance > 8 && distance < 20)) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
                             } else if (mode === 'straight') {
@@ -2798,6 +3107,7 @@
                 case 'extermination': return 'Extermination Protocol';
                 case 'straight': return 'Straight Through';
                 case 'onslaught': return 'Onslaught';
+                case 'lava': return 'Lava Chaos';
                 default: return 'Unknown';
             }
         }
@@ -2888,9 +3198,65 @@
             updateUI();
         }
 
+        // Система волн для Lava Chaos
+        function startWaveLava(waveNumber) {
+            currentWave = waveNumber;
+            
+            // В Lava Chaos мало врагов: 1-5 в зависимости от волны
+            waveEnemiesCount = Math.min(1 + Math.floor(waveNumber / 2), 5);
+            
+            // Создаем врагов
+            createEnemies(waveEnemiesCount, 'lava');
+            
+            // Обновляем параметры падения полов
+            floorsToFall = Math.min(1 + currentWave, 8);
+            floorFallInterval = Math.max(0.5, 3.0 - currentWave * 0.3);
+            
+            // Запускаем таймер волны
+            waveTimer = 30;
+            waveTimerActive = true;
+            document.getElementById('waveTimer').style.display = 'block';
+            
+            // Показываем информацию о волне
+            const waveInfo = document.getElementById('waveInfo');
+            waveInfo.textContent = `Волна ${waveNumber}`;
+            waveInfo.style.display = 'block';
+            
+            setTimeout(() => {
+                waveInfo.style.display = 'none';
+            }, 2000);
+            
+            updateUI();
+        }
+
         function nextWave() {
             currentWave++;
             startWave(currentWave);
+        }
+
+        // Запуск следующей волны в Lava Chaos
+        function startNextWaveLava() {
+            // Восстанавливаем полы
+            restoreFloorsForNewWave();
+            
+            // Запускаем следующую волну
+            currentWave++;
+            startWaveLava(currentWave);
+        }
+
+        // Обновление таймера волны для Lava Chaos
+        function updateWaveTimer(deltaTime) {
+            if (!waveTimerActive) return;
+            
+            waveTimer -= deltaTime;
+            document.getElementById('waveTimer').textContent = `Волна через: ${Math.ceil(waveTimer)}`;
+            
+            if (waveTimer <= 0) {
+                // Таймер истек - запускаем следующую волну
+                waveTimerActive = false;
+                document.getElementById('waveTimer').style.display = 'none';
+                startNextWaveLava();
+            }
         }
 
         // Функция постепенного спавна врагов в режиме Onslaught
@@ -3008,6 +3374,12 @@
                 respawnEnemiesInStraightThrough();
             }
             
+            // Обновляем систему лавы для Lava Chaos
+            if (currentGameMode === 'lava') {
+                updateLavaFloors(deltaTime);
+                updateWaveTimer(deltaTime);
+            }
+            
             // Обновляем врагов
             for (let enemy of enemies) {
                 enemy.update(deltaTime, camera.position.x, camera.position.z);
@@ -3036,6 +3408,7 @@
             document.getElementById('uiPanel').style.display = 'block';
             document.getElementById('modeStats').style.display = 'block';
             document.getElementById('damageEffect').style.display = 'none';
+            document.getElementById('waveTimer').style.display = 'none';
             
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
@@ -3070,6 +3443,8 @@
                 startWave(1);
             } else if (currentGameMode === 'straight') {
                 createEnemies(15, 'straight'); // МНОГО врагов в лабиринте
+            } else if (currentGameMode === 'lava') {
+                startWaveLava(1);
             }
             
             updateUI();
@@ -3188,7 +3563,11 @@
             currentGameMode = mode;
             
             // Создаем лабиринт в зависимости от режима
-            mazeGen = new MazeGenerator(25, 25, mode);
+            if (mode === 'lava') {
+                mazeGen = new MazeGenerator(13, 13, mode); // Меньшая карта для Lava Chaos
+            } else {
+                mazeGen = new MazeGenerator(25, 25, mode);
+            }
             maze = mazeGen.getMaze();
             
             // Создаем систему навигации
