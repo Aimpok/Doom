@@ -97,8 +97,23 @@
             -webkit-touch-callout: none;
         }
 
-        /* Панель подключения к комнате */
-        #connectMenu {
+        /* Панель настроек меню - СКРЫТА */
+        .menu-settings {
+            display: none;
+        }
+
+        /* Запрет выделения и контекстного меню для ВСЕХ элементов */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Экран настроек */
+        #optionsMenu {
             position: absolute;
             top: 0;
             left: 0;
@@ -112,37 +127,213 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 110;
-            color: white;
+            z-index: 150;
+            color: #fff;
         }
-
-        .connect-title {
+        
+        .options-title {
             width: 60vmin;
             max-width: 600px;
             min-width: 250px;
-            margin-bottom: 3vmin;
+            margin-bottom: 5vmin;
             object-fit: contain;
+            -webkit-user-drag: none;
+            user-drag: none;
+            pointer-events: none;
         }
-
-        .room-input {
-            width: 50vmin;
-            max-width: 500px;
-            min-width: 200px;
-            padding: 2vmin;
+        
+        .option-item {
+            margin: 2vmin 0;
             font-size: 3vmin;
-            background: rgba(0,0,0,0.8);
-            border: 2px solid #444;
-            color: white;
-            text-align: center;
-            margin-bottom: 3vmin;
-            border-radius: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1vmin 2vmin;
+            border-radius: 5px;
+            width: 80%;
+            max-width: 400px;
         }
-
-        .connect-buttons {
+        
+        .option-item label {
             display: flex;
             flex-direction: column;
-            gap: 2vmin;
+            gap: 1vmin;
+            width: 100%;
+        }
+        
+        .back-button {
+            margin-top: 5vmin;
+            width: 60vmin;
+            max-width: 600px;
+            min-width: 250px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            object-fit: contain;
+            -webkit-user-drag: none;
+            user-drag: none;
+            pointer-events: auto;
+            -webkit-touch-callout: none;
+        }
+        
+        .back-button:hover {
+            transform: scale(1.05);
+        }
+        
+        /* Мобильное управление */
+        #mobileControls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+            display: none;
+        }
+        
+        /* Джойстик для движения - УМЕНЬШЕН */
+        #movementJoystick {
+            position: absolute;
+            bottom: 5vmin;
+            left: 5vmin;
+            width: 30vmin;
+            height: 30vmin;
+            pointer-events: auto;
+        }
+        
+        .joystick-base {
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            position: absolute;
+        }
+        
+        .joystick-stick {
+            width: 15vmin;
+            height: 15vmin;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            position: absolute;
+            top: 7.5vmin;
+            left: 7.5vmin;
+            transition: transform 0.1s;
+        }
+        
+        /* Область для поворота камеры */
+        #cameraTouchArea {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            pointer-events: auto;
+        }
+
+        /* Кнопка стрельбы - УМЕНЬШЕНА */
+        #shootButton {
+            position: absolute;
+            bottom: 15vmin;
+            right: 15vmin;
+            width: 25vmin;
+            height: 25vmin;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
             align-items: center;
+            color: white;
+            font-size: 5vmin;
+            z-index: 60;
+        }
+
+        /* Оружие */
+        #weapon {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40vmin;
+            max-width: 400px;
+            height: auto;
+            pointer-events: none;
+            z-index: 40;
+            display: none;
+        }
+
+        /* Запрет перетаскивания для всех изображений */
+        img {
+            -webkit-user-drag: none;
+            user-drag: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* Разрешаем pointer-events только для кликабельных кнопок */
+        .menu-button {
+            pointer-events: auto;
+        }
+
+        /* FPS счетчик */
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px;
+            border-radius: 3px;
+            display: none;
+            z-index: 1000;
+        }
+
+        /* UI панель с текстом */
+        #uiPanel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 45;
+            display: none;
+            pointer-events: none;
+        }
+
+        #hpDisplay, #ammoDisplay {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        #hpDisplay {
+            color: #ff4444;
+        }
+
+        #ammoDisplay {
+            color: #44ff44;
+        }
+
+        /* Эффект получения урона */
+        #damageEffect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.3s;
+            display: none;
         }
 
         /* Экран выбора режима игры */
@@ -179,16 +370,16 @@
             align-items: center;
             justify-content: center;
             width: 90%;
-            max-width: 1000px;
-            height: 50vmin;
+            max-width: 1200px;
+            height: 60vmin;
             position: relative;
             overflow: hidden;
         }
 
         .mode-slide {
             position: absolute;
-            width: 50vmin;
-            height: 40vmin;
+            width: 70vmin;
+            height: 50vmin;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -198,17 +389,18 @@
             transform: scale(0.8);
             cursor: pointer;
             background: rgba(60, 60, 60, 0.9);
-            border-radius: 10px;
-            padding: 0;
+            border: 4px solid #444;
+            border-radius: 15px;
+            padding: 2vmin;
             box-sizing: border-box;
-            overflow: hidden;
         }
 
         .mode-slide.active {
             opacity: 1;
             transform: scale(1);
             z-index: 10;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
+            border-color: #ff0000;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
         }
 
         .mode-slide.left {
@@ -220,18 +412,37 @@
         }
 
         .mode-icon {
-            width: 100%;
-            height: 60%;
+            width: 40vmin;
+            height: 20vmin;
             object-fit: cover;
+            margin-bottom: 2vmin;
             pointer-events: none;
+            border-radius: 10px;
+            border: 2px solid #444;
         }
 
         .mode-name {
-            width: 80%;
-            height: 20%;
+            width: 40vmin;
+            max-width: 400px;
             object-fit: contain;
             pointer-events: none;
-            margin: 1vmin 0;
+            margin-bottom: 2vmin;
+        }
+
+        .mode-description {
+            color: white;
+            font-size: 2.2vmin;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2vmin;
+            border-radius: 10px;
+            width: 90%;
+            pointer-events: none;
+            border: 1px solid #555;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .carousel-nav {
@@ -272,7 +483,7 @@
             transform: scale(1.05);
         }
 
-        /* Дополнительные UI элементы */
+        /* Дополнительные UI элементы для режимов */
         #modeStats {
             position: absolute;
             top: 50px;
@@ -289,59 +500,62 @@
             border-radius: 5px;
         }
 
-        #multiplayerInfo {
+        #exitArea {
             position: absolute;
-            top: 10px;
+            bottom: 10px;
             right: 10px;
-            color: white;
-            font-size: 16px;
-            background: rgba(0,0,0,0.7);
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-            z-index: 46;
-        }
-
-        .player-status {
-            margin: 5px 0;
-            padding: 5px;
-            border-radius: 3px;
-        }
-
-        .player-alive {
+            width: 100px;
+            height: 100px;
             background: rgba(0, 255, 0, 0.3);
+            border: 2px dashed rgba(0, 255, 0, 0.7);
+            display: none;
+            pointer-events: none;
+            z-index: 30;
         }
 
-        .player-dead {
-            background: rgba(255, 0, 0, 0.3);
+        #waveInfo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 36px;
+            font-family: 'Arial', sans-serif;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 100;
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
         }
 
-        .respawn-timer {
-            font-size: 12px;
-            color: #ffaa00;
+        /* Стрелка для указания направления выхода */
+        #exitArrow {
+            position: absolute;
+            top: 50%;
+            right: 5%;
+            width: 8vmin;
+            height: 8vmin;
+            transform: translateY(-50%);
+            pointer-events: none;
+            z-index: 45;
+            display: none;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));
         }
     </style>
 </head>
 <body>
+    
     <!-- Стартовое меню -->
     <div id="startMenu">
         <img src="MenuUi/Logo.png" alt="DOOM" class="logo">
         <div class="menu-buttons">
             <img src="MenuUi/PlayText.png" alt="Играть" class="menu-button" id="playButton">
-            <img src="MenuUi/ConnectText.png" alt="Подключиться" class="menu-button" id="connectButton">
             <img src="MenuUi/OptionsText.png" alt="Настройки" class="menu-button" id="optionsButton">
         </div>
         <img src="MenuUi/companyname.png" alt="Company Name" class="company-name">
-    </div>
-
-    <!-- Меню подключения -->
-    <div id="connectMenu">
-        <img src="MenuUi/ConnectText.png" alt="ПОДКЛЮЧЕНИЕ" class="connect-title">
-        <input type="text" id="roomCodeInput" class="room-input" placeholder="КОД КОМНАТЫ" maxlength="6">
-        <div class="connect-buttons">
-            <img src="MenuUi/ConnectText.png" alt="ПОДКЛЮЧИТЬСЯ" class="menu-button" id="joinRoomButton">
-            <img src="MenuUi/BackText.png" alt="НАЗАД" class="menu-button" id="backFromConnectButton">
-        </div>
     </div>
     
     <!-- Меню выбора режима -->
@@ -352,16 +566,19 @@
             <div class="mode-slide" data-mode="extermination">
                 <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
                 <img src="MenuUi/ModeTexts/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
+                <div class="mode-description">Уничтожьте 40 врагов. Враги постоянно ищут вас и появляются рядом</div>
             </div>
             
             <div class="mode-slide" data-mode="straight">
                 <img src="MenuUi/ModeIcons/StraightThrough.png" alt="Straight Through" class="mode-icon">
                 <img src="MenuUi/ModeTexts/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
+                <div class="mode-description">Доберитесь до выхода через толпы врагов</div>
             </div>
             
             <div class="mode-slide" data-mode="onslaught">
                 <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
                 <img src="MenuUi/ModeTexts/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
+                <div class="mode-description">Выживайте в волнах врагов. Враги телепортируются к вам если далеко</div>
             </div>
         </div>
         
@@ -372,6 +589,11 @@
         </div>
         
         <img src="MenuUi/BackText.png" alt="НАЗАД" class="back-button" id="backToMainButton">
+    </div>
+    
+    <!-- Панель настроек меню - СКРЫТА -->
+    <div class="menu-settings">
+        <!-- Скрыто -->
     </div>
     
     <!-- Меню настроек -->
@@ -423,12 +645,6 @@
     <div id="uiPanel">
         <div id="hpDisplay">HP: 100</div>
         <div id="ammoDisplay">ПАТРОНЫ: 2/2</div>
-        <div id="roomCodeDisplay" style="color: #ffff00; display: none;">КОД: </div>
-    </div>
-    
-    <!-- Мультиплеер информация -->
-    <div id="multiplayerInfo">
-        <div id="playersList"></div>
     </div>
     
     <!-- Дополнительная статистика для режимов -->
@@ -437,14 +653,21 @@
         <div id="waveCounter">Волна: 1</div>
     </div>
     
+    <!-- Область выхода для режима Straight Through -->
+    <div id="exitArea"></div>
+    
+    <!-- Информация о волне -->
+    <div id="waveInfo"></div>
+    
+    <!-- Стрелка для указания выхода -->
+    <img id="exitArrow" src="MenuUi/ArrowIcon.png" alt="→">
+    
     <!-- Эффект получения урона -->
     <div id="damageEffect"></div>
     
     <!-- FPS счетчик -->
     <div id="fpsCounter">FPS: 0</div>
-
-    <!-- Подключаем PeerJS -->
-    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // ЖЕСТКИЙ ЗАПРЕТ КОНТЕКСТНОГО МЕНЮ И ПЕРЕТАСКИВАНИЯ
@@ -458,455 +681,10 @@
             return false;
         });
 
-        // МУЛЬТИПЛЕЕР СИСТЕМА
-        class MultiplayerSystem {
-            constructor() {
-                this.peer = null;
-                this.conn = null;
-                this.roomCode = null;
-                this.isHost = false;
-                this.players = new Map();
-                this.connected = false;
-                this.playerId = this.generatePlayerId();
-            }
-
-            generatePlayerId() {
-                return Math.random().toString(36).substring(2, 8);
-            }
-
-            generateRoomCode() {
-                return Math.random().toString(36).substring(2, 8).toUpperCase();
-            }
-
-            async init() {
-                try {
-                    // Используем бесплатный PeerJS сервер
-                    this.peer = new Peer(this.playerId, {
-                        host: '0.peerjs.com',
-                        port: 443,
-                        path: '/',
-                        secure: true,
-                        config: {
-                            iceServers: [
-                                { urls: 'stun:stun.l.google.com:19302' },
-                                { urls: 'stun:global.stun.twilio.com:3478' }
-                            ]
-                        }
-                    });
-
-                    this.peer.on('open', (id) => {
-                        console.log('Peer connected with ID:', id);
-                    });
-
-                    this.peer.on('connection', (conn) => {
-                        console.log('Player connected:', conn.peer);
-                        this.setupConnection(conn);
-                    });
-
-                    this.peer.on('error', (err) => {
-                        console.error('PeerJS error:', err);
-                    });
-
-                } catch (error) {
-                    console.error('Failed to initialize multiplayer:', error);
-                }
-            }
-
-            async createRoom() {
-                this.roomCode = this.generateRoomCode();
-                this.isHost = true;
-                
-                // Ждем подключения других игроков
-                console.log('Room created with code:', this.roomCode);
-                return this.roomCode;
-            }
-
-            async joinRoom(roomCode) {
-                this.roomCode = roomCode.toUpperCase();
-                this.isHost = false;
-                
-                try {
-                    this.conn = this.peer.connect(this.roomCode);
-                    this.setupConnection(this.conn);
-                    return true;
-                } catch (error) {
-                    console.error('Failed to join room:', error);
-                    return false;
-                }
-            }
-
-            setupConnection(conn) {
-                this.conn = conn;
-                
-                conn.on('open', () => {
-                    console.log('Connected to peer');
-                    this.connected = true;
-                    
-                    // Отправляем информацию о себе
-                    this.sendPlayerInfo();
-                });
-
-                conn.on('data', (data) => {
-                    this.handleNetworkData(data);
-                });
-
-                conn.on('close', () => {
-                    console.log('Connection closed');
-                    this.connected = false;
-                });
-
-                conn.on('error', (err) => {
-                    console.error('Connection error:', err);
-                });
-            }
-
-            sendPlayerInfo() {
-                if (!this.connected) return;
-                
-                this.send({
-                    type: 'player_info',
-                    playerId: this.playerId,
-                    position: {
-                        x: camera.position.x,
-                        y: camera.position.y,
-                        z: camera.position.z
-                    },
-                    rotation: camera.rotation.y,
-                    hp: hp,
-                    isAlive: hp > 0
-                });
-            }
-
-            send(data) {
-                if (this.conn && this.conn.open) {
-                    this.conn.send(data);
-                }
-            }
-
-            handleNetworkData(data) {
-                switch(data.type) {
-                    case 'player_info':
-                        this.updatePlayer(data.playerId, data);
-                        break;
-                    case 'player_update':
-                        this.updatePlayer(data.playerId, data);
-                        break;
-                    case 'game_state':
-                        if (this.isHost) break;
-                        // Синхронизируем состояние игры
-                        this.syncGameState(data);
-                        break;
-                    case 'enemy_update':
-                        this.syncEnemy(data.enemyId, data);
-                        break;
-                    case 'player_shoot':
-                        this.playRemoteShoot(data.playerId, data.position);
-                        break;
-                    case 'player_damage':
-                        this.handleRemoteDamage(data.playerId, data.damage);
-                        break;
-                }
-            }
-
-            updatePlayer(playerId, data) {
-                if (playerId === this.playerId) return;
-
-                if (!this.players.has(playerId)) {
-                    this.createRemotePlayer(playerId, data);
-                }
-
-                const player = this.players.get(playerId);
-                if (player && player.sprite) {
-                    // Плавно интерполируем позицию
-                    player.targetPosition = new THREE.Vector3(data.position.x, data.position.y, data.position.z);
-                    player.targetRotation = data.rotation;
-                    player.hp = data.hp;
-                    player.isAlive = data.isAlive;
-                    
-                    // Обновляем анимацию
-                    if (data.isMoving !== undefined) {
-                        player.isMoving = data.isMoving;
-                    }
-                }
-
-                this.updatePlayersUI();
-            }
-
-            createRemotePlayer(playerId, data) {
-                const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-                    map: this.createPlayerTexture('front', 0),
-                    transparent: true,
-                    fog: true
-                }));
-
-                sprite.position.set(data.position.x, 1.7, data.position.z);
-                sprite.scale.set(3, 3, 1);
-                scene.add(sprite);
-
-                const player = {
-                    id: playerId,
-                    sprite: sprite,
-                    targetPosition: new THREE.Vector3(data.position.x, data.position.y, data.position.z),
-                    targetRotation: data.rotation,
-                    hp: data.hp,
-                    isAlive: data.isAlive,
-                    isMoving: false,
-                    animationTimer: 0,
-                    currentFrame: 0,
-                    direction: 'front',
-                    lastPosition: new THREE.Vector3(data.position.x, data.position.y, data.position.z)
-                };
-
-                this.players.set(playerId, player);
-            }
-
-            createPlayerTexture(direction, frame) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 64;
-                canvas.height = 64;
-                const context = canvas.getContext('2d');
-                
-                const img = new Image();
-                img.src = `GameUi/Player/${direction.charAt(0).toUpperCase() + direction.slice(1)}/${frame}.png`;
-                
-                context.fillStyle = 'transparent';
-                context.fillRect(0, 0, 64, 64);
-                context.drawImage(img, 0, 0, 64, 64);
-                
-                return new THREE.CanvasTexture(canvas);
-            }
-
-            updateRemotePlayers(deltaTime) {
-                for (let [playerId, player] of this.players) {
-                    if (!player.sprite) continue;
-
-                    // Интерполяция позиции
-                    player.sprite.position.lerp(player.targetPosition, 0.2);
-                    player.sprite.rotation.y = player.targetRotation;
-
-                    // Определяем направление движения
-                    const moveDelta = new THREE.Vector3();
-                    moveDelta.subVectors(player.sprite.position, player.lastPosition);
-                    const moveDistance = moveDelta.length();
-
-                    if (moveDistance > 0.01) {
-                        player.isMoving = true;
-                        
-                        // Определяем направление относительно камеры
-                        const angle = Math.atan2(moveDelta.x, moveDelta.z);
-                        const viewAngle = camera.rotation.y;
-                        const relativeAngle = angle - viewAngle;
-                        
-                        // Нормализуем угол
-                        let normalizedAngle = ((relativeAngle + Math.PI) % (2 * Math.PI)) - Math.PI;
-                        
-                        // Определяем направление анимации
-                        if (Math.abs(normalizedAngle) < Math.PI/4) {
-                            player.direction = 'back';
-                        } else if (Math.abs(normalizedAngle) > 3*Math.PI/4) {
-                            player.direction = 'front';
-                        } else if (normalizedAngle > 0) {
-                            player.direction = 'right';
-                        } else {
-                            player.direction = 'left';
-                        }
-                    } else {
-                        player.isMoving = false;
-                    }
-
-                    // Анимация движения
-                    player.animationTimer += deltaTime;
-                    if (player.isMoving && player.animationTimer > 0.1) {
-                        player.animationTimer = 0;
-                        
-                        let maxFrames = 4;
-                        if (player.direction === 'left' || player.direction === 'right') {
-                            maxFrames = 3;
-                        }
-                        
-                        player.currentFrame = (player.currentFrame % maxFrames) + 1;
-                        player.sprite.material.map = this.createPlayerTexture(player.direction, player.currentFrame);
-                        player.sprite.material.needsUpdate = true;
-                    } else if (!player.isMoving && player.currentFrame !== 0) {
-                        player.currentFrame = 0;
-                        player.sprite.material.map = this.createPlayerTexture(player.direction, 0);
-                        player.sprite.material.needsUpdate = true;
-                    }
-
-                    player.lastPosition.copy(player.sprite.position);
-
-                    // Визуализация состояния игрока
-                    if (!player.isAlive) {
-                        player.sprite.material.opacity = 0.5;
-                    } else {
-                        player.sprite.material.opacity = 1.0;
-                    }
-                }
-            }
-
-            updatePlayersUI() {
-                const playersList = document.getElementById('playersList');
-                if (!playersList) return;
-
-                let html = '';
-                for (let [playerId, player] of this.players) {
-                    const statusClass = player.isAlive ? 'player-alive' : 'player-dead';
-                    const statusText = player.isAlive ? `HP: ${player.hp}` : 'УМЕР';
-                    
-                    html += `<div class="player-status ${statusClass}">Игрок ${playerId.substring(0, 4)}: ${statusText}</div>`;
-                }
-
-                // Добавляем себя в список
-                const selfStatusClass = hp > 0 ? 'player-alive' : 'player-dead';
-                const selfStatusText = hp > 0 ? `HP: ${hp}` : 'УМЕР';
-                html += `<div class="player-status ${selfStatusClass}">ВЫ: ${selfStatusText}</div>`;
-
-                playersList.innerHTML = html;
-            }
-
-            sendPlayerUpdate() {
-                if (!this.connected) return;
-
-                const isMoving = moveForward || moveBackward || moveLeft || moveRight;
-                
-                this.send({
-                    type: 'player_update',
-                    playerId: this.playerId,
-                    position: {
-                        x: camera.position.x,
-                        y: camera.position.y,
-                        z: camera.position.z
-                    },
-                    rotation: camera.rotation.y,
-                    hp: hp,
-                    isAlive: hp > 0,
-                    isMoving: isMoving
-                });
-            }
-
-            sendGameState() {
-                if (!this.isHost || !this.connected) return;
-
-                const gameState = {
-                    type: 'game_state',
-                    enemies: enemies.map(enemy => ({
-                        id: enemy.id,
-                        x: enemy.x,
-                        z: enemy.z,
-                        health: enemy.health,
-                        isAlive: enemy.isAlive
-                    })),
-                    enemiesKilled: enemiesKilled,
-                    currentWave: currentWave
-                };
-
-                this.send(gameState);
-            }
-
-            syncGameState(data) {
-                // Синхронизируем состояние игры с хостом
-                enemiesKilled = data.enemiesKilled;
-                currentWave = data.currentWave;
-                updateUI();
-            }
-
-            sendEnemyUpdate(enemy) {
-                if (!this.isHost || !this.connected) return;
-
-                this.send({
-                    type: 'enemy_update',
-                    enemyId: enemy.id,
-                    x: enemy.x,
-                    z: enemy.z,
-                    health: enemy.health,
-                    isAlive: enemy.isAlive
-                });
-            }
-
-            syncEnemy(enemyId, data) {
-                if (this.isHost) return;
-
-                // Находим или создаем врага
-                let enemy = enemies.find(e => e.id === enemyId);
-                if (!enemy && data.isAlive) {
-                    // Создаем нового врага
-                    enemy = new Enemy(data.x, data.z);
-                    enemy.id = enemyId;
-                    enemies.push(enemy);
-                }
-
-                if (enemy) {
-                    enemy.x = data.x;
-                    enemy.z = data.z;
-                    enemy.health = data.health;
-                    enemy.isAlive = data.isAlive;
-                    
-                    if (enemy.sprite) {
-                        enemy.sprite.position.set(data.x, 0.8, data.z);
-                        
-                        if (!data.isAlive && !enemy.isDying) {
-                            enemy.startDeath();
-                        }
-                    }
-                }
-            }
-
-            sendShoot() {
-                if (!this.connected) return;
-
-                this.send({
-                    type: 'player_shoot',
-                    playerId: this.playerId,
-                    position: {
-                        x: camera.position.x,
-                        y: camera.position.y,
-                        z: camera.position.z
-                    }
-                });
-            }
-
-            playRemoteShoot(playerId, position) {
-                // Воспроизводим эффект выстрела другого игрока
-                // Можно добавить частицы или звук
-                console.log(`Player ${playerId} shooting at`, position);
-            }
-
-            sendDamage(damage) {
-                if (!this.connected) return;
-
-                this.send({
-                    type: 'player_damage',
-                    playerId: this.playerId,
-                    damage: damage
-                });
-            }
-
-            handleRemoteDamage(playerId, damage) {
-                // Обрабатываем получение урона другим игроком
-                console.log(`Player ${playerId} took ${damage} damage`);
-            }
-
-            disconnect() {
-                if (this.conn) {
-                    this.conn.close();
-                }
-                if (this.peer) {
-                    this.peer.destroy();
-                }
-                this.connected = false;
-                
-                // Удаляем всех удаленных игроков
-                for (let [playerId, player] of this.players) {
-                    if (player.sprite) {
-                        scene.remove(player.sprite);
-                    }
-                }
-                this.players.clear();
-            }
-        }
-
-        // Создаем систему мультиплеера
-        const multiplayer = new MultiplayerSystem();
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
 
         // Система сохранения настроек
         class SettingsManager {
@@ -969,7 +747,7 @@
         // Переменные для режимов игры
         let currentGameMode = null;
         let enemiesKilled = 0;
-        let targetEnemies = 40;
+        let targetEnemies = 40; // Увеличил до 40
         let currentWave = 1;
         let exitArea = null;
         let waveSpawnTimer = 0;
@@ -977,12 +755,15 @@
         let waveEnemiesKilled = 0;
         let enemiesToSpawn = 0;
         let lastSpawnTime = 0;
-        const SPAWN_INTERVAL = 1000;
+        const SPAWN_INTERVAL = 1000; // 1 секунда между спавнами
 
-        // Базовые настройки Three.js
+        // Базовые настройки
         const scene = new THREE.Scene();
+        
+        // ТУМАН - добавляем в сцену (теперь нельзя отключить)
         scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
         
+        // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
         
         const renderer = new THREE.WebGLRenderer({ 
@@ -1016,46 +797,89 @@
                     }
                 }
 
-                wallTexture = textureLoader.load('Textures/WallTex.jpg', onTextureLoad);
-                floorTexture = textureLoader.load('Textures/FloorTex.jpg', onTextureLoad);
-                roofTexture = textureLoader.load('Textures/RoofTex.jpg', onTextureLoad);
-
-                // Настройки текстур
-                [wallTexture, floorTexture, roofTexture].forEach(texture => {
-                    if (texture) {
-                        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-                        texture.repeat.set(1, 1);
-                        texture.minFilter = THREE.LinearFilter;
-                        texture.magFilter = THREE.LinearFilter;
-                    }
+                wallTexture = textureLoader.load('Textures/WallTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры стен:', error);
+                    wallTexture = null;
+                    onTextureLoad();
                 });
+
+                floorTexture = textureLoader.load('Textures/FloorTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры пола:', error);
+                    floorTexture = null;
+                    onTextureLoad();
+                });
+
+                roofTexture = textureLoader.load('Textures/RoofTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры потолка:', error);
+                    roofTexture = null;
+                    onTextureLoad();
+                });
+
+                // НАСТРОЙКИ ТЕКСТУР
+                if (wallTexture) {
+                    wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
+                    wallTexture.repeat.set(1, 1);
+                    wallTexture.minFilter = THREE.LinearFilter;
+                    wallTexture.magFilter = THREE.LinearFilter;
+                }
+                if (floorTexture) {
+                    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
+                    floorTexture.repeat.set(20, 20);
+                    floorTexture.minFilter = THREE.LinearFilter;
+                    floorTexture.magFilter = THREE.LinearFilter;
+                }
+                if (roofTexture) {
+                    roofTexture.wrapS = roofTexture.wrapT = THREE.RepeatWrapping;
+                    roofTexture.repeat.set(20, 20);
+                    roofTexture.minFilter = THREE.LinearFilter;
+                    roofTexture.magFilter = THREE.LinearFilter;
+                }
             });
         }
 
         // Создаем материалы с текстурами
         function createMaterials() {
             const wallMaterial = wallTexture ? 
-                new THREE.MeshLambertMaterial({ map: wallTexture, fog: true }) :
-                new THREE.MeshLambertMaterial({ color: 0x8B4513, fog: true });
+                new THREE.MeshLambertMaterial({ 
+                    map: wallTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x8B4513,
+                    fog: true
+                });
             
             const floorMaterial = floorTexture ? 
-                new THREE.MeshLambertMaterial({ map: floorTexture, fog: true }) :
-                new THREE.MeshLambertMaterial({ color: 0x90EE90, fog: true });
+                new THREE.MeshLambertMaterial({ 
+                    map: floorTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0x90EE90,
+                    fog: true
+                });
             
             const roofMaterial = roofTexture ? 
-                new THREE.MeshLambertMaterial({ map: roofTexture, fog: true }) :
-                new THREE.MeshLambertMaterial({ color: 0xCCCCCC, fog: true });
+                new THREE.MeshLambertMaterial({ 
+                    map: roofTexture,
+                    fog: true
+                }) :
+                new THREE.MeshLambertMaterial({ 
+                    color: 0xCCCCCC,
+                    fog: true
+                });
             
             return { wallMaterial, floorMaterial, roofMaterial };
         }
 
-        // Генератор лабиринта
+        // Генератор лабиринта для разных режимов - УЛУЧШЕННАЯ ВЕРСИЯ
         class MazeGenerator {
             constructor(width, height, mode = 'extermination') {
                 this.width = width;
                 this.height = height;
                 this.mode = mode;
                 this.maze = this.generateMazeForMode();
+                this.exitPosition = this.findExitPosition();
             }
 
             generateMazeForMode() {
@@ -1066,27 +890,37 @@
                 }
             }
 
+            // РЕАЛЬНЫЙ лабиринт для режима Straight Through
             generateRealMaze() {
                 let maze = Array(this.height).fill().map(() => Array(this.width).fill(1));
+                
+                // Используем алгоритм поиска в глубину для создания настоящего лабиринта
                 this.depthFirstMaze(maze, 1, 1);
+                
+                // Гарантируем, что начальная позиция (1,1) и конечная (width-2, height-2) проходимы
                 maze[1][1] = 0;
                 maze[this.height-2][this.width-2] = 0;
-                this.addExtraPassages(maze, 0.1);
+                
+                // Добавляем дополнительные проходы для сложности
+                this.addExtraPassages(maze, 0.1); // 10% дополнительных проходов
+                
                 return maze;
             }
 
             depthFirstMaze(maze, startX, startY) {
                 let stack = [[startX, startY]];
                 maze[startY][startX] = 0;
+                
                 const directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
                 
                 while (stack.length > 0) {
                     let [x, y] = stack[stack.length - 1];
-                    let neighbors = [];
                     
+                    let neighbors = [];
                     for (let [dx, dy] of directions) {
                         let nx = x + dx, ny = y + dy;
                         if (nx > 0 && nx < this.width - 1 && ny > 0 && ny < this.height - 1 && maze[ny][nx] === 1) {
+                            // Проверяем, что соседняя клетка не была посещена
                             let valid = true;
                             for (let [ddx, ddy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
                                 let nnx = nx + ddx, nny = ny + ddy;
@@ -1095,13 +929,15 @@
                                     break;
                                 }
                             }
-                            if (valid) neighbors.push([dx, dy, nx, ny]);
+                            if (valid) {
+                                neighbors.push([dx, dy, nx, ny]);
+                            }
                         }
                     }
                     
                     if (neighbors.length > 0) {
                         let [dx, dy, nx, ny] = neighbors[Math.floor(Math.random() * neighbors.length)];
-                        maze[y + dy/2][x + dx/2] = 0;
+                        maze[y + dy/2][x + dx/2] = 0; // Убираем стену между клетками
                         maze[ny][nx] = 0;
                         stack.push([nx, ny]);
                     } else {
@@ -1114,11 +950,16 @@
                 for (let y = 1; y < this.height - 1; y++) {
                     for (let x = 1; x < this.width - 1; x++) {
                         if (maze[y][x] === 1 && Math.random() < probability) {
+                            // Проверяем, что убирание этой стены создает проход
                             let wallCount = 0;
                             for (let [dx, dy] of [[0,1],[1,0],[0,-1],[-1,0]]) {
-                                if (maze[y+dy] && maze[y+dy][x+dx] === 1) wallCount++;
+                                if (maze[y+dy] && maze[y+dy][x+dx] === 1) {
+                                    wallCount++;
+                                }
                             }
-                            if (wallCount >= 3) maze[y][x] = 0;
+                            if (wallCount >= 3) {
+                                maze[y][x] = 0;
+                            }
                         }
                     }
                 }
@@ -1137,34 +978,42 @@
                 
                 this.connectPaths(maze, paths);
                 this.addRandomPassages(maze);
+                
                 return maze;
             }
 
             generatePath(maze, startX, startY) {
                 let x = startX, y = startY;
                 maze[y][x] = 0;
+                
                 let path = [[x, y]];
                 let directions = [[0, 2], [2, 0], [0, -2], [-2, 0]];
                 let stack = [[x, y]];
                 
                 while (stack.length > 0) {
                     let [cx, cy] = stack[stack.length - 1];
+                    
                     let possibleDirs = directions.filter(([dx, dy]) => {
                         let nx = cx + dx, ny = cy + dy;
-                        return nx > 0 && nx < this.width - 1 && ny > 0 && ny < this.height - 1 && maze[ny][nx] === 1;
+                        return nx > 0 && nx < this.width - 1 && 
+                               ny > 0 && ny < this.height - 1 && 
+                               maze[ny][nx] === 1;
                     });
                     
                     if (possibleDirs.length > 0) {
                         let [dx, dy] = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
                         let nx = cx + dx, ny = cy + dy;
+                        
                         maze[cy + dy/2][cx + dx/2] = 0;
                         maze[ny][nx] = 0;
+                        
                         path.push([nx, ny]);
                         stack.push([nx, ny]);
                     } else {
                         stack.pop();
                     }
                 }
+                
                 return path;
             }
 
@@ -1199,20 +1048,53 @@
                     const x = 1 + Math.floor(Math.random() * (this.width - 2));
                     const y = 1 + Math.floor(Math.random() * (this.height - 2));
                     if (maze[y][x] === 1) {
-                        const neighbors = [[x-1, y], [x+1, y], [x, y-1], [x, y+1]]
-                            .filter(([nx, ny]) => nx >= 0 && nx < this.width && ny >= 0 && ny < this.height);
+                        const neighbors = [
+                            [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                        ].filter(([nx, ny]) => 
+                            nx >= 0 && nx < this.width && ny >= 0 && ny < this.height
+                        );
                         const passageNeighbors = neighbors.filter(([nx, ny]) => maze[ny][nx] === 0);
-                        if (passageNeighbors.length >= 2) maze[y][x] = 0;
+                        if (passageNeighbors.length >= 2) {
+                            maze[y][x] = 0;
+                        }
                     }
                 }
+            }
+
+            findExitPosition() {
+                if (this.mode === 'straight') {
+                    // Для режима Straight Through находим самую дальнюю точку от начала
+                    let maxDistance = -1;
+                    let exitPos = null;
+                    
+                    for (let y = 0; y < this.height; y++) {
+                        for (let x = 0; x < this.width; x++) {
+                            if (this.maze[y][x] === 0) {
+                                // Расстояние от стартовой позиции (1,1)
+                                const distance = Math.sqrt((x-1)*(x-1) + (y-1)*(y-1));
+                                if (distance > maxDistance) {
+                                    maxDistance = distance;
+                                    exitPos = { x, y };
+                                }
+                            }
+                        }
+                    }
+                    
+                    return exitPos;
+                }
+                return null;
             }
 
             getMaze() {
                 return this.maze;
             }
+
+            getExitPosition() {
+                return this.exitPosition;
+            }
         }
 
-        // Создаем лабиринт
+        // Создаем лабиринт (будет пересоздан при выборе режима)
         let mazeGen = null;
         let maze = null;
 
@@ -1230,10 +1112,12 @@
 
         // Создание сцены
         function createScene(materials) {
+            // Очищаем сцену от предыдущих объектов
             while(scene.children.length > 0){ 
                 scene.remove(scene.children[0]); 
             }
             
+            // Добавляем освещение обратно
             scene.add(ambientLight);
             scene.add(directionalLight1);
             scene.add(directionalLight2);
@@ -1241,6 +1125,12 @@
             createFloor(materials.floorMaterial);
             createRoof(materials.roofMaterial);
             createMazeWalls(materials.wallMaterial);
+            
+            // Создаем зону выхода для режима Straight Through
+            if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
+                createExitArea(mazeGen.getExitPosition());
+                createExitArrow();
+            }
         }
 
         function createFloor(floorMaterial) {
@@ -1303,12 +1193,67 @@
             scene.add(wallGroup);
         }
 
+        // Создание зоны выхода для режима Straight Through
+        function createExitArea(exitPos) {
+            if (!exitPos) return;
+            
+            const exitGeometry = new THREE.BoxGeometry(CELL_SIZE * 0.8, 1, CELL_SIZE * 0.8);
+            const exitMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            exitArea = new THREE.Mesh(exitGeometry, exitMaterial);
+            exitArea.position.set(
+                (exitPos.x - maze[0].length/2) * CELL_SIZE,
+                0.5,
+                (exitPos.y - maze.length/2) * CELL_SIZE
+            );
+            
+            scene.add(exitArea);
+            
+            // Показываем UI элемент выхода
+            document.getElementById('exitArea').style.display = 'block';
+        }
+
+        // Создание стрелки для указания выхода
+        function createExitArrow() {
+            document.getElementById('exitArrow').style.display = 'block';
+        }
+
+        // Обновление стрелки выхода
+        function updateExitArrow() {
+            if (currentGameMode !== 'straight' || !exitArea) return;
+            
+            const arrow = document.getElementById('exitArrow');
+            const playerDirection = new THREE.Vector3();
+            camera.getWorldDirection(playerDirection);
+            
+            const toExit = new THREE.Vector3();
+            toExit.subVectors(exitArea.position, camera.position);
+            toExit.y = 0; // Игнорируем вертикальную составляющую
+            toExit.normalize();
+            
+            // Вычисляем угол между направлением игрока и направлением к выходу
+            const angle = Math.atan2(
+                playerDirection.x * toExit.z - playerDirection.z * toExit.x,
+                playerDirection.x * toExit.x + playerDirection.z * toExit.z
+            );
+            
+            // Преобразуем угол в градусы и поворачиваем стрелку
+            const degrees = angle * (180 / Math.PI);
+            arrow.style.transform = `translateY(-50%) rotate(${degrees}deg)`;
+        }
+
         // Позиция игрока
         function findRandomStartPosition() {
             let freeCells = [];
             for (let y = 1; y < maze.length - 1; y++) {
                 for (let x = 1; x < maze[y].length - 1; x++) {
-                    if (maze[y][x] === 0) freeCells.push({x, y});
+                    if (maze[y][x] === 0) {
+                        freeCells.push({x, y});
+                    }
                 }
             }
             
@@ -1320,6 +1265,15 @@
                 };
             }
             
+            return {
+                x: (-maze[0].length/2 + 1) * CELL_SIZE,
+                z: (-maze.length/2 + 1) * CELL_SIZE
+            };
+        }
+
+        // Для режима Straight Through - спавн в углу
+        function findCornerStartPosition() {
+            // Левый верхний угол
             return {
                 x: (-maze[0].length/2 + 1) * CELL_SIZE,
                 z: (-maze.length/2 + 1) * CELL_SIZE
@@ -1338,7 +1292,7 @@
         let pitch = 0;
         const PI_2 = Math.PI / 2;
 
-        // Настройки чувствительности
+        // Настройки чувствительности из сохраненных данных
         let mouseSensitivity = settingsManager.sensitivity * 0.0004;
 
         // Аудио система
@@ -1372,7 +1326,7 @@
         let isMouseDown = false;
         let autoShootInterval = null;
         let lastShootTime = 0;
-        const SHOOT_DELAY = 300;
+        const SHOOT_DELAY = 300; // Задержка между выстрелами в мс
 
         // Предзагрузка изображений оружия
         const gunImages = {
@@ -1384,6 +1338,7 @@
             reload3: 'Guns/DefaultShootGun/GunKD3.png'
         };
 
+        // Функция предзагрузки изображений
         function preloadWeaponImages() {
             Object.values(gunImages).forEach(src => {
                 const img = new Image();
@@ -1393,10 +1348,12 @@
 
         // Инициализация аудио системы
         function initAudio() {
+            // Создаем звуковые эффекты
             shootSound = new Audio('Sounds/Shoot.mp3');
             reloadSound = new Audio('Sounds/Reload.mp3');
             playerHitSound = new Audio('Sounds/PlayerHit.mp3');
             
+            // Звуки врагов
             impDamageSound1 = new Audio('Sounds/Imp/ImpDamage.mp3');
             impDamageSound2 = new Audio('Sounds/Imp/ImpDamage1.mp3');
             impDeathSound1 = new Audio('Sounds/Imp/ImpDeath.mp3');
@@ -1404,61 +1361,126 @@
             impDeathSound3 = new Audio('Sounds/Imp/ImpDeath2.mp3');
             
             // Настраиваем звуковые эффекты
-            [shootSound, reloadSound, playerHitSound, impDamageSound1, impDamageSound2, 
-             impDeathSound1, impDeathSound2, impDeathSound3].forEach(sound => {
-                if (sound) sound.volume = soundVolume;
-            });
+            shootSound.volume = soundVolume;
+            reloadSound.volume = soundVolume;
+            playerHitSound.volume = soundVolume;
+            impDamageSound1.volume = soundVolume;
+            impDamageSound2.volume = soundVolume;
+            impDeathSound1.volume = soundVolume;
+            impDeathSound2.volume = soundVolume;
+            impDeathSound3.volume = soundVolume;
             
+            // Предзагружаем звуки
+            shootSound.preload = 'auto';
+            reloadSound.preload = 'auto';
+            playerHitSound.preload = 'auto';
+            impDamageSound1.preload = 'auto';
+            impDamageSound2.preload = 'auto';
+            impDeathSound1.preload = 'auto';
+            impDeathSound2.preload = 'auto';
+            impDeathSound3.preload = 'auto';
+            
+            // Создаем список музыкальных треков (только 3 трека)
             musicTracks = [
                 'Sounds/MenuMusic.mp3',
                 'Sounds/MenuMusic1.mp3',
                 'Sounds/MenuMusic2.mp3'
             ];
             
+            console.log('Загружено музыкальных треков:', musicTracks.length);
+            
+            // Случайный выбор первого трека
             currentTrackIndex = Math.floor(Math.random() * musicTracks.length);
         }
 
+        // Функция для воспроизведения следующего трека
         function playNextTrack() {
-            if (musicTracks.length === 0) return;
+            if (musicTracks.length === 0) {
+                console.log('Нет музыкальных треков для воспроизведения');
+                return;
+            }
             
+            // Останавливаем текущую музыку
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
                 currentMusic.removeEventListener('ended', playNextTrack);
             }
             
+            // Переходим к следующему треку
             currentTrackIndex = (currentTrackIndex + 1) % musicTracks.length;
+            
+            console.log('Воспроизведение трека:', musicTracks[currentTrackIndex]);
+            
+            // Создаем новый аудио элемент
             currentMusic = new Audio(musicTracks[currentTrackIndex]);
             currentMusic.volume = musicVolume;
-            currentMusic.loop = false;
+            currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
+            
+            // Когда трек заканчивается, играем следующий
             currentMusic.addEventListener('ended', playNextTrack);
             
+            // Пытаемся воспроизвести
             const playPromise = currentMusic.play();
+            
             if (playPromise !== undefined) {
                 playPromise.then(() => {
+                    console.log('Музыка успешно запущена');
                     musicStarted = true;
                 }).catch(error => {
+                    console.log('Автовоспроизведение музыки заблокировано:', error);
+                    // Пытаемся снова при взаимодействии
                     document.addEventListener('click', startMusicOnInteraction, { once: true });
                     document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
                 });
             }
         }
 
+        // Функция запуска музыки
         function startMusic() {
             if (musicStarted) return;
+            
+            console.log('Запуск музыки...');
             playNextTrack();
         }
 
+        // Функция для принудительного запуска музыки при взаимодействии
         function startMusicOnInteraction() {
-            if (!musicStarted) startMusic();
+            if (!musicStarted) {
+                console.log('Принудительный запуск музыки после взаимодействия');
+                startMusic();
+            }
         }
 
+        // Обновление громкости
         function updateVolumes() {
-            if (currentMusic) currentMusic.volume = musicVolume;
-            [shootSound, reloadSound, playerHitSound, impDamageSound1, impDamageSound2, 
-             impDeathSound1, impDeathSound2, impDeathSound3].forEach(sound => {
-                if (sound) sound.volume = soundVolume;
-            });
+            if (currentMusic) {
+                currentMusic.volume = musicVolume;
+            }
+            if (shootSound) {
+                shootSound.volume = soundVolume;
+            }
+            if (reloadSound) {
+                reloadSound.volume = soundVolume;
+            }
+            if (playerHitSound) {
+                playerHitSound.volume = soundVolume;
+            }
+            if (impDamageSound1) {
+                impDamageSound1.volume = soundVolume;
+            }
+            if (impDamageSound2) {
+                impDamageSound2.volume = soundVolume;
+            }
+            if (impDeathSound1) {
+                impDeathSound1.volume = soundVolume;
+            }
+            if (impDeathSound2) {
+                impDeathSound2.volume = soundVolume;
+            }
+            if (impDeathSound3) {
+                impDeathSound3.volume = soundVolume;
+            }
         }
 
         // Обновление UI
@@ -1466,6 +1488,7 @@
             document.getElementById('hpDisplay').textContent = `HP: ${Math.round(hp)}`;
             document.getElementById('ammoDisplay').textContent = `ПАТРОНЫ: ${ammo}/${maxAmmo}`;
             
+            // Обновляем статистику режима
             if (currentGameMode === 'extermination') {
                 document.getElementById('enemiesKilled').textContent = `Убито: ${enemiesKilled}/${targetEnemies}`;
                 document.getElementById('waveCounter').style.display = 'none';
@@ -1477,45 +1500,49 @@
                 document.getElementById('enemiesKilled').style.display = 'none';
                 document.getElementById('waveCounter').style.display = 'none';
             }
-
-            // Обновляем UI мультиплеера
-            multiplayer.updatePlayersUI();
         }
 
-        // Анимация выстрела
+        // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playShootAnimation() {
-            if (!canShoot || isReloading || isShooting || ammo <= 0) return;
+            // Проверяем возможность стрельбы
+            if (!canShoot || isReloading || isShooting || ammo <= 0) {
+                return;
+            }
             
             isShooting = true;
             canShoot = false;
             ammo--;
             updateUI();
             
+            // Сразу меняем на первый кадр выстрела
             weapon.src = gunImages.shoot1;
             
+            // Звук выстрела
             if (shootSound) {
                 shootSound.currentTime = 0;
                 shootSound.play().catch(e => console.log('Не удалось воспроизвести звук выстрела'));
             }
             
-            // Отправляем информацию о выстреле в мультиплеере
-            multiplayer.sendShoot();
-            
+            // Проверяем попадание по врагам
             checkEnemyHit();
             
+            // Второй кадр выстрела
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.shoot2;
             }, 50);
             
+            // Возврат к нормальному состоянию
             setTimeout(() => {
                 if (!isShooting) return;
                 weapon.src = gunImages.normal;
                 isShooting = false;
                 
+                // Если патроны кончились - перезарядка
                 if (ammo <= 0) {
                     playReloadAnimation();
                 } else {
+                    // Задержка между выстрелами
                     setTimeout(() => {
                         canShoot = true;
                     }, 300);
@@ -1523,33 +1550,40 @@
             }, 150);
         }
 
-        // Анимация перезарядки
+        // Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function playReloadAnimation() {
-            if (isReloading || ammo >= maxAmmo) return;
+            if (isReloading || ammo >= maxAmmo) {
+                return;
+            }
             
             isReloading = true;
             canShoot = false;
             
+            // Звук перезарядки
             if (reloadSound) {
                 reloadSound.currentTime = 0;
                 reloadSound.play().catch(e => console.log('Не удалось воспроизвести звук перезарядки'));
             }
             
+            // Первый кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload1;
             }, 100);
             
+            // Второй кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload2;
             }, 300);
             
+            // Третий кадр перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.reload3;
             }, 500);
             
+            // Завершение перезарядки
             setTimeout(() => {
                 if (!isReloading) return;
                 weapon.src = gunImages.normal;
@@ -1560,6 +1594,7 @@
             }, 700);
         }
 
+        // Функция для автоматической стрельбы при удержании
         function startAutoShoot() {
             if (autoShootInterval) return;
             
@@ -1569,7 +1604,7 @@
                     playShootAnimation();
                     lastShootTime = currentTime;
                 }
-            }, 100);
+            }, 100); // Проверяем каждые 100мс
         }
 
         function stopAutoShoot() {
@@ -1592,9 +1627,8 @@
         let lastCameraTouchX = 0;
         let lastCameraTouchY = 0;
 
-        // Инициализация управления
-        function initControls() {
-            // Джойстик для мобильных устройств
+        // Инициализация джойстика
+        function initJoystick() {
             const joystickStick = document.getElementById('joystickStick');
             const joystickBase = document.getElementById('movementJoystick');
             
@@ -1631,6 +1665,11 @@
                 moveRight = normalizedX > 0.3;
             }
 
+            function resetJoystick() {
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+            }
+
             // Обработка событий джойстика
             joystickBase.addEventListener('touchstart', (e) => {
                 e.preventDefault();
@@ -1648,8 +1687,10 @@
                     updateJoystick(touch);
                 }
             });
+        }
 
-            // Область для поворота камеры
+        // Инициализация поворота камеры и стрельбы
+        function initCameraControls() {
             const cameraArea = document.getElementById('cameraTouchArea');
             const shootButton = document.getElementById('shootButton');
 
@@ -1697,8 +1738,10 @@
                     }
                 }
             });
+        }
 
-            // Общие обработчики касаний
+        // ОБЩИЕ ОБРАБОТЧИКИ
+        function initGlobalHandlers() {
             document.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 
@@ -1706,7 +1749,37 @@
                     const touchData = activeTouches.get(touch.identifier);
                     
                     if (touchData && touchData.type === 'joystick') {
-                        updateJoystick(touch);
+                        const joystickStick = document.getElementById('joystickStick');
+                        const joystickBase = document.getElementById('movementJoystick');
+                        
+                        let baseRect = joystickBase.getBoundingClientRect();
+                        const baseCenterX = baseRect.left + baseRect.width / 2;
+                        const baseCenterY = baseRect.top + baseRect.height / 2;
+                        const maxDistance = baseRect.width / 3;
+                        
+                        const deltaX = touch.clientX - baseCenterX;
+                        const deltaY = touch.clientY - baseCenterY;
+                        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        
+                        let stickX = deltaX;
+                        let stickY = deltaY;
+                        
+                        if (distance > maxDistance) {
+                            const angle = Math.atan2(deltaY, deltaX);
+                            stickX = Math.cos(angle) * maxDistance;
+                            stickY = Math.sin(angle) * maxDistance;
+                        }
+                        
+                        joystickStick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+                        
+                        const normalizedX = stickX / maxDistance;
+                        const normalizedY = stickY / maxDistance;
+                        
+                        moveForward = normalizedY < -0.3;
+                        moveBackward = normalizedY > 0.3;
+                        moveLeft = normalizedX < -0.3;
+                        moveRight = normalizedX > 0.3;
+                        
                     } else if (touchData && touchData.type === 'camera') {
                         if (touchData.lastX && touchData.lastY) {
                             const deltaX = touch.clientX - touchData.lastX;
@@ -1740,6 +1813,7 @@
                     const touchData = activeTouches.get(touch.identifier);
                     if (touchData) {
                         if (touchData.type === 'joystick') {
+                            const joystickStick = document.getElementById('joystickStick');
                             joystickStick.style.transform = 'translate(0, 0)';
                             moveForward = moveBackward = moveLeft = moveRight = false;
                         }
@@ -1753,35 +1827,20 @@
                 }
             });
 
-            // Управление для ПК
-            window.addEventListener('keydown', (event) => {
-                if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none' &&
-                    document.getElementById('modeSelectMenu').style.display === 'none') {
-                    switch(event.code) {
-                        case 'KeyW': moveForward = true; break;
-                        case 'KeyS': moveBackward = true; break;
-                        case 'KeyA': moveLeft = true; break;
-                        case 'KeyD': moveRight = true; break;
-                    }
-                }
-            });
-            
-            window.addEventListener('keyup', (event) => {
-                if (document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none' &&
-                    document.getElementById('modeSelectMenu').style.display === 'none') {
-                    switch(event.code) {
-                        case 'KeyW': moveForward = false; break;
-                        case 'KeyS': moveBackward = false; break;
-                        case 'KeyA': moveLeft = false; break;
-                        case 'KeyD': moveRight = false; break;
-                    }
-                }
+            window.addEventListener('blur', () => {
+                activeTouches.clear();
+                const joystickStick = document.getElementById('joystickStick');
+                joystickStick.style.transform = 'translate(0, 0)';
+                moveForward = moveBackward = moveLeft = moveRight = false;
+                isShootingTouch = false;
+                shootTouchId = null;
+                stopAutoShoot();
+                isMouseDown = false;
             });
 
-            // Мышь для ПК
+            // Управление стрельбой для ПК - ЛКМ (только в игре)
             document.addEventListener('mousedown', (e) => {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (e.button === 0 && 
                     document.getElementById('startMenu').style.display === 'none' &&
                     document.getElementById('optionsMenu').style.display === 'none' &&
@@ -1800,7 +1859,59 @@
                 }
             });
 
+            // Перезарядка по кнопке R (только в игре)
+            document.addEventListener('keydown', (e) => {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (e.code === 'KeyR' && 
+                    document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
+                    // Если уже перезаряжаемся или патроны полные - игнорируем
+                    if (!isReloading && ammo < maxAmmo) {
+                        playReloadAnimation();
+                    }
+                }
+            });
+        }
+
+        // Инициализация управления
+        function initControls() {
+            initJoystick();
+            initCameraControls();
+            initGlobalHandlers();
+
+            // Клавиатура для десктопа (только в игре)
+            window.addEventListener('keydown', (event) => {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
+                    switch(event.code) {
+                        case 'KeyW': moveForward = true; break;
+                        case 'KeyS': moveBackward = true; break;
+                        case 'KeyA': moveLeft = true; break;
+                        case 'KeyD': moveRight = true; break;
+                    }
+                }
+            });
+            
+            window.addEventListener('keyup', (event) => {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
+                if (document.getElementById('startMenu').style.display === 'none' &&
+                    document.getElementById('optionsMenu').style.display === 'none' &&
+                    document.getElementById('modeSelectMenu').style.display === 'none') {
+                    switch(event.code) {
+                        case 'KeyW': moveForward = false; break;
+                        case 'KeyS': moveBackward = false; break;
+                        case 'KeyA': moveLeft = false; break;
+                        case 'KeyD': moveRight = false; break;
+                    }
+                }
+            });
+
+            // Мышь для десктопа (только в игре)
             document.addEventListener('mousemove', (event) => {
+                // Проверяем, что игра активна (меню скрыто) и НЕ в настройках
                 if (document.getElementById('startMenu').style.display === 'none' &&
                     document.getElementById('optionsMenu').style.display === 'none' &&
                     document.getElementById('modeSelectMenu').style.display === 'none' && 
@@ -1811,34 +1922,13 @@
                 }
             });
 
-            // Перезарядка по R
-            document.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyR' && 
-                    document.getElementById('startMenu').style.display === 'none' &&
-                    document.getElementById('optionsMenu').style.display === 'none' &&
-                    document.getElementById('modeSelectMenu').style.display === 'none') {
-                    if (!isReloading && ammo < maxAmmo) {
-                        playReloadAnimation();
-                    }
-                }
-            });
-
             renderer.domElement.addEventListener('click', () => {
+                // Запрос блокировки указателя только в игре
                 if (document.getElementById('startMenu').style.display === 'none' &&
                     document.getElementById('optionsMenu').style.display === 'none' &&
                     document.getElementById('modeSelectMenu').style.display === 'none') {
                     renderer.domElement.requestPointerLock();
                 }
-            });
-
-            window.addEventListener('blur', () => {
-                activeTouches.clear();
-                joystickStick.style.transform = 'translate(0, 0)';
-                moveForward = moveBackward = moveLeft = moveRight = false;
-                isShootingTouch = false;
-                shootTouchId = null;
-                stopAutoShoot();
-                isMouseDown = false;
             });
         }
 
@@ -1869,11 +1959,23 @@
             return false;
         }
 
+        // Проверка достижения выхода (для режима Straight Through)
+        function checkExitReached() {
+            if (currentGameMode !== 'straight' || !exitArea) return false;
+            
+            const dx = camera.position.x - exitArea.position.x;
+            const dz = camera.position.z - exitArea.position.z;
+            const distance = Math.sqrt(dx * dx + dz * dz);
+            
+            return distance < CELL_SIZE;
+        }
+
         // СИСТЕМА НАВИГАЦИИ ДЛЯ ВРАГОВ
         class NavigationSystem {
             constructor() {
                 this.nodes = [];
                 this.edges = [];
+                this.gridSize = 1.0;
                 this.generateNavigationGraph();
             }
             
@@ -1924,6 +2026,8 @@
                         }
                     }
                 }
+                
+                console.log(`Создана навигационная сеть: ${this.nodes.length} узлов, ${this.edges.length} связей`);
             }
             
             findPath(startX, startZ, targetX, targetZ) {
@@ -2037,10 +2141,9 @@
         // Создаем систему навигации
         let navigationSystem = null;
 
-        // КЛАСС ВРАГА
+        // КЛАСС ВРАГА - УЛУЧШЕННАЯ ВЕРСИЯ
         class Enemy {
             constructor(x, z) {
-                this.id = Math.random().toString(36).substring(2, 9);
                 this.x = x;
                 this.z = z;
                 this.health = 3;
@@ -2063,6 +2166,8 @@
                 this.lastX = x;
                 this.lastZ = z;
                 this.avoidanceForce = new THREE.Vector2(0, 0);
+                this.damageEffectTimer = 0;
+                this.isTakingDamage = false;
                 this.teleportTimer = 0;
                 this.lastDistanceToPlayer = 0;
                 
@@ -2091,7 +2196,8 @@
                 context.fillRect(0, 0, 64, 64);
                 context.drawImage(img, 0, 0, 64, 64);
                 
-                return new THREE.CanvasTexture(canvas);
+                const texture = new THREE.CanvasTexture(canvas);
+                return texture;
             }
             
             update(deltaTime, playerX, playerZ) {
@@ -2102,10 +2208,13 @@
                     return;
                 }
                 
+                // УБРАЛ эффект получения урона (красный цвет)
+                
+                // Сохраняем предыдущую позицию для обнаружения застреваний
                 this.lastX = this.x;
                 this.lastZ = this.z;
                 
-                // Анимация
+                // Обновляем анимацию
                 this.animationTimer += deltaTime;
                 if (this.animationTimer > 0.3) {
                     this.animationTimer = 0;
@@ -2117,18 +2226,20 @@
                 if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
                 if (this.fireballCooldown > 0) this.fireballCooldown -= deltaTime;
                 
+                // Сохраняем позицию игрока
                 this.lastPlayerX = playerX;
                 this.lastPlayerZ = playerZ;
                 
+                // Вычисляем направление к игроку
                 const dx = playerX - this.x;
                 const dz = playerZ - this.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 this.lastDistanceToPlayer = distance;
                 
-                // Телепортация в режиме Onslaught
-                if (currentGameMode === 'onslaught' && distance > 70) {
+                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught) - ИСПРАВЛЕНО
+                if (currentGameMode === 'onslaught' && distance > 70) { // Увеличил дистанцию до 70
                     this.teleportTimer += deltaTime;
-                    if (this.teleportTimer > 20.0) {
+                    if (this.teleportTimer > 20.0) { // Увеличил интервал до 20 секунд
                         this.teleportToPlayer();
                         this.teleportTimer = 0;
                     }
@@ -2136,7 +2247,8 @@
                     this.teleportTimer = 0;
                 }
                 
-                // Навигация
+                // ВСЕГДА преследуем игрока, независимо от расстояния
+                // Обновляем путь каждые 2 секунды или если путь пустой
                 this.pathUpdateTimer += deltaTime;
                 if (this.pathUpdateTimer > 2.0 || this.path.length === 0 || distance < 5) {
                     this.pathUpdateTimer = 0;
@@ -2144,7 +2256,7 @@
                     this.currentPathIndex = 0;
                 }
                 
-                // Движение
+                // Двигаемся по пути с улучшенным избеганием препятствий
                 if (this.path.length > 0 && this.currentPathIndex < this.path.length) {
                     const targetNode = this.path[this.currentPathIndex];
                     const targetX = targetNode.x;
@@ -2154,16 +2266,18 @@
                     const dzToNode = targetZ - this.z;
                     const distanceToNode = Math.sqrt(dxToNode * dxToNode + dzToNode * dzToNode);
                     
-                    if (distanceToNode < 1.0) {
+                    if (distanceToNode < 1.0) { // Увеличил дистанцию достижения узла
                         this.currentPathIndex++;
                     } else {
                         let dirX = dxToNode / distanceToNode;
                         let dirZ = dzToNode / distanceToNode;
                         
+                        // Добавляем силу избегания других врагов
                         this.calculateAvoidanceForce();
                         dirX += this.avoidanceForce.x * 0.5;
                         dirZ += this.avoidanceForce.y * 0.5;
                         
+                        // Нормализуем результирующее направление
                         const dirLength = Math.sqrt(dirX * dirX + dirZ * dirZ);
                         if (dirLength > 0) {
                             dirX /= dirLength;
@@ -2173,18 +2287,22 @@
                         const newX = this.x + dirX * this.speed * deltaTime;
                         const newZ = this.z + dirZ * this.speed * deltaTime;
                         
+                        // УЛУЧШЕННАЯ проверка коллизий с плавным обходом препятствий
                         if (!this.checkWallCollision(newX, newZ)) {
                             this.x = newX;
                             this.z = newZ;
                         } else {
+                            // Если столкнулись со стеной, пытаемся обойти
                             this.handleWallCollision(dirX, dirZ, deltaTime);
                         }
                     }
                 } else {
+                    // Если путь недоступен, двигаемся напрямую к игроку с избеганием препятствий
                     if (distance > 0) {
                         let dirX = dx / distance;
                         let dirZ = dz / distance;
                         
+                        // Добавляем силу избегания
                         this.calculateAvoidanceForce();
                         dirX += this.avoidanceForce.x * 0.3;
                         dirZ += this.avoidanceForce.y * 0.3;
@@ -2207,9 +2325,13 @@
                     }
                 }
                 
+                // Обновляем позицию спрайта
                 this.sprite.position.set(this.x, 0.8, this.z);
+                
+                // Поворачиваем спрайт к камере
                 this.sprite.lookAt(camera.position);
                 
+                // Проверяем, не застрял ли враг
                 const movedDistance = Math.sqrt(
                     (this.x - this.lastX) * (this.x - this.lastX) + 
                     (this.z - this.lastZ) * (this.z - this.lastZ)
@@ -2217,7 +2339,7 @@
                 
                 if (movedDistance < 0.1 * deltaTime) {
                     this.stuckTimer += deltaTime;
-                    if (this.stuckTimer > 2.0) {
+                    if (this.stuckTimer > 2.0) { // Если застрял более 2 секунд
                         this.findAlternativePath();
                         this.stuckTimer = 0;
                     }
@@ -2225,24 +2347,22 @@
                     this.stuckTimer = 0;
                 }
                 
-                // Атаки
+                // Ближняя атака - раз в 1 секунду
                 if (distance < this.attackRange && this.attackCooldown <= 0) {
                     this.meleeAttack();
                     this.attackCooldown = 1.0;
                 }
                 
+                // Бросок файрбола - раз в 5 секунд
                 if (distance < 15 && this.fireballCooldown <= 0 && distance > this.attackRange) {
                     this.throwFireball(playerX, playerZ);
                     this.fireballCooldown = 5.0;
                 }
-
-                // Синхронизация в мультиплеере
-                if (multiplayer.isHost && multiplayer.connected) {
-                    multiplayer.sendEnemyUpdate(this);
-                }
             }
             
+            // Телепортация к игроку - ИСПРАВЛЕНО
             teleportToPlayer() {
+                // Находим свободную клетку рядом с игроком на расстоянии 25 единиц
                 const playerMazeX = Math.round((camera.position.x / CELL_SIZE) + maze[0].length/2);
                 const playerMazeZ = Math.round((camera.position.z / CELL_SIZE) + maze.length/2);
                 
@@ -2260,6 +2380,7 @@
                                     (worldZ - camera.position.z) * (worldZ - camera.position.z)
                                 );
                                 
+                                // Телепортируем на расстоянии 25 единиц от игрока
                                 if (distanceToPlayer > 20 && distanceToPlayer < 30) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
@@ -2273,10 +2394,11 @@
                     this.x = randomCell.x;
                     this.z = randomCell.z;
                     this.sprite.position.set(this.x, 0.8, this.z);
-                    this.path = [];
+                    this.path = []; // Сбрасываем путь
                 }
             }
             
+            // Расчет силы избегания других врагов
             calculateAvoidanceForce() {
                 this.avoidanceForce.set(0, 0);
                 const avoidanceRadius = 3.0;
@@ -2289,6 +2411,7 @@
                     const distance = Math.sqrt(dx * dx + dz * dz);
                     
                     if (distance < avoidanceRadius && distance > 0) {
+                        // Сила отталкивания обратно пропорциональна расстоянию
                         const force = (avoidanceRadius - distance) / avoidanceRadius;
                         this.avoidanceForce.x -= (dx / distance) * force;
                         this.avoidanceForce.y -= (dz / distance) * force;
@@ -2296,12 +2419,14 @@
                 }
             }
             
+            // Обработка столкновений со стенами
             handleWallCollision(dirX, dirZ, deltaTime) {
+                // Пробуем разные направления для обхода препятствия
                 const directions = [
-                    [dirZ, -dirX],
-                    [-dirZ, dirX],
-                    [dirX * 0.7, dirZ * 0.7],
-                    [-dirX * 0.5, -dirZ * 0.5]
+                    [dirZ, -dirX],  // Перпендикулярно влево
+                    [-dirZ, dirX],  // Перпендикулярно вправо
+                    [dirX * 0.7, dirZ * 0.7],  // Под углом
+                    [-dirX * 0.5, -dirZ * 0.5] // Назад
                 ];
                 
                 for (let [testX, testZ] of directions) {
@@ -2316,9 +2441,10 @@
                 }
             }
             
+            // Поиск альтернативного пути при застревании
             findAlternativePath() {
                 this.path = [];
-                this.pathUpdateTimer = 2.0;
+                this.pathUpdateTimer = 2.0; // Принудительно обновим путь в следующем кадре
             }
             
             checkWallCollision(x, z) {
@@ -2382,6 +2508,7 @@
             }
             
             takeDamage(amount, distance) {
+                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
                 let damage = 0;
                 
                 if (distance < 4) {
@@ -2392,17 +2519,21 @@
                     damage = 1;
                 }
                 
+                // Применяем округленный урон
                 this.health -= damage;
                 
+                // УБРАЛ эффект получения урона (красный цвет)
+                
+                // Воспроизводим случайный звук получения урона
                 if (Math.random() > 0.5) {
                     if (impDamageSound1) {
                         impDamageSound1.currentTime = 0;
-                        impDamageSound1.play();
+                        impDamageSound1.play().catch(e => console.log('Не удалось воспроизвести звук получения урона врагом'));
                     }
                 } else {
                     if (impDamageSound2) {
                         impDamageSound2.currentTime = 0;
-                        impDamageSound2.play();
+                        impDamageSound2.play().catch(e => console.log('Не удалось воспроизвести звук получения урона врагом'));
                     }
                 }
                 
@@ -2416,12 +2547,13 @@
                 this.deathFrame = 1;
                 this.deathTimer = 0;
                 
+                // Воспроизводим случайный звук смерти
                 const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
                 const randomSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
                 
                 if (randomSound) {
                     randomSound.currentTime = 0;
-                    randomSound.play();
+                    randomSound.play().catch(e => console.log('Не удалось воспроизвести звук смерти врага'));
                 }
                 
                 this.updateDeathTexture();
@@ -2469,13 +2601,16 @@
                     enemies.splice(index, 1);
                 }
                 
+                // Увеличиваем счет убитых врагов
                 enemiesKilled++;
                 updateUI();
                 
+                // Проверяем победу в режиме Extermination
                 if (currentGameMode === 'extermination' && enemiesKilled >= targetEnemies) {
                     victory();
                 }
                 
+                // Проверяем завершение волны в режиме Onslaught
                 if (currentGameMode === 'onslaught') {
                     waveEnemiesKilled++;
                     if (waveEnemiesKilled >= waveEnemiesCount && enemies.length === 0) {
@@ -2485,14 +2620,15 @@
             }
         }
 
-        // КЛАСС ФАЙРБОЛА
+        // КЛАСС ФАЙРБОЛА - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР
         class Fireball {
             constructor(x, z, targetX, targetZ) {
                 this.x = x;
                 this.z = z;
                 this.speed = 12.0;
                 this.isActive = true;
-                this.damage = Math.round((20 + Math.random() * 20) / 5) * 5;
+                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
+                this.damage = Math.round((20 + Math.random() * 20) / 5) * 5; // Урон от 20 до 40, округленный до шага 5
                 
                 const dx = targetX - x;
                 const dz = targetZ - z;
@@ -2507,7 +2643,7 @@
                 }));
                 
                 this.sprite.position.set(this.x, 0.8, this.z);
-                this.sprite.scale.set(3.5, 3.5, 1);
+                this.sprite.scale.set(3.5, 3.5, 1); // Увеличил размер спрайта
                 scene.add(this.sprite);
                 
                 this.rotation = 0;
@@ -2533,14 +2669,15 @@
                 const dz = this.z - camera.position.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                if (distance < 2.0) {
+                // УВЕЛИЧИЛ радиус коллайдера фаербола
+                if (distance < 2.0) { // Было 1.5
                     this.destroy();
                     takeDamage(this.damage);
                 }
             }
             
             checkWallCollision() {
-                const fireballRadius = 0.8;
+                const fireballRadius = 0.8; // УВЕЛИЧИЛ радиус коллайдера (было 0.3)
                 const points = [
                     [this.x - fireballRadius, this.z],
                     [this.x + fireballRadius, this.z],
@@ -2580,7 +2717,7 @@
         let enemies = [];
         let fireballs = [];
 
-        // Функция создания врагов
+        // Функция создания врагов - УЛУЧШЕННАЯ
         function createEnemies(count, mode = 'normal') {
             for (let i = 0; i < count; i++) {
                 let freeCells = [];
@@ -2595,10 +2732,12 @@
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
                             if (mode === 'onslaught' || mode === 'extermination') {
+                                // В режимах Onslaught и Extermination враги появляются НЕДАЛЕКО от игрока
                                 if (distance > 8 && distance < 20) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
                             } else if (mode === 'straight') {
+                                // В режиме Straight Through враги появляются ВЕЗДЕ (много врагов)
                                 if (distance > 5) {
                                     freeCells.push({x: worldX, z: worldZ});
                                 }
@@ -2614,8 +2753,9 @@
             }
         }
 
-        // Функция получения урона игроком
+        // Функция получения урона игроком - ИСПРАВЛЕННАЯ
         function takeDamage(amount) {
+            // ОКРУГЛЯЕМ урон до целых чисел
             const roundedDamage = Math.round(amount);
             hp -= roundedDamage;
             if (hp < 0) hp = 0;
@@ -2624,19 +2764,17 @@
             
             if (playerHitSound) {
                 playerHitSound.currentTime = 0;
-                playerHitSound.play();
+                playerHitSound.play().catch(e => console.log('Не удалось воспроизвести звук получения урона'));
             }
             
             showDamageEffect();
-            
-            // Отправляем информацию об уроне в мультиплеере
-            multiplayer.sendDamage(roundedDamage);
             
             if (hp <= 0) {
                 gameOver();
             }
         }
 
+        // Функция показа эффекта получения урона
         function showDamageEffect() {
             const damageEffect = document.getElementById('damageEffect');
             damageEffect.style.display = 'block';
@@ -2650,16 +2788,19 @@
             }, 300);
         }
 
+        // Функция завершения игры
         function gameOver() {
             alert('Игра окончена! Вы погибли.');
             location.reload();
         }
 
+        // Функция победы
         function victory() {
             alert(`Поздравляем! Вы победили в режиме ${getModeName(currentGameMode)}!`);
             location.reload();
         }
 
+        // Функция получения названия режима
         function getModeName(mode) {
             switch(mode) {
                 case 'extermination': return 'Extermination Protocol';
@@ -2669,18 +2810,21 @@
             }
         }
 
-        // Функция проверки попадания по врагам
+        // Функция проверки попадания по врагам - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР ПУЛИ
         function checkEnemyHit() {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            raycaster.far = 50;
+            
+            // УВЕЛИЧИЛ дальность луча для лучшего обнаружения врагов
+            raycaster.far = 50; // Увеличил дальность луча
             
             for (let enemy of enemies) {
                 if (!enemy.isAlive) continue;
                 
+                // УВЕЛИЧИЛ радиус сферы для обнаружения
                 const enemySphere = new THREE.Sphere(
                     new THREE.Vector3(enemy.x, 0.8, enemy.z),
-                    2.0
+                    2.0 // УВЕЛИЧИЛ радиус (было 1.5)
                 );
                 
                 if (raycaster.ray.intersectsSphere(enemySphere)) {
@@ -2693,14 +2837,36 @@
                 }
             }
             
+            // Дополнительная проверка с использованием рейкастинга по всем врагам
+            const intersects = [];
+            for (let enemy of enemies) {
+                if (!enemy.isAlive) continue;
+                
+                // Создаем bounding box для врага
+                const enemyBox = new THREE.Box3().setFromCenterAndSize(
+                    new THREE.Vector3(enemy.x, 0.8, enemy.z),
+                    new THREE.Vector3(2.0, 2.0, 2.0) // Увеличил размер бокса
+                );
+                
+                if (raycaster.ray.intersectsBox(enemyBox)) {
+                    const dx = enemy.x - camera.position.x;
+                    const dz = enemy.z - camera.position.z;
+                    const distance = Math.sqrt(dx * dx + dz * dz);
+                    
+                    enemy.takeDamage(1, distance);
+                    return true;
+                }
+            }
+            
             return false;
         }
 
-        // Система волн для режима Onslaught
+        // Система волн для режима Onslaught - ИСПРАВЛЕННАЯ
         function startWave(waveNumber) {
             currentWave = waveNumber;
             waveEnemiesKilled = 0;
             
+            // БАЛАНС: меньше врагов на первых волнах
             if (waveNumber === 1) {
                 waveEnemiesCount = 2;
             } else if (waveNumber === 2) {
@@ -2708,12 +2874,13 @@
             } else if (waveNumber === 3) {
                 waveEnemiesCount = 6;
             } else {
-                waveEnemiesCount = 5 + waveNumber * 2;
+                waveEnemiesCount = 5 + waveNumber * 2; // Постепенное увеличение
             }
             
             enemiesToSpawn = waveEnemiesCount;
             lastSpawnTime = 0;
             
+            // Показываем информацию о волне
             const waveInfo = document.getElementById('waveInfo');
             waveInfo.textContent = `Волна ${waveNumber}`;
             waveInfo.style.display = 'block';
@@ -2735,6 +2902,7 @@
             if (currentGameMode !== 'onslaught' || enemiesToSpawn <= 0) return;
             
             if (currentTime - lastSpawnTime > SPAWN_INTERVAL) {
+                // Спавним по 1 врагу за раз
                 const spawnCount = Math.min(1, enemiesToSpawn);
                 
                 let freeCells = [];
@@ -2747,6 +2915,7 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
+                            // Враги появляются НЕДАЛЕКО от игрока
                             if (distance > 8 && distance < 20) {
                                 freeCells.push({x: worldX, z: worldZ});
                             }
@@ -2766,7 +2935,7 @@
             }
         }
 
-        // Анимация с delta time
+        // Анимация с delta time для независимой от FPS скорости
         const BASE_MOVE_SPEED = 15.0;
         
         function animate(currentTime) {
@@ -2811,6 +2980,17 @@
             camera.position.x = newX;
             camera.position.z = newZ;
             
+            // Проверяем достижение выхода в режиме Straight Through
+            if (currentGameMode === 'straight' && checkExitReached()) {
+                victory();
+                return;
+            }
+            
+            // Обновляем стрелку выхода
+            if (currentGameMode === 'straight') {
+                updateExitArrow();
+            }
+            
             // Постепенный спавн врагов в режиме Onslaught
             if (currentGameMode === 'onslaught') {
                 spawnEnemiesOverTime(currentTime);
@@ -2825,13 +3005,6 @@
             for (let i = fireballs.length - 1; i >= 0; i--) {
                 fireballs[i].update(deltaTime);
             }
-
-            // Обновляем мультиплеер
-            if (multiplayer.connected) {
-                multiplayer.sendPlayerUpdate();
-                multiplayer.sendGameState();
-                multiplayer.updateRemotePlayers(deltaTime);
-            }
             
             renderer.render(scene, camera);
         }
@@ -2843,30 +3016,14 @@
         });
 
         // Функция запуска игры
-        async function startGame(isMultiplayer = false, roomCode = null) {
+        function startGame() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'none';
             document.getElementById('modeSelectMenu').style.display = 'none';
-            document.getElementById('connectMenu').style.display = 'none';
-            
             fpsCounter.style.display = 'block';
             document.getElementById('uiPanel').style.display = 'block';
             document.getElementById('modeStats').style.display = 'block';
             document.getElementById('damageEffect').style.display = 'none';
-            
-            if (isMultiplayer) {
-                document.getElementById('multiplayerInfo').style.display = 'block';
-                document.getElementById('roomCodeDisplay').style.display = 'block';
-                document.getElementById('roomCodeDisplay').textContent = `КОД: ${roomCode}`;
-                
-                // Инициализируем мультиплеер
-                await multiplayer.init();
-                
-                if (multiplayer.isHost) {
-                    await multiplayer.createRoom();
-                    document.getElementById('roomCodeDisplay').textContent = `КОД: ${multiplayer.roomCode}`;
-                }
-            }
             
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 document.getElementById('mobileControls').style.display = 'block';
@@ -2889,11 +3046,11 @@
             
             // Создаем врагов в зависимости от режима
             if (currentGameMode === 'extermination') {
-                createEnemies(40, 'extermination');
+                createEnemies(40, 'extermination'); // Увеличил до 40 врагов
             } else if (currentGameMode === 'onslaught') {
                 startWave(1);
             } else if (currentGameMode === 'straight') {
-                createEnemies(15, 'straight');
+                createEnemies(15, 'straight'); // МНОГО врагов в лабиринте
             }
             
             updateUI();
@@ -2908,15 +3065,11 @@
             document.getElementById('modeSelectMenu').style.display = 'flex';
         }
 
-        function showConnectMenu() {
-            document.getElementById('startMenu').style.display = 'none';
-            document.getElementById('connectMenu').style.display = 'flex';
-        }
-
         function showOptions() {
             document.getElementById('startMenu').style.display = 'none';
             document.getElementById('optionsMenu').style.display = 'flex';
             
+            // Устанавливаем значения слайдеров из сохраненных настроек
             document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
             document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
             document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
@@ -2932,11 +3085,6 @@
             document.getElementById('startMenu').style.display = 'flex';
         }
 
-        function hideConnectMenu() {
-            document.getElementById('connectMenu').style.display = 'none';
-            document.getElementById('startMenu').style.display = 'flex';
-        }
-
         // Инициализация карусели режимов
         function initModeCarousel() {
             const slides = document.querySelectorAll('.mode-slide');
@@ -2946,8 +3094,10 @@
             
             let currentSlide = 0;
             
+            // Устанавливаем начальный активный слайд
             updateSlides();
             
+            // Обработчики для кнопок навигации
             prevBtn.addEventListener('click', () => {
                 currentSlide = (currentSlide - 1 + slides.length) % slides.length;
                 updateSlides();
@@ -2958,12 +3108,14 @@
                 updateSlides();
             });
             
+            // Обработчик для кнопки старта
             startBtn.addEventListener('click', () => {
                 const activeSlide = document.querySelector('.mode-slide.active');
                 const mode = activeSlide.getAttribute('data-mode');
-                selectGameMode(mode, false);
+                selectGameMode(mode);
             });
             
+            // Функция обновления слайдов
             function updateSlides() {
                 slides.forEach((slide, index) => {
                     slide.classList.remove('active', 'left', 'right');
@@ -2997,9 +3149,11 @@
                 const swipeThreshold = 50;
                 
                 if (touchEndX < touchStartX - swipeThreshold) {
+                    // Свайп влево - следующий слайд
                     currentSlide = (currentSlide + 1) % slides.length;
                     updateSlides();
                 } else if (touchEndX > touchStartX + swipeThreshold) {
+                    // Свайп вправо - предыдущий слайд
                     currentSlide = (currentSlide - 1 + slides.length) % slides.length;
                     updateSlides();
                 }
@@ -3007,48 +3161,54 @@
         }
 
         // Функция выбора режима игры
-        function selectGameMode(mode, isMultiplayer = false, roomCode = null) {
+        function selectGameMode(mode) {
             currentGameMode = mode;
             
+            // Создаем лабиринт в зависимости от режима
             mazeGen = new MazeGenerator(25, 25, mode);
             maze = mazeGen.getMaze();
             
+            // Создаем систему навигации
             navigationSystem = new NavigationSystem();
             
-            startPos = findRandomStartPosition();
+            // Устанавливаем стартовую позицию
+            if (mode === 'straight') {
+                startPos = findCornerStartPosition();
+            } else {
+                startPos = findRandomStartPosition();
+            }
+            
             camera.position.set(startPos.x, 1.7, startPos.z);
             
+            // Пересоздаем сцену
             const materials = createMaterials();
             createScene(materials);
             
-            startGame(isMultiplayer, roomCode);
+            // Запускаем игру
+            startGame();
         }
 
         // Инициализация меню
         function initMenu() {
             const playButton = document.getElementById('playButton');
-            const connectButton = document.getElementById('connectButton');
             const optionsButton = document.getElementById('optionsButton');
             const backButton = document.getElementById('backButton');
             const backToMainButton = document.getElementById('backToMainButton');
-            const backFromConnectButton = document.getElementById('backFromConnectButton');
-            const joinRoomButton = document.getElementById('joinRoomButton');
-            const roomCodeInput = document.getElementById('roomCodeInput');
             
+            // Устанавливаем начальные значения слайдеров из сохраненных настроек
             document.getElementById('musicVolumeSlider').value = settingsManager.musicVolume;
             document.getElementById('soundVolumeSlider').value = settingsManager.soundVolume;
             document.getElementById('sensitivitySlider').value = settingsManager.sensitivity;
             
+            // Запускаем музыку при инициализации
             startMusic();
+            
+            // Добавляем обработчики для принудительного запуска музыки
             document.addEventListener('click', startMusicOnInteraction, { once: true });
             document.addEventListener('touchstart', startMusicOnInteraction, { once: true });
             
             playButton.addEventListener('click', function(e) {
                 showModeSelect();
-            });
-            
-            connectButton.addEventListener('click', function(e) {
-                showConnectMenu();
             });
             
             optionsButton.addEventListener('click', function(e) {
@@ -3063,24 +3223,7 @@
                 hideModeSelect();
             });
             
-            backFromConnectButton.addEventListener('click', function(e) {
-                hideConnectMenu();
-            });
-            
-            joinRoomButton.addEventListener('click', async function(e) {
-                const roomCode = roomCodeInput.value.trim();
-                if (roomCode.length === 6) {
-                    const success = await multiplayer.joinRoom(roomCode);
-                    if (success) {
-                        selectGameMode('extermination', true, roomCode);
-                    } else {
-                        alert('Не удалось подключиться к комнате. Проверьте код.');
-                    }
-                } else {
-                    alert('Введите 6-символьный код комнаты');
-                }
-            });
-            
+            // Инициализируем карусель режимов
             initModeCarousel();
         }
 
@@ -3107,6 +3250,7 @@
 
         // Запуск игры
         loadTextures().then(() => {
+            // Создаем начальный лабиринт (будет пересоздан при выборе режима)
             mazeGen = new MazeGenerator(25, 25);
             maze = mazeGen.getMaze();
             navigationSystem = new NavigationSystem();
@@ -3121,6 +3265,7 @@
             preloadWeaponImages();
         }).catch((error) => {
             console.error('Ошибка загрузки:', error);
+            // Создаем начальный лабиринт (будет пересоздан при выборе режима)
             mazeGen = new MazeGenerator(25, 25);
             maze = mazeGen.getMaze();
             navigationSystem = new NavigationSystem();
@@ -3137,3 +3282,7 @@
     </script>
 </body>
 </html>
+
+. 
+
+вот у рамки самой не будет обводки, типа она подут не полу прозраасчная а норм цвета
