@@ -765,7 +765,7 @@
         // Переменные для режимов игры
         let currentGameMode = null;
         let enemiesKilled = 0;
-        let targetEnemies = 20; // Изменил на 20
+        let targetEnemies = 20;
         let currentWave = 1;
         let exitArea = null;
         let waveSpawnTimer = 0;
@@ -773,7 +773,7 @@
         let waveEnemiesKilled = 0;
         let enemiesToSpawn = 0;
         let lastSpawnTime = 0;
-        const SPAWN_INTERVAL = 1000; // 1 секунда между спавнами
+        const SPAWN_INTERVAL = 1000;
 
         // Переменные для Lava Chaos
         let lavaFloors = [];
@@ -784,12 +784,10 @@
         let waveTimer = 30;
         let waveTimerActive = false;
         let lavaTexture = null;
+        let ironWallTexture = null;
 
         // Базовые настройки
         const scene = new THREE.Scene();
-        
-        // ТУМАН - будет установлен в зависимости от режима
-        let sceneFog = null;
         
         // Камера с МЕНЬШЕЙ дальностью прорисовки
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 50);
@@ -816,7 +814,7 @@
         function loadTextures() {
             return new Promise((resolve) => {
                 let texturesLoaded = 0;
-                const totalTextures = 4;
+                const totalTextures = 5;
 
                 function onTextureLoad() {
                     texturesLoaded++;
@@ -849,6 +847,12 @@
                     onTextureLoad();
                 });
 
+                ironWallTexture = textureLoader.load('Textures/IronWallTex.jpg', onTextureLoad, undefined, (error) => {
+                    console.error('Ошибка загрузки текстуры железных стен:', error);
+                    ironWallTexture = null;
+                    onTextureLoad();
+                });
+
                 // НАСТРОЙКИ ТЕКСТУР
                 if (wallTexture) {
                     wallTexture.wrapS = wallTexture.wrapT = THREE.RepeatWrapping;
@@ -874,20 +878,31 @@
                     lavaTexture.minFilter = THREE.LinearFilter;
                     lavaTexture.magFilter = THREE.LinearFilter;
                 }
+                if (ironWallTexture) {
+                    ironWallTexture.wrapS = ironWallTexture.wrapT = THREE.RepeatWrapping;
+                    ironWallTexture.repeat.set(1, 1);
+                    ironWallTexture.minFilter = THREE.LinearFilter;
+                    ironWallTexture.magFilter = THREE.LinearFilter;
+                }
             });
         }
 
         // Создаем материалы с текстурами
         function createMaterials() {
-            const wallMaterial = wallTexture ? 
+            const wallMaterial = (currentGameMode === 'lava' && ironWallTexture) ? 
                 new THREE.MeshLambertMaterial({ 
-                    map: wallTexture,
+                    map: ironWallTexture,
                     fog: true
                 }) :
-                new THREE.MeshLambertMaterial({ 
-                    color: 0x8B4513,
-                    fog: true
-                });
+                (wallTexture ? 
+                    new THREE.MeshLambertMaterial({ 
+                        map: wallTexture,
+                        fog: true
+                    }) :
+                    new THREE.MeshLambertMaterial({ 
+                        color: 0x8B4513,
+                        fog: true
+                    }));
             
             const floorMaterial = floorTexture ? 
                 new THREE.MeshLambertMaterial({ 
@@ -958,7 +973,7 @@
                 maze[this.height-2][this.width-2] = 0;
                 
                 // Добавляем дополнительные проходы для сложности
-                this.addExtraPassages(maze, 0.1); // 10% дополнительных проходов
+                this.addExtraPassages(maze, 0.1);
                 
                 return maze;
             }
@@ -971,7 +986,7 @@
                 let maze = Array(lavaHeight).fill().map(() => Array(lavaWidth).fill(0));
                 
                 // Добавляем несколько квадратных стен
-                this.addSquareWalls(maze, 3); // 3 квадратные стены
+                this.addSquareWalls(maze, 2); // 2 квадратные стены
                 
                 return maze;
             }
@@ -1226,6 +1241,7 @@
             createFloor(materials.floorMaterial);
             createRoof(materials.roofMaterial);
             createMazeWalls(materials.wallMaterial);
+            createBoundaryWalls(materials.wallMaterial);
             
             // Создаем зону выхода для режима Straight Through
             if (currentGameMode === 'straight' && mazeGen.getExitPosition()) {
@@ -1306,15 +1322,86 @@
             scene.add(wallGroup);
         }
 
+        // Создание граничных стен
+        function createBoundaryWalls(wallMaterial) {
+            const boundaryGroup = new THREE.Group();
+            const mazeWidth = maze[0].length * CELL_SIZE;
+            const mazeHeight = maze.length * CELL_SIZE;
+            
+            // Северная стена
+            const northWall = new THREE.BoxGeometry(mazeWidth, WALL_HEIGHT, WALL_THICKNESS);
+            const northWallMesh = new THREE.Mesh(northWall, wallMaterial);
+            northWallMesh.position.set(0, WALL_HEIGHT/2 - 1, -mazeHeight/2);
+            boundaryGroup.add(northWallMesh);
+            
+            // Южная стена
+            const southWall = new THREE.BoxGeometry(mazeWidth, WALL_HEIGHT, WALL_THICKNESS);
+            const southWallMesh = new THREE.Mesh(southWall, wallMaterial);
+            southWallMesh.position.set(0, WALL_HEIGHT/2 - 1, mazeHeight/2);
+            boundaryGroup.add(southWallMesh);
+            
+            // Западная стена
+            const westWall = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, mazeHeight);
+            const westWallMesh = new THREE.Mesh(westWall, wallMaterial);
+            westWallMesh.position.set(-mazeWidth/2, WALL_HEIGHT/2 - 1, 0);
+            boundaryGroup.add(westWallMesh);
+            
+            // Восточная стена
+            const eastWall = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, mazeHeight);
+            const eastWallMesh = new THREE.Mesh(eastWall, wallMaterial);
+            eastWallMesh.position.set(mazeWidth/2, WALL_HEIGHT/2 - 1, 0);
+            boundaryGroup.add(eastWallMesh);
+            
+            scene.add(boundaryGroup);
+        }
+
         // Создание лавы для Lava Chaos
         function createLava(lavaMaterial) {
             const lavaWidth = maze[0].length * CELL_SIZE;
             const lavaHeight = maze.length * CELL_SIZE;
-            const lavaGeometry = new THREE.PlaneGeometry(lavaWidth, lavaHeight);
+            const lavaGeometry = new THREE.BoxGeometry(lavaWidth, 2, lavaHeight);
             const lava = new THREE.Mesh(lavaGeometry, lavaMaterial);
-            lava.rotation.x = -Math.PI / 2;
-            lava.position.y = -5; // Лава ниже уровня пола
+            lava.position.y = -3; // Лава ниже уровня пола
             scene.add(lava);
+            
+            // Создаем стены под лавой
+            const undergroundWallMaterial = new THREE.MeshLambertMaterial({ 
+                color: 0x333333,
+                fog: true
+            });
+            
+            const undergroundWidth = lavaWidth + 10;
+            const undergroundHeight = lavaHeight + 10;
+            
+            // Северная стена под лавой
+            const northUnderground = new THREE.BoxGeometry(undergroundWidth, 10, 1);
+            const northUndergroundMesh = new THREE.Mesh(northUnderground, undergroundWallMaterial);
+            northUndergroundMesh.position.set(0, -8, -undergroundHeight/2);
+            scene.add(northUndergroundMesh);
+            
+            // Южная стена под лавой
+            const southUnderground = new THREE.BoxGeometry(undergroundWidth, 10, 1);
+            const southUndergroundMesh = new THREE.Mesh(southUnderground, undergroundWallMaterial);
+            southUndergroundMesh.position.set(0, -8, undergroundHeight/2);
+            scene.add(southUndergroundMesh);
+            
+            // Западная стена под лавой
+            const westUnderground = new THREE.BoxGeometry(1, 10, undergroundHeight);
+            const westUndergroundMesh = new THREE.Mesh(westUnderground, undergroundWallMaterial);
+            westUndergroundMesh.position.set(-undergroundWidth/2, -8, 0);
+            scene.add(westUndergroundMesh);
+            
+            // Восточная стена под лавой
+            const eastUnderground = new THREE.BoxGeometry(1, 10, undergroundHeight);
+            const eastUndergroundMesh = new THREE.Mesh(eastUnderground, undergroundWallMaterial);
+            eastUndergroundMesh.position.set(undergroundWidth/2, -8, 0);
+            scene.add(eastUndergroundMesh);
+            
+            // Пол под лавой
+            const undergroundFloor = new THREE.BoxGeometry(undergroundWidth, 1, undergroundHeight);
+            const undergroundFloorMesh = new THREE.Mesh(undergroundFloor, undergroundWallMaterial);
+            undergroundFloorMesh.position.set(0, -13, 0);
+            scene.add(undergroundFloorMesh);
         }
 
         // Инициализация системы падающих полов для Lava Chaos
@@ -1326,7 +1413,7 @@
             for (let y = 0; y < maze.length; y++) {
                 for (let x = 0; x < maze[y].length; x++) {
                     if (maze[y][x] === 0) { // Только проходимые клетки
-                        const floorGeometry = new THREE.PlaneGeometry(CELL_SIZE * 0.9, CELL_SIZE * 0.9);
+                        const floorGeometry = new THREE.PlaneGeometry(CELL_SIZE * 0.95, CELL_SIZE * 0.95);
                         const floorMaterial = new THREE.MeshLambertMaterial({ 
                             map: floorTexture,
                             fog: true
@@ -1336,7 +1423,7 @@
                         floorTile.rotation.x = -Math.PI / 2;
                         floorTile.position.set(
                             (x - maze[0].length/2) * CELL_SIZE,
-                            0.1, // Немного выше чтобы не было z-fighting
+                            0.05, // Немного выше чтобы не было z-fighting
                             (y - maze.length/2) * CELL_SIZE
                         );
                         
@@ -1345,8 +1432,8 @@
                             y: y,
                             isFalling: false,
                             fallTimer: 0,
-                            warningTime: 5.0,
-                            originalY: 0.1
+                            warningTime: 3.0,
+                            originalY: 0.05
                         };
                         
                         scene.add(floorTile);
@@ -1376,28 +1463,30 @@
                         floorTile.userData.fallTimer += deltaTime;
                         
                         // Мигание красным цветом
-                        const blinkSpeed = currentWave > 1 ? 2.0 : 1.0; // Быстрее на высоких волнах
+                        const blinkSpeed = currentWave > 1 ? 2.0 : 1.0;
                         const blink = Math.sin(floorTile.userData.fallTimer * blinkSpeed * Math.PI * 2) > 0;
                         floorTile.material.emissive.setHex(blink ? 0xff0000 : 0x000000);
                         floorTile.material.emissiveIntensity = blink ? 0.5 : 0;
                         
                     } else {
                         // Фаза падения
-                        floorTile.position.y -= deltaTime * 5; // Скорость падения
-                        
-                        // Проверяем столкновение игрока с падающим полом
-                        const dx = floorTile.position.x - camera.position.x;
-                        const dz = floorTile.position.z - camera.position.z;
-                        const distance = Math.sqrt(dx * dx + dz * dz);
-                        
-                        if (distance < CELL_SIZE * 0.8 && floorTile.position.y < -1) {
-                            // Игрок упал в лаву
-                            gameOver();
-                            return;
-                        }
-                        
-                        // Удаляем пол если упал слишком низко
-                        if (floorTile.position.y < -10) {
+                        if (floorTile.userData.fallTimer < floorTile.userData.warningTime + 0.5) {
+                            // Анимация разрушения - плитка начинает падать
+                            floorTile.position.y -= deltaTime * 10;
+                            floorTile.rotation.z += deltaTime * 2;
+                            
+                            // Проверяем столкновение игрока с падающим полом
+                            const dx = floorTile.position.x - camera.position.x;
+                            const dz = floorTile.position.z - camera.position.z;
+                            const distance = Math.sqrt(dx * dx + dz * dz);
+                            
+                            if (distance < CELL_SIZE * 0.8 && floorTile.position.y < -1) {
+                                // Игрок упал в лаву
+                                gameOver();
+                                return;
+                            }
+                        } else {
+                            // Пол полностью исчез
                             scene.remove(floorTile);
                             fallingFloors.splice(i, 1);
                             
@@ -1434,6 +1523,12 @@
                 randomFloor.userData.fallTimer = 0;
                 fallingFloors.push(randomFloor);
                 
+                // Воспроизводим звук разрушения пола
+                if (destroyFloorSound) {
+                    destroyFloorSound.currentTime = 0;
+                    destroyFloorSound.play().catch(e => console.log('Не удалось воспроизвести звук разрушения пола'));
+                }
+                
                 // Убираем из доступных
                 const index = lavaFloors.indexOf(randomFloor);
                 if (index > -1) {
@@ -1457,8 +1552,8 @@
             initializeLavaFloors();
             
             // Обновляем параметры падения для новой волны
-            floorsToFall = Math.min(1 + currentWave, 8); // Максимум 8 полов за раз
-            floorFallInterval = Math.max(0.5, 3.0 - currentWave * 0.3); // Минимум 0.5 секунды
+            floorsToFall = Math.min(1 + currentWave, 8);
+            floorFallInterval = Math.max(0.5, 3.0 - currentWave * 0.3);
         }
 
         // Создание зоны выхода для режима Straight Through
@@ -1500,7 +1595,7 @@
             
             const toExit = new THREE.Vector3();
             toExit.subVectors(exitArea.position, camera.position);
-            toExit.y = 0; // Игнорируем вертикальную составляющую
+            toExit.y = 0;
             toExit.normalize();
             
             // Вычисляем угол между направлением игрока и направлением к выходу
@@ -1580,6 +1675,7 @@
         let impDeathSound1 = null;
         let impDeathSound2 = null;
         let impDeathSound3 = null;
+        let destroyFloorSound = null;
 
         // Оружие
         const weapon = document.getElementById('weapon');
@@ -1594,7 +1690,7 @@
         let isMouseDown = false;
         let autoShootInterval = null;
         let lastShootTime = 0;
-        const SHOOT_DELAY = 300; // Задержка между выстрелами в мс
+        const SHOOT_DELAY = 300;
 
         // Предзагрузка изображений оружия
         const gunImages = {
@@ -1620,6 +1716,7 @@
             shootSound = new Audio('Sounds/Shoot.mp3');
             reloadSound = new Audio('Sounds/Reload.mp3');
             playerHitSound = new Audio('Sounds/PlayerHit.mp3');
+            destroyFloorSound = new Audio('Sounds/DestroyFloor.mp3');
             
             // Звуки врагов
             impDamageSound1 = new Audio('Sounds/Imp/ImpDamage.mp3');
@@ -1632,6 +1729,7 @@
             shootSound.volume = soundVolume;
             reloadSound.volume = soundVolume;
             playerHitSound.volume = soundVolume;
+            destroyFloorSound.volume = soundVolume;
             impDamageSound1.volume = soundVolume;
             impDamageSound2.volume = soundVolume;
             impDeathSound1.volume = soundVolume;
@@ -1642,13 +1740,14 @@
             shootSound.preload = 'auto';
             reloadSound.preload = 'auto';
             playerHitSound.preload = 'auto';
+            destroyFloorSound.preload = 'auto';
             impDamageSound1.preload = 'auto';
             impDamageSound2.preload = 'auto';
             impDeathSound1.preload = 'auto';
             impDeathSound2.preload = 'auto';
             impDeathSound3.preload = 'auto';
             
-            // Создаем список музыкальных треков (только 3 трека)
+            // Создаем список музыкальных треков
             musicTracks = [
                 'Sounds/MenuMusic.mp3',
                 'Sounds/MenuMusic1.mp3',
@@ -1683,7 +1782,7 @@
             // Создаем новый аудио элемент
             currentMusic = new Audio(musicTracks[currentTrackIndex]);
             currentMusic.volume = musicVolume;
-            currentMusic.loop = false; // Не зацикливаем, чтобы переходить к следующему
+            currentMusic.loop = false;
             
             // Когда трек заканчивается, играем следующий
             currentMusic.addEventListener('ended', playNextTrack);
@@ -1734,6 +1833,9 @@
             if (playerHitSound) {
                 playerHitSound.volume = soundVolume;
             }
+            if (destroyFloorSound) {
+                destroyFloorSound.volume = soundVolume;
+            }
             if (impDamageSound1) {
                 impDamageSound1.volume = soundVolume;
             }
@@ -1770,7 +1872,7 @@
             }
         }
 
-        // Анимация выстрела - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // Анимация выстрела
         function playShootAnimation() {
             // Проверяем возможность стрельбы
             if (!canShoot || isReloading || isShooting || ammo <= 0) {
@@ -1818,7 +1920,7 @@
             }, 150);
         }
 
-        // Анимация перезарядки - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // Анимация перезарядки
         function playReloadAnimation() {
             if (isReloading || ammo >= maxAmmo) {
                 return;
@@ -1872,7 +1974,7 @@
                     playShootAnimation();
                     lastShootTime = currentTime;
                 }
-            }, 100); // Проверяем каждые 100мс
+            }, 100);
         }
 
         function stopAutoShoot() {
@@ -2409,13 +2511,13 @@
         // Создаем систему навигации
         let navigationSystem = null;
 
-        // КЛАСС ВРАГА - УЛУЧШЕННАЯ ВЕРСИЯ
+        // КЛАСС ВРАГА
         class Enemy {
             constructor(x, z) {
                 this.x = x;
                 this.z = z;
                 this.health = 3;
-                this.speed = currentGameMode === 'onslaught' ? 4.5 : 9.0; // В 2 раза медленнее в Onslaught
+                this.speed = currentGameMode === 'onslaught' ? 4.5 : 9.0;
                 this.attackRange = 2.0;
                 this.attackCooldown = 0;
                 this.fireballCooldown = 0;
@@ -2477,8 +2579,6 @@
                     return;
                 }
                 
-                // УБРАЛ эффект получения урона (красный цвет)
-                
                 // Сохраняем предыдущую позицию для обнаружения застреваний
                 this.lastX = this.x;
                 this.lastZ = this.z;
@@ -2510,10 +2610,10 @@
                     this.checkFloorUnderEnemy();
                 }
                 
-                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught) - ИСПРАВЛЕНО
-                if (currentGameMode === 'onslaught' && distance > 70) { // Увеличил дистанцию до 70
+                // ТЕЛЕПОРТАЦИЯ если игрок слишком далеко (только в Onslaught)
+                if (currentGameMode === 'onslaught' && distance > 70) {
                     this.teleportTimer += deltaTime;
-                    if (this.teleportTimer > 20.0) { // Увеличил интервал до 20 секунд
+                    if (this.teleportTimer > 20.0) {
                         this.teleportToPlayer();
                         this.teleportTimer = 0;
                     }
@@ -2540,7 +2640,7 @@
                     const dzToNode = targetZ - this.z;
                     const distanceToNode = Math.sqrt(dxToNode * dxToNode + dzToNode * dzToNode);
                     
-                    if (distanceToNode < 1.0) { // Увеличил дистанцию достижения узла
+                    if (distanceToNode < 1.0) {
                         this.currentPathIndex++;
                     } else {
                         let dirX = dxToNode / distanceToNode;
@@ -2613,7 +2713,7 @@
                 
                 if (movedDistance < 0.1 * deltaTime) {
                     this.stuckTimer += deltaTime;
-                    if (this.stuckTimer > 2.0) { // Если застрял более 2 секунд
+                    if (this.stuckTimer > 2.0) {
                         this.findAlternativePath();
                         this.stuckTimer = 0;
                     }
@@ -2656,7 +2756,7 @@
                 this.floorUnderEnemy = closestFloor;
             }
             
-            // Телепортация к игроку - ИСПРАВЛЕНО
+            // Телепортация к игроку
             teleportToPlayer() {
                 // Находим свободную клетку рядом с игроком на расстоянии 25 единиц
                 const playerMazeX = Math.round((camera.position.x / CELL_SIZE) + maze[0].length/2);
@@ -2719,10 +2819,10 @@
             handleWallCollision(dirX, dirZ, deltaTime) {
                 // Пробуем разные направления для обхода препятствия
                 const directions = [
-                    [dirZ, -dirX],  // Перпендикулярно влево
-                    [-dirZ, dirX],  // Перпендикулярно вправо
-                    [dirX * 0.7, dirZ * 0.7],  // Под углом
-                    [-dirX * 0.5, -dirZ * 0.5] // Назад
+                    [dirZ, -dirX],
+                    [-dirZ, dirX],
+                    [dirX * 0.7, dirZ * 0.7],
+                    [-dirX * 0.5, -dirZ * 0.5]
                 ];
                 
                 for (let [testX, testZ] of directions) {
@@ -2740,7 +2840,7 @@
             // Поиск альтернативного пути при застревании
             findAlternativePath() {
                 this.path = [];
-                this.pathUpdateTimer = 2.0; // Принудительно обновим путь в следующем кадре
+                this.pathUpdateTimer = 2.0;
             }
             
             checkWallCollision(x, z) {
@@ -2804,7 +2904,6 @@
             }
             
             takeDamage(amount, distance) {
-                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
                 let damage = 0;
                 
                 if (distance < 4) {
@@ -2815,10 +2914,7 @@
                     damage = 1;
                 }
                 
-                // Применяем округленный урон
                 this.health -= damage;
-                
-                // УБРАЛ эффект получения урона (красный цвет)
                 
                 // Воспроизводим случайный звук получения урона
                 if (Math.random() > 0.5) {
@@ -2921,15 +3017,14 @@
             }
         }
 
-        // КЛАСС ФАЙРБОЛА - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР
+        // КЛАСС ФАЙРБОЛА
         class Fireball {
             constructor(x, z, targetX, targetZ) {
                 this.x = x;
                 this.z = z;
                 this.speed = 12.0;
                 this.isActive = true;
-                // ОКРУГЛЯЕМ урон до целых чисел с шагом 5
-                this.damage = Math.round((20 + Math.random() * 20) / 5) * 5; // Урон от 20 до 40, округленный до шага 5
+                this.damage = Math.round((20 + Math.random() * 20) / 5) * 5;
                 
                 const dx = targetX - x;
                 const dz = targetZ - z;
@@ -2944,7 +3039,7 @@
                 }));
                 
                 this.sprite.position.set(this.x, 0.8, this.z);
-                this.sprite.scale.set(3.5, 3.5, 1); // Увеличил размер спрайта
+                this.sprite.scale.set(3.5, 3.5, 1);
                 scene.add(this.sprite);
                 
                 this.rotation = 0;
@@ -2970,15 +3065,14 @@
                 const dz = this.z - camera.position.z;
                 const distance = Math.sqrt(dx * dx + dz * dz);
                 
-                // УВЕЛИЧИЛ радиус коллайдера фаербола
-                if (distance < 2.0) { // Было 1.5
+                if (distance < 2.0) {
                     this.destroy();
                     takeDamage(this.damage);
                 }
             }
             
             checkWallCollision() {
-                const fireballRadius = 0.8; // УВЕЛИЧИЛ радиус коллайдера (было 0.3)
+                const fireballRadius = 0.8;
                 const points = [
                     [this.x - fireballRadius, this.z],
                     [this.x + fireballRadius, this.z],
@@ -3018,7 +3112,7 @@
         let enemies = [];
         let fireballs = [];
 
-        // Функция создания врагов - УЛУЧШЕННАЯ
+        // Функция создания врагов - ИСПРАВЛЕННАЯ
         function createEnemies(count, mode = 'normal') {
             for (let i = 0; i < count; i++) {
                 let freeCells = [];
@@ -3032,16 +3126,9 @@
                             const dz = worldZ - camera.position.z;
                             const distance = Math.sqrt(dx * dx + dz * dz);
                             
-                            if (mode === 'onslaught' || mode === 'extermination' || mode === 'lava') {
-                                // В режиме Extermination и Lava Chaos враги появляются в случайных местах
-                                if (mode === 'extermination' || mode === 'lava' || (distance > 8 && distance < 20)) {
-                                    freeCells.push({x: worldX, z: worldZ});
-                                }
-                            } else if (mode === 'straight') {
-                                // В режиме Straight Through враги появляются ВЕЗДЕ (много врагов)
-                                if (distance > 5) {
-                                    freeCells.push({x: worldX, z: worldZ});
-                                }
+                            // Враги появляются НЕДАЛЕКО от игрока (8-20 единиц)
+                            if (distance > 8 && distance < 20) {
+                                freeCells.push({x: worldX, z: worldZ});
                             }
                         }
                     }
@@ -3054,9 +3141,8 @@
             }
         }
 
-        // Функция получения урона игроком - ИСПРАВЛЕННАЯ
+        // Функция получения урона игроком
         function takeDamage(amount) {
-            // ОКРУГЛЯЕМ урон до целых чисел
             const roundedDamage = Math.round(amount);
             hp -= roundedDamage;
             if (hp < 0) hp = 0;
@@ -3112,21 +3198,19 @@
             }
         }
 
-        // Функция проверки попадания по врагам - ИСПРАВЛЕННЫЙ КОЛЛАЙДЕР ПУЛИ
+        // Функция проверки попадания по врагам
         function checkEnemyHit() {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             
-            // УВЕЛИЧИЛ дальность луча для лучшего обнаружения врагов
-            raycaster.far = 50; // Увеличил дальность луча
+            raycaster.far = 50;
             
             for (let enemy of enemies) {
                 if (!enemy.isAlive) continue;
                 
-                // УВЕЛИЧИЛ радиус сферы для обнаружения
                 const enemySphere = new THREE.Sphere(
                     new THREE.Vector3(enemy.x, 0.8, enemy.z),
-                    2.0 // УВЕЛИЧИЛ радиус (было 1.5)
+                    2.0
                 );
                 
                 if (raycaster.ray.intersectsSphere(enemySphere)) {
@@ -3147,7 +3231,7 @@
                 // Создаем bounding box для врага
                 const enemyBox = new THREE.Box3().setFromCenterAndSize(
                     new THREE.Vector3(enemy.x, 0.8, enemy.z),
-                    new THREE.Vector3(2.0, 2.0, 2.0) // Увеличил размер бокса
+                    new THREE.Vector3(2.0, 2.0, 2.0)
                 );
                 
                 if (raycaster.ray.intersectsBox(enemyBox)) {
@@ -3163,7 +3247,7 @@
             return false;
         }
 
-        // Система волн для режима Onslaught - ИСПРАВЛЕННАЯ
+        // Система волн для режима Onslaught
         function startWave(waveNumber) {
             currentWave = waveNumber;
             waveEnemiesKilled = 0;
@@ -3180,7 +3264,7 @@
             } else if (waveNumber === 5) {
                 waveEnemiesCount = 9;
             } else {
-                waveEnemiesCount = 9 + (waveNumber - 5) * 2; // Постепенное увеличение после 5 волны
+                waveEnemiesCount = 9 + (waveNumber - 5) * 2;
             }
             
             enemiesToSpawn = waveEnemiesCount;
@@ -3297,14 +3381,24 @@
             }
         }
 
-        // Функция респавна врагов в Straight Through
-        function respawnEnemiesInStraightThrough() {
-            if (currentGameMode !== 'straight') return;
-            
-            // Респавним врагов если их меньше 5
-            if (enemies.length < 5) {
-                const enemiesToRespawn = 5 - enemies.length;
-                createEnemies(enemiesToRespawn, 'straight');
+        // Функция респавна врагов в Straight Through и Extermination
+        function respawnEnemies() {
+            if (currentGameMode === 'straight') {
+                // Респавним врагов если их меньше 5
+                if (enemies.length < 5) {
+                    const enemiesToRespawn = 5 - enemies.length;
+                    createEnemies(enemiesToRespawn, 'straight');
+                }
+            } else if (currentGameMode === 'extermination') {
+                // В Extermination спавним нового врага когда убит старый
+                if (enemies.length < 5 && enemiesKilled < targetEnemies) {
+                    createEnemies(1, 'extermination');
+                }
+            } else if (currentGameMode === 'onslaught' || currentGameMode === 'lava') {
+                // В Onslaught и Lava Chaos спавним нового врага когда убит старый
+                if (enemies.length < waveEnemiesCount) {
+                    createEnemies(1, currentGameMode);
+                }
             }
         }
 
@@ -3369,10 +3463,8 @@
                 spawnEnemiesOverTime(currentTime);
             }
             
-            // Респавн врагов в Straight Through
-            if (currentGameMode === 'straight') {
-                respawnEnemiesInStraightThrough();
-            }
+            // Респавн врагов
+            respawnEnemies();
             
             // Обновляем систему лавы для Lava Chaos
             if (currentGameMode === 'lava') {
@@ -3431,18 +3523,18 @@
             
             // Устанавливаем HP в зависимости от режима
             if (currentGameMode === 'straight') {
-                hp = 35; // 35 HP для Straight Through
+                hp = 35;
             } else {
                 hp = 100;
             }
             
             // Создаем врагов в зависимости от режима
             if (currentGameMode === 'extermination') {
-                createEnemies(40, 'extermination'); // 40 врагов спавнится, но нужно убить только 20
+                createEnemies(5, 'extermination'); // Начинаем с 5 врагов
             } else if (currentGameMode === 'onslaught') {
                 startWave(1);
             } else if (currentGameMode === 'straight') {
-                createEnemies(15, 'straight'); // МНОГО врагов в лабиринте
+                createEnemies(5, 'straight'); // Начинаем с 5 врагов
             } else if (currentGameMode === 'lava') {
                 startWaveLava(1);
             }
@@ -3502,7 +3594,6 @@
                         currentSlide = (currentSlide + 1) % slides.length;
                         updateSlides();
                     }
-                    // Если клик по активному слайду - ничего не делаем (можно выбрать режим)
                 });
             });
             
@@ -3564,7 +3655,7 @@
             
             // Создаем лабиринт в зависимости от режима
             if (mode === 'lava') {
-                mazeGen = new MazeGenerator(13, 13, mode); // Меньшая карта для Lava Chaos
+                mazeGen = new MazeGenerator(13, 13, mode);
             } else {
                 mazeGen = new MazeGenerator(25, 25, mode);
             }
