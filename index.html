@@ -378,29 +378,29 @@
 
         .mode-slide {
             position: absolute;
-            width: 70vmin;
+            width: 50vmin; /* Уменьшил ширину рамки */
             height: 50vmin;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Изменил на flex-start */
             transition: all 0.5s ease;
             opacity: 0.5;
             transform: scale(0.8);
             cursor: pointer;
-            background: rgba(60, 60, 60, 0.9);
-            border: 4px solid #444;
-            border-radius: 15px;
-            padding: 2vmin;
+            background: rgba(40, 40, 40, 0.95); /* Убрал прозрачность, сделал нормальный цвет */
+            border: none; /* Убрал обводку */
+            border-radius: 10px;
+            padding: 0; /* Убрал внутренние отступы */
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         .mode-slide.active {
             opacity: 1;
             transform: scale(1);
             z-index: 10;
-            border-color: #ff0000;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7);
         }
 
         .mode-slide.left {
@@ -412,37 +412,28 @@
         }
 
         .mode-icon {
-            width: 40vmin;
-            height: 20vmin;
-            object-fit: cover;
-            margin-bottom: 2vmin;
+            width: 100%; /* Растягиваем на всю ширину рамки */
+            height: 70%; /* Занимает 70% высоты */
+            object-fit: cover; /* Растягиваем изображение чтобы заполнить всю область */
+            margin-bottom: 0;
             pointer-events: none;
-            border-radius: 10px;
-            border: 2px solid #444;
+            border-radius: 10px 10px 0 0; /* Закругляем только верхние углы */
         }
 
         .mode-name {
-            width: 40vmin;
-            max-width: 400px;
+            width: 90%; /* Уменьшил ширину чтобы было поуже */
+            max-width: 350px;
             object-fit: contain;
             pointer-events: none;
-            margin-bottom: 2vmin;
-        }
-
-        .mode-description {
-            color: white;
-            font-size: 2.2vmin;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 2vmin;
-            border-radius: 10px;
-            width: 90%;
-            pointer-events: none;
-            border: 1px solid #555;
-            flex-grow: 1;
+            margin: 1vmin 0; /* Уменьшил отступы */
+            height: 20%; /* Фиксируем высоту для названия */
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .mode-description {
+            display: none; /* Скрываем описание */
         }
 
         .carousel-nav {
@@ -565,19 +556,19 @@
         <div class="mode-carousel">
             <div class="mode-slide" data-mode="extermination">
                 <img src="MenuUi/ModeIcons/ExterminationProtocol.png" alt="Extermination Protocol" class="mode-icon">
-                <img src="MenuUi/ModeTexts/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
+                <img src="MenuUi/ExterminationProtocolText.png" alt="EXTERMINATION PROTOCOL" class="mode-name">
                 <div class="mode-description">Уничтожьте 40 врагов. Враги постоянно ищут вас и появляются рядом</div>
             </div>
             
             <div class="mode-slide" data-mode="straight">
                 <img src="MenuUi/ModeIcons/StraightThrough.png" alt="Straight Through" class="mode-icon">
-                <img src="MenuUi/ModeTexts/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
+                <img src="MenuUi/StraightThroughText.png" alt="STRAIGHT THROUGH" class="mode-name">
                 <div class="mode-description">Доберитесь до выхода через толпы врагов</div>
             </div>
             
             <div class="mode-slide" data-mode="onslaught">
                 <img src="MenuUi/ModeIcons/Onslaught.png" alt="Onslaught" class="mode-icon">
-                <img src="MenuUi/ModeTexts/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
+                <img src="MenuUi/OnslaughtText.png" alt="ONSLAUGHT" class="mode-name">
                 <div class="mode-description">Выживайте в волнах врагов. Враги телепортируются к вам если далеко</div>
             </div>
         </div>
@@ -3282,7 +3273,3 @@
     </script>
 </body>
 </html>
-
-. 
-
-вот у рамки самой не будет обводки, типа она подут не полу прозраасчная а норм цвета
