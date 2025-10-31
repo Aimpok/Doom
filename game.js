@@ -5,7 +5,9 @@ class SettingsManager {
             musicVolume: 50,
             soundVolume: 50,
             sensitivity: 5,
-            coins: 0
+            coins: 0,
+            doubleWeaponPurchased: false,
+            currentWeapon: 'default'
         };
         this.loadSettings();
     }
@@ -19,11 +21,15 @@ class SettingsManager {
                 this.soundVolume = settings.soundVolume || this.defaultSettings.soundVolume;
                 this.sensitivity = settings.sensitivity || this.defaultSettings.sensitivity;
                 this.coins = settings.coins || this.defaultSettings.coins;
+                this.doubleWeaponPurchased = settings.doubleWeaponPurchased || this.defaultSettings.doubleWeaponPurchased;
+                this.currentWeapon = settings.currentWeapon || this.defaultSettings.currentWeapon;
             } else {
                 this.musicVolume = this.defaultSettings.musicVolume;
                 this.soundVolume = this.defaultSettings.soundVolume;
                 this.sensitivity = this.defaultSettings.sensitivity;
                 this.coins = this.defaultSettings.coins;
+                this.doubleWeaponPurchased = this.defaultSettings.doubleWeaponPurchased;
+                this.currentWeapon = this.defaultSettings.currentWeapon;
             }
         } catch (e) {
             console.error('Ошибка загрузки настроек:', e);
@@ -31,6 +37,8 @@ class SettingsManager {
             this.soundVolume = this.defaultSettings.soundVolume;
             this.sensitivity = this.defaultSettings.sensitivity;
             this.coins = this.defaultSettings.coins;
+            this.doubleWeaponPurchased = this.defaultSettings.doubleWeaponPurchased;
+            this.currentWeapon = this.defaultSettings.currentWeapon;
         }
     }
 
@@ -40,7 +48,9 @@ class SettingsManager {
                 musicVolume: this.musicVolume,
                 soundVolume: this.soundVolume,
                 sensitivity: this.sensitivity,
-                coins: this.coins
+                coins: this.coins,
+                doubleWeaponPurchased: this.doubleWeaponPurchased,
+                currentWeapon: this.currentWeapon
             };
             localStorage.setItem('doomMazeSettings', JSON.stringify(settings));
         } catch (e) {
@@ -57,8 +67,13 @@ class SettingsManager {
         return false;
     }
 
+    getSetting(key) {
+        return this[key];
+    }
+
     addCoins(amount) {
         this.coins += amount;
+        if (this.coins < 0) this.coins = 0;
         this.saveSettings();
         updateCoinCounter();
         return this.coins;
@@ -651,7 +666,7 @@ let lastShootTime = 0;
 const SHOOT_DELAY = 300;
 
 // Предзагрузка изображений оружия
-const gunImages = {
+let gunImages = {
     normal: 'Guns/DefaultShootGun/Gun.png',
     shoot1: 'Guns/DefaultShootGun/GunSh1.png',
     shoot2: 'Guns/DefaultShootGun/GunSh2.png',
@@ -1152,7 +1167,8 @@ function initGlobalHandlers() {
         if (e.button === 0 && 
             document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
-            document.getElementById('modeSelectMenu').style.display === 'none') {
+            document.getElementById('modeSelectMenu').style.display === 'none' &&
+            document.getElementById('weaponsMenu').style.display === 'none') {
             e.preventDefault();
             isMouseDown = true;
             playShootAnimation();
@@ -1171,7 +1187,8 @@ function initGlobalHandlers() {
         if (e.code === 'KeyR' && 
             document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
-            document.getElementById('modeSelectMenu').style.display === 'none') {
+            document.getElementById('modeSelectMenu').style.display === 'none' &&
+            document.getElementById('weaponsMenu').style.display === 'none') {
             if (!isReloading && ammo < maxAmmo) {
                 playReloadAnimation();
             }
@@ -1188,7 +1205,8 @@ function initControls() {
     window.addEventListener('keydown', (event) => {
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
-            document.getElementById('modeSelectMenu').style.display === 'none') {
+            document.getElementById('modeSelectMenu').style.display === 'none' &&
+            document.getElementById('weaponsMenu').style.display === 'none') {
             switch(event.code) {
                 case 'KeyW': moveForward = true; break;
                 case 'KeyS': moveBackward = true; break;
@@ -1201,7 +1219,8 @@ function initControls() {
     window.addEventListener('keyup', (event) => {
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
-            document.getElementById('modeSelectMenu').style.display === 'none') {
+            document.getElementById('modeSelectMenu').style.display === 'none' &&
+            document.getElementById('weaponsMenu').style.display === 'none') {
             switch(event.code) {
                 case 'KeyW': moveForward = false; break;
                 case 'KeyS': moveBackward = false; break;
@@ -1215,6 +1234,7 @@ function initControls() {
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
             document.getElementById('modeSelectMenu').style.display === 'none' && 
+            document.getElementById('weaponsMenu').style.display === 'none' &&
             document.pointerLockElement === renderer.domElement) {
             yaw -= event.movementX * mouseSensitivity;
             pitch -= event.movementY * mouseSensitivity;
@@ -1225,7 +1245,8 @@ function initControls() {
     renderer.domElement.addEventListener('click', () => {
         if (document.getElementById('startMenu').style.display === 'none' &&
             document.getElementById('optionsMenu').style.display === 'none' &&
-            document.getElementById('modeSelectMenu').style.display === 'none') {
+            document.getElementById('modeSelectMenu').style.display === 'none' &&
+            document.getElementById('weaponsMenu').style.display === 'none') {
             renderer.domElement.requestPointerLock();
         }
     });
@@ -1527,8 +1548,10 @@ class Coin {
         this.isCollected = true;
         scene.remove(this.sprite);
         
-        // Добавляем монету
-        settingsManager.addCoins(1);
+        // Добавляем монету только в определенных режимах
+        if (currentGameMode !== 'straight') {
+            settingsManager.addCoins(1);
+        }
         
         // Воспроизводим звук
         if (coinSound) {
@@ -1573,6 +1596,8 @@ class Enemy {
         this.avoidanceForce = new THREE.Vector2(0, 0);
         this.teleportTimer = 0;
         this.lastDistanceToPlayer = 0;
+        this.isVisible = false;
+        this.lastVisibilityCheck = 0;
         
         this.sprite = new THREE.Sprite(new THREE.SpriteMaterial({
             map: this.createEnemyTexture(),
@@ -1583,6 +1608,9 @@ class Enemy {
         this.sprite.position.set(this.x, 0.8, this.z);
         this.sprite.scale.set(4.5, 4.5, 1);
         scene.add(this.sprite);
+        
+        // Изначально скрываем врага
+        this.setVisible(false);
     }
     
     createEnemyTexture() {
@@ -1602,11 +1630,59 @@ class Enemy {
         return texture;
     }
     
+    setVisible(visible) {
+        this.isVisible = visible;
+        this.sprite.visible = visible;
+    }
+    
+    checkVisibility() {
+        const currentTime = Date.now();
+        if (currentTime - this.lastVisibilityCheck < 500) {
+            return this.isVisible;
+        }
+        this.lastVisibilityCheck = currentTime;
+        
+        // Проверяем, виден ли враг игроку
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+        
+        const enemyPosition = new THREE.Vector3(this.x, 0.8, this.z);
+        const direction = new THREE.Vector3();
+        direction.subVectors(enemyPosition, camera.position).normalize();
+        
+        raycaster.set(camera.position, direction);
+        raycaster.far = 50;
+        
+        const intersects = raycaster.intersectObjects(scene.children, true);
+        
+        if (intersects.length > 0) {
+            const firstIntersect = intersects[0];
+            const distanceToEnemy = camera.position.distanceTo(enemyPosition);
+            
+            // Если первый пересеченный объект - это враг, или расстояние до врага меньше чем до стены
+            if (firstIntersect.distance > distanceToEnemy - 1.0) {
+                this.setVisible(true);
+                return true;
+            }
+        }
+        
+        this.setVisible(false);
+        return false;
+    }
+    
     update(deltaTime, playerX, playerZ) {
         if (!this.isAlive) return;
         
         if (this.isDying) {
             this.updateDeathAnimation(deltaTime);
+            return;
+        }
+        
+        // Проверяем видимость врага
+        const isVisible = this.checkVisibility();
+        
+        // Если враг не виден, не обновляем его логику (кроме смерти)
+        if (!isVisible && currentGameMode !== 'onslaught') {
             return;
         }
         
@@ -1779,7 +1855,7 @@ class Enemy {
         const avoidanceRadius = 3.0;
         
         for (let enemy of enemies) {
-            if (enemy === this || !enemy.isAlive) continue;
+            if (enemy === this || !enemy.isAlive || !enemy.isVisible) continue;
             
             const dx = enemy.x - this.x;
             const dz = enemy.z - this.z;
@@ -1881,12 +1957,23 @@ class Enemy {
     takeDamage(amount, distance) {
         let damage = 0;
         
-        if (distance < 4) {
-            damage = 3;
-        } else if (distance < 10) {
-            damage = 2;
-        } else {
-            damage = 1;
+        // Определяем урон в зависимости от оружия и расстояния
+        const currentWeapon = settingsManager.getSetting('currentWeapon') || 'default';
+        
+        if (currentWeapon === 'default') {
+            // Стандартное оружие
+            if (distance < 10) {
+                damage = 2;
+            } else {
+                damage = 1;
+            }
+        } else if (currentWeapon === 'double') {
+            // Двухстволка
+            if (distance < 10) {
+                damage = 3;
+            } else {
+                damage = 2;
+            }
         }
         
         this.health -= damage;
@@ -1913,8 +2000,10 @@ class Enemy {
         this.deathFrame = 1;
         this.deathTimer = 0;
         
-        // Создаем монету при смерти врага
-        createCoinFromEnemy(this.x, this.z);
+        // Создаем монету при смерти врага только в определенных режимах
+        if (currentGameMode !== 'straight') {
+            createCoinFromEnemy(this.x, this.z);
+        }
         
         const deathSounds = [impDeathSound1, impDeathSound2, impDeathSound3];
         const randomSound = deathSounds[Math.floor(Math.random() * deathSounds.length)];
@@ -2414,6 +2503,7 @@ function startGame() {
     document.getElementById('startMenu').style.display = 'none';
     document.getElementById('optionsMenu').style.display = 'none';
     document.getElementById('modeSelectMenu').style.display = 'none';
+    document.getElementById('weaponsMenu').style.display = 'none';
     fpsCounter.style.display = 'block';
     document.getElementById('uiPanel').style.display = 'block';
     document.getElementById('modeStats').style.display = 'block';
